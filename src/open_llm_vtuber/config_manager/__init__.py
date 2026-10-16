@@ -9,7 +9,7 @@ and utility functions for loading/saving configurations.
 from .main import Config
 from .system import SystemConfig
 from .character import CharacterConfig
-from .live import LiveConfig, BiliBiliLiveConfig
+from .live import LiveConfig, BiliBiliLiveConfig, TikTokLiveConfig
 from .stateless_llm import (
     OpenAICompatibleConfig,
     ClaudeConfig,
@@ -71,6 +71,7 @@ __all__ = [
     "CharacterConfig",
     "LiveConfig",
     "BiliBiliLiveConfig",
+    "TikTokLiveConfig",
     # LLM related classes
     "OpenAICompatibleConfig",
     "ClaudeConfig",

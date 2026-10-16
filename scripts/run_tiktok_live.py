@@ -1,0 +1,67 @@
+import os
+import sys
+import asyncio
+from loguru import logger
+
+# Add project root to path to enable imports
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, project_root)
+
+from src.open_llm_vtuber.live.tiktok_live import TikTokLivePlatform
+from src.open_llm_vtuber.config_manager.utils import read_yaml, validate_config
+
+
+async def main():
+    """
+    Main function to run the TikTok Live platform client.
+    Connects to a TikTok live room and forwards comments to the VTuber.
+    """
+    logger.info("Starting TikTok Live platform client")
+
+    try:
+        # Load configuration
+        config_path = os.path.join(project_root, "conf.yaml")
+        config_data = read_yaml(config_path)
+        config = validate_config(config_data)
+
+        tiktok_config = config.live_config.tiktok_live
+
+        if not tiktok_config.unique_id:
+            logger.error(
+                "No TikTok username specified in configuration. Please set live_config.tiktok_live.unique_id."
+            )
+            return
+
+        port = config.system_config.port
+        platform = TikTokLivePlatform(
+            unique_id=tiktok_config.unique_id,
+            batch_size=tiktok_config.batch_size,
+            max_pending_comments=tiktok_config.max_pending_comments,
+            min_interval=tiktok_config.min_interval,
+            response_timeout=tiktok_config.response_timeout,
+            include_nickname=tiktok_config.include_nickname,
+            blocked_words=tiktok_config.blocked_words,
+            proxy_url=f"ws://localhost:{port}/proxy-ws",
+        )
+
+        await platform.run()
+
+    except ImportError as e:
+        logger.error(f"Failed to import required modules: {e}")
+        logger.error(
+            "Make sure you have installed TikTokLive with: uv sync --extra tiktok"
+        )
+    except Exception as e:
+        logger.error(f"Error starting TikTok Live client: {e}")
+        import traceback
+
+        logger.debug(traceback.format_exc())
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Shutting down TikTok Live platform")
+
+# Usage: uv run python scripts/run_tiktok_live.py

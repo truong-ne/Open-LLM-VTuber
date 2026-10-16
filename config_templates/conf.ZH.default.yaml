@@ -497,3 +497,13 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie值（可选，用于认证请求，可以查看发送弹幕用户名）
     sessdata: ""
+  tiktok_live:
+    # 主播的TikTok用户名（例如 '@your_name'）。运行: uv run python scripts/run_tiktok_live.py
+    # 需要额外依赖: uv sync --extra tiktok
+    unique_id: ""
+    batch_size: 3 # 每次回复合并的最近评论数上限
+    max_pending_comments: 20 # VTuber忙碌时最多保留的评论数（超出时丢弃最旧的）
+    min_interval: 2.0 # 两次回复之间的最短间隔（秒）
+    response_timeout: 90.0 # 等待回复结束的最长时间（秒）
+    include_nickname: true # 在每条评论前加上观众昵称
+    blocked_words: [] # 包含这些词的评论将被忽略

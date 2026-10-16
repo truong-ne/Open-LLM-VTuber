@@ -501,3 +501,13 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie value (optional, for authenticated requests)
     sessdata: ""
+  tiktok_live:
+    # TikTok username of the streamer (e.g. '@your_name'). Run: uv run python scripts/run_tiktok_live.py
+    # Requires the extra dependency: uv sync --extra tiktok
+    unique_id: ""
+    batch_size: 3 # Max number of recent comments merged into one reply
+    max_pending_comments: 20 # Max comments kept while the VTuber is busy (oldest dropped first)
+    min_interval: 2.0 # Minimum seconds between two replies
+    response_timeout: 90.0 # Seconds to wait for a reply to finish before sending the next comments
+    include_nickname: true # Prefix each comment with the viewer's nickname
+    blocked_words: [] # Comments containing any of these words are ignored
