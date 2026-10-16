@@ -7,6 +7,14 @@
       "ddg-search": {
         "command": "uvx",
         "args": ["duckduckgo-mcp-server"]
+      },
+      "game-control": {
+        "command": "uv",
+        "args": [
+          "run", "--extra", "game", "python", "scripts/game_control_mcp.py",
+          "--window", "Your Game Window Title",
+          "--max-side", "1024"
+        ]
       }
     }
 }

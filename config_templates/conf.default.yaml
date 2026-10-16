@@ -68,6 +68,13 @@ character_config:
         # 'Plus' means that it has the ability to call tools by using OpenAI API.
         use_mcpp: True
         mcp_enabled_servers: ["time", "ddg-search"] # Enabled MCP servers
+        # Maximum number of chat messages kept in memory (0 = unlimited).
+        # When exceeded, the oldest user/assistant turns are dropped so long sessions
+        # (e.g. livestreams) do not overflow the LLM context window.
+        max_memory_messages: 0
+        # Summarize dropped messages with the same LLM into a short running summary
+        # that is added to the system prompt. Only used when max_memory_messages > 0.
+        summarize_memory: False
 
       letta_agent:
         host: 'localhost' # Host address
@@ -277,7 +284,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts'
+    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts', 'piper_tts', 'vieneu_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -305,6 +312,18 @@ character_config:
       volume: 1.0               # Volume level (0.0–1.0; 1.0 = normal)
       normalize_audio: true     # Whether to normalize audio (recommended: true, for more consistent volume)
       use_cuda: false           # Whether to use GPU acceleration (requires onnxruntime-gpu)
+
+    # VieNeu-TTS: Vietnamese/English TTS with voice cloning (https://github.com/pnnbao97/VieNeu-TTS, Apache-2.0)
+    # Install: uv pip install vieneu   (models download from Hugging Face on first run)
+    vieneu_tts:
+      mode: 'v3turbo'           # 'v3turbo' (48 kHz, best) or 'v3nano' (24 kHz, CPU only, for weak CPUs)
+      voice: 'Trúc Ly'          # Preset voice, e.g. 'Trúc Ly', 'Đoan Trang', 'Ngọc Huyền' (female), 'Hải Đăng', 'Adam' (male)
+      ref_audio: ''             # Path to a 3-8 s clip to clone a voice; overrides voice when set
+      backend: 'auto'           # 'auto' (ONNX on CPU, PyTorch on GPU), 'onnx' or 'pytorch'
+      device: 'auto'            # 'auto', 'cpu' or 'cuda'
+      precision: 'fp32'         # ONNX/CPU: 'fp32' or 'int8' (~3x faster, needs a CPU with VNNI)
+      threads: 0                # ONNX/CPU threads, 0 = automatic
+      temperature: 0.8
 
     cosyvoice_tts: # Cosy Voice TTS connects to the gradio webui
       # Check their documentation for deployment and the meaning of the following configurations
@@ -504,6 +523,7 @@ live_config:
   tiktok_live:
     # TikTok username of the streamer (e.g. '@your_name'). Run: uv run python scripts/run_tiktok_live.py
     # Requires the extra dependency: uv sync --extra tiktok
+    # Requires system_config.enable_proxy: true, and the web client connected to ws://localhost:12393/proxy-ws
     unique_id: ""
     batch_size: 3 # Max number of recent comments merged into one reply
     max_pending_comments: 20 # Max comments kept while the VTuber is busy (oldest dropped first)
@@ -511,3 +531,17 @@ live_config:
     response_timeout: 90.0 # Seconds to wait for a reply to finish before sending the next comments
     include_nickname: true # Prefix each comment with the viewer's nickname
     blocked_words: [] # Comments containing any of these words are ignored
+  # Play games made for Neuro-sama (Neuro Game SDK, https://github.com/VedalAI/neuro-sdk).
+  # Run: uv run python scripts/run_neuro_game.py, then start the game with NEURO_SDK_WS_URL=ws://localhost:8000
+  # Requires system_config.enable_proxy: true for the character to talk about the game.
+  neuro_game:
+    host: 'localhost'
+    port: 8000
+    model: '' # LLM that picks actions; empty = same model as the character (needs tool calling)
+    temperature: 0.3 # Lower = steadier play
+    max_retries: 3 # Retries when the chosen action is invalid or fails
+    max_context: 20 # Recent game messages kept for decisions
+    act_on_context: false # Act on game events without being asked by the game
+    comment_on_context: true # Talk about game events
+    comment_on_actions: true # Talk about the actions taken
+    max_pending_comments: 3 # Game texts kept while the character is talking

@@ -51,6 +51,12 @@ bilibili = [
 tiktok = [
     "TikTokLive>=7.0.0,<8",
 ]
+game = [
+    "mss>=10.0.0",
+    "Pillow>=10.0.0",
+    "PyDirectInput>=1.0.4; sys_platform == 'win32'",
+    "PyGetWindow>=0.0.9; sys_platform == 'win32'",
+]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
@@ -68,4 +74,4 @@ target-version = "py310"
 
 [tool.ruff.lint]
 # Ignore E402 (module level import not at top of file) for the live platform scripts
-per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"], "scripts/run_tiktok_live.py" = ["E402"] }
+per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"], "scripts/run_tiktok_live.py" = ["E402"], "scripts/run_neuro_game.py" = ["E402"] }

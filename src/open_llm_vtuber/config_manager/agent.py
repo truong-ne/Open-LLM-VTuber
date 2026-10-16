@@ -33,11 +33,21 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
+    max_memory_messages: Optional[int] = Field(0, ge=0, alias="max_memory_messages")
+    summarize_memory: Optional[bool] = Field(False, alias="summarize_memory")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "llm_provider": Description(
             en="LLM provider to use for this agent",
             zh="Basic Memory Agent 智能体使用的大语言模型选项",
+        ),
+        "max_memory_messages": Description(
+            en="Maximum number of chat messages kept in memory; the oldest turns are dropped when exceeded (0 = unlimited, default: 0)",
+            zh="记忆中保留的最大消息数，超出时丢弃最早的对话轮次（0 = 不限制，默认：0）",
+        ),
+        "summarize_memory": Description(
+            en="Summarize dropped messages with the same LLM into a running summary added to the system prompt (default: False)",
+            zh="使用同一个 LLM 将被丢弃的消息总结为滚动摘要并加入系统提示词（默认：False）",
         ),
         "faster_first_response": Description(
             en="Whether to respond as soon as encountering a comma in the first sentence to reduce latency (default: True)",

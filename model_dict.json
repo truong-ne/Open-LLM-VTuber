@@ -26,5 +26,35 @@
                 "": 1
             }
         }
+    },
+    {
+        "name": "hiyori_pro",
+        "description": "Hiyori Momose (Live2D sample). Expressions in runtime/expressions were added for Open-LLM-VTuber.",
+        "url": "/live2d-models/hiyori_pro/runtime/hiyori_pro_t11.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": 0,
+            "joy": 1,
+            "smirk": 5,
+            "sadness": 2,
+            "fear": 2,
+            "anger": 3,
+            "disgust": 3,
+            "surprise": 4
+        },
+        "tapMotions": {
+            "HitArea": {
+                "Tap": 1,
+                "Tap@Body": 1
+            },
+            "Body": {
+                "Tap": 1,
+                "Tap@Body": 1
+            }
+        }
     }
 ]

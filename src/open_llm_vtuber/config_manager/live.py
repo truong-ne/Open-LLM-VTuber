@@ -63,6 +63,61 @@ class TikTokLiveConfig(I18nMixin):
     }
 
 
+class NeuroGameConfig(I18nMixin):
+    """Configuration for the Neuro Game API bridge (games made for Neuro-sama)."""
+
+    host: str = Field("localhost", alias="host")
+    port: int = Field(8000, alias="port")
+    model: str = Field("", alias="model")
+    temperature: float = Field(0.3, alias="temperature")
+    max_retries: int = Field(3, alias="max_retries")
+    max_context: int = Field(20, alias="max_context")
+    act_on_context: bool = Field(False, alias="act_on_context")
+    comment_on_context: bool = Field(True, alias="comment_on_context")
+    comment_on_actions: bool = Field(True, alias="comment_on_actions")
+    max_pending_comments: int = Field(3, alias="max_pending_comments")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "host": Description(en="Host the game connects to", zh="游戏连接的主机地址"),
+        "port": Description(
+            en="Port the game connects to (NEURO_SDK_WS_URL=ws://host:port)",
+            zh="游戏连接的端口（NEURO_SDK_WS_URL=ws://host:port）",
+        ),
+        "model": Description(
+            en="LLM used to pick actions; empty = same model as the character",
+            zh="用于选择游戏动作的LLM；留空则与角色使用同一模型",
+        ),
+        "temperature": Description(
+            en="Sampling temperature for picking actions (lower = steadier play)",
+            zh="选择动作时的温度（越低越稳定）",
+        ),
+        "max_retries": Description(
+            en="Retries when the chosen action is invalid or fails",
+            zh="动作无效或失败时的重试次数",
+        ),
+        "max_context": Description(
+            en="Number of recent game messages kept for decisions",
+            zh="决策时保留的最近游戏消息数",
+        ),
+        "act_on_context": Description(
+            en="Let the character act on game events without being asked by the game",
+            zh="允许角色在游戏未要求时主动执行动作",
+        ),
+        "comment_on_context": Description(
+            en="Let the character talk about game events",
+            zh="让角色评论游戏事件",
+        ),
+        "comment_on_actions": Description(
+            en="Let the character talk about the actions it takes",
+            zh="让角色评论自己执行的动作",
+        ),
+        "max_pending_comments": Description(
+            en="Max game texts kept while the character is talking (oldest dropped first)",
+            zh="角色说话时最多保留的游戏消息数（超出时丢弃最旧的）",
+        ),
+    }
+
+
 class LiveConfig(I18nMixin):
     """Configuration for live streaming platforms integration."""
 
@@ -70,6 +125,7 @@ class LiveConfig(I18nMixin):
         BiliBiliLiveConfig(), alias="bilibili_live"
     )
     tiktok_live: TikTokLiveConfig = Field(TikTokLiveConfig(), alias="tiktok_live")
+    neuro_game: NeuroGameConfig = Field(NeuroGameConfig(), alias="neuro_game")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "bilibili_live": Description(
@@ -77,5 +133,9 @@ class LiveConfig(I18nMixin):
         ),
         "tiktok_live": Description(
             en="Configuration for TikTok Live platform", zh="TikTok直播平台配置"
+        ),
+        "neuro_game": Description(
+            en="Neuro Game API bridge for games made for Neuro-sama",
+            zh="Neuro游戏API桥接（适配为Neuro-sama制作的游戏）",
         ),
     }

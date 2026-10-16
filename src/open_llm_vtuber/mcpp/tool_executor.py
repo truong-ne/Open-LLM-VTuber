@@ -293,6 +293,18 @@ class ToolExecutor:
                 caller_mode, tool_id, llm_formatted_content, is_error
             )
             if formatted_result:
+                # OpenAI tool messages can only hold text, so images are passed
+                # along under a private key; the agent sends them in a user message.
+                if caller_mode == "OpenAI" and not is_error and content_items:
+                    image_urls = [
+                        f"data:{item['mimeType']};base64,{item['data']}"
+                        for item in content_items
+                        if item.get("type") == "image"
+                        and "data" in item
+                        and "mimeType" in item
+                    ]
+                    if image_urls:
+                        formatted_result["_images"] = image_urls
                 tool_results_for_llm.append(formatted_result)
 
         logger.info(

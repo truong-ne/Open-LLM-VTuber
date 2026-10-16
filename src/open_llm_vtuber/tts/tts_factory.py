@@ -211,6 +211,19 @@ class TTSFactory:
                 normalize_audio=kwargs.get("normalize_audio"),
                 use_cuda=kwargs.get("use_cuda"),
             )
+        elif engine_type == "vieneu_tts":
+            from .vieneu_tts import TTSEngine as VieNeuTTSEngine
+
+            return VieNeuTTSEngine(
+                mode=kwargs.get("mode"),
+                voice=kwargs.get("voice"),
+                ref_audio=kwargs.get("ref_audio"),
+                backend=kwargs.get("backend"),
+                device=kwargs.get("device"),
+                precision=kwargs.get("precision"),
+                threads=kwargs.get("threads"),
+                temperature=kwargs.get("temperature"),
+            )
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")
 

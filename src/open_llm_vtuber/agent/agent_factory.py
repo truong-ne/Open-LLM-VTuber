@@ -83,6 +83,8 @@ class AgentFactory:
                 tool_manager=tool_manager,
                 tool_executor=tool_executor,
                 mcp_prompt_string=mcp_prompt_string,
+                max_memory_messages=basic_memory_settings.get("max_memory_messages", 0),
+                summarize_memory=basic_memory_settings.get("summarize_memory", False),
             )
 
         elif conversation_agent_choice == "mem0_agent":

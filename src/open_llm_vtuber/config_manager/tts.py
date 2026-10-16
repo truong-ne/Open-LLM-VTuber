@@ -585,6 +585,51 @@ class PiperTTSConfig(I18nMixin):
     }
 
 
+class VieNeuTTSConfig(I18nMixin):
+    """Configuration for VieNeu TTS (Vietnamese)."""
+
+    mode: Literal["v3turbo", "v3nano"] = Field("v3turbo", alias="mode")
+    voice: str = Field("", alias="voice")
+    ref_audio: str = Field("", alias="ref_audio")
+    backend: Literal["auto", "onnx", "pytorch"] = Field("auto", alias="backend")
+    device: Literal["auto", "cpu", "cuda"] = Field("auto", alias="device")
+    precision: Literal["fp32", "int8"] = Field("fp32", alias="precision")
+    threads: int = Field(0, alias="threads")
+    temperature: float = Field(0.8, alias="temperature")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "mode": Description(
+            en="'v3turbo' (48 kHz, best quality) or 'v3nano' (24 kHz, CPU only, for weak CPUs)",
+            zh="'v3turbo'（48 kHz，最佳质量）或 'v3nano'（24 kHz，仅CPU，适合弱CPU）",
+        ),
+        "voice": Description(
+            en="Preset voice name (e.g. 'Trúc Ly'); empty = default voice",
+            zh="预设音色名称（如 'Trúc Ly'）；留空则使用默认音色",
+        ),
+        "ref_audio": Description(
+            en="Path to a 3-8 s clip for voice cloning; overrides voice when set",
+            zh="用于声音克隆的3-8秒音频路径；设置后覆盖 voice",
+        ),
+        "backend": Description(
+            en="'auto' (ONNX on CPU, PyTorch on GPU), 'onnx' or 'pytorch'",
+            zh="'auto'（CPU用ONNX，GPU用PyTorch）、'onnx' 或 'pytorch'",
+        ),
+        "device": Description(
+            en="'auto', 'cpu' or 'cuda'", zh="'auto'、'cpu' 或 'cuda'"
+        ),
+        "precision": Description(
+            en="ONNX/CPU precision: 'fp32' or 'int8' (faster, needs a CPU with VNNI)",
+            zh="ONNX/CPU 精度：'fp32' 或 'int8'（更快，需要支持VNNI的CPU）",
+        ),
+        "threads": Description(
+            en="ONNX/CPU threads, 0 = automatic", zh="ONNX/CPU 线程数，0 = 自动"
+        ),
+        "temperature": Description(
+            en="Sampling temperature (v3turbo)", zh="采样温度（v3turbo）"
+        ),
+    }
+
+
 class ElevenLabsTTSConfig(I18nMixin):
     """Configuration for ElevenLabs TTS."""
 
@@ -702,6 +747,7 @@ class TTSConfig(I18nMixin):
         "elevenlabs_tts",
         "cartesia_tts",
         "piper_tts",
+        "vieneu_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -726,6 +772,7 @@ class TTSConfig(I18nMixin):
     elevenlabs_tts: ElevenLabsTTSConfig | None = Field(None, alias="elevenlabs_tts")
     cartesia_tts: CartesiaTTSConfig | None = Field(None, alias="cartesia_tts")
     piper_tts: Optional[PiperTTSConfig] = Field(None, alias="piper_tts")
+    vieneu_tts: Optional[VieNeuTTSConfig] = Field(None, alias="vieneu_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -769,6 +816,10 @@ class TTSConfig(I18nMixin):
             en="Configuration for Cartesia TTS", zh="Cartesia TTS 配置"
         ),
         "piper_tts": Description(en="Configuration for Piper TTS", zh="Piper TTS 配置"),
+        "vieneu_tts": Description(
+            en="Configuration for VieNeu TTS (Vietnamese)",
+            zh="VieNeu TTS（越南语）配置",
+        ),
     }
 
     @model_validator(mode="after")
@@ -813,4 +864,6 @@ class TTSConfig(I18nMixin):
 
         elif tts_model == "piper_tts" and values.piper_tts is not None:
             values.piper_tts.model_validate(values.piper_tts.model_dump())
+        elif tts_model == "vieneu_tts" and values.vieneu_tts is not None:
+            values.vieneu_tts.model_validate(values.vieneu_tts.model_dump())
         return values

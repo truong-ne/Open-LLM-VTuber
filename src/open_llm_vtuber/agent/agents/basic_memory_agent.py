@@ -1,3 +1,5 @@
+import asyncio
+import re
 from typing import (
     AsyncIterator,
     List,
@@ -29,6 +31,17 @@ from ...mcpp.json_detector import StreamJSONDetector
 from ...mcpp.types import ToolCallObject
 from ...mcpp.tool_executor import ToolExecutor
 
+MEMORY_SUMMARY_SYSTEM_PROMPT = (
+    "You keep the long-term memory of an AI character's conversation "
+    "(for example a livestream with many viewers). Merge the previous summary "
+    "and the new messages into one updated summary. Keep what matters later: "
+    "names of people and facts about them, promises, running jokes, game "
+    "progress and important events. Drop small talk. Write at most 150 words, "
+    "in the same language as the conversation. Output only the summary."
+)
+MEMORY_SUMMARY_MAX_CHARS = 2000
+MEMORY_SUMMARY_TIMEOUT_SECONDS = 120
+
 
 class BasicMemoryAgent(AgentInterface):
     """Agent with basic chat memory and tool calling support."""
@@ -49,10 +62,17 @@ class BasicMemoryAgent(AgentInterface):
         tool_manager: Optional[ToolManager] = None,
         tool_executor: Optional[ToolExecutor] = None,
         mcp_prompt_string: str = "",
+        max_memory_messages: int = 0,
+        summarize_memory: bool = False,
     ):
         """Initialize agent with LLM and configuration."""
         super().__init__()
         self._memory = []
+        self._max_memory_messages = max(0, max_memory_messages or 0)
+        self._summarize_memory = summarize_memory
+        self._memory_summary = ""
+        self._pending_summary_messages: List[Dict[str, Any]] = []
+        self._summary_task: Optional[asyncio.Task] = None
         self._live2d_model = live2d_model
         self._tts_preprocessor_config = tts_preprocessor_config
         self._faster_first_response = faster_first_response
@@ -125,6 +145,121 @@ class BasicMemoryAgent(AgentInterface):
 
         self._system = system
 
+    def _system_prompt(self) -> str:
+        """Return the system prompt plus the running memory summary, if any."""
+        if not self._memory_summary:
+            return self._system
+        return (
+            f"{self._system}\n\n"
+            "[Summary of the earlier conversation (older messages were removed "
+            f"from the chat history)]\n{self._memory_summary}"
+        )
+
+    def _enforce_memory_limit(self) -> None:
+        """Drop the oldest turns once memory exceeds max_memory_messages."""
+        limit = self._max_memory_messages
+        if not limit or len(self._memory) <= limit:
+            return
+
+        cut = len(self._memory) - limit
+        # Keep turns intact: the kept history must start with a real user message.
+        while cut < len(self._memory) and (
+            self._memory[cut]["role"] != "user"
+            or self._memory[cut]["content"] == "[Interrupted by user]"
+        ):
+            cut += 1
+        if cut >= len(self._memory):
+            cut = len(self._memory) - limit
+
+        dropped = self._memory[:cut]
+        self._memory = self._memory[cut:]
+        logger.debug(
+            f"Memory limit ({limit}) exceeded: dropped {len(dropped)} oldest messages."
+        )
+
+        if self._summarize_memory:
+            self._pending_summary_messages.extend(dropped)
+            self._schedule_memory_summary()
+
+    def _schedule_memory_summary(self) -> None:
+        """Summarize dropped messages in the background so replies are not delayed."""
+        if self._summary_task and not self._summary_task.done():
+            return  # The running task also picks up the newly dropped messages.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.warning(
+                "No running event loop, dropped messages are not summarized."
+            )
+            self._pending_summary_messages = []
+            return
+        self._summary_task = loop.create_task(self._summarize_pending_memory())
+
+    async def _summarize_pending_memory(self) -> None:
+        """Fold pending dropped messages into the running memory summary."""
+        while self._pending_summary_messages:
+            batch = self._pending_summary_messages
+            self._pending_summary_messages = []
+            try:
+                summary = await asyncio.wait_for(
+                    self._request_memory_summary(batch),
+                    MEMORY_SUMMARY_TIMEOUT_SECONDS,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.warning(
+                    f"Memory summarization failed, dropped messages are forgotten: {e}"
+                )
+                continue
+            if summary:
+                self._memory_summary = summary[:MEMORY_SUMMARY_MAX_CHARS]
+                logger.info(
+                    f"Memory summary updated with {len(batch)} dropped messages."
+                )
+            else:
+                logger.warning("Memory summarization returned an empty summary.")
+
+    async def _request_memory_summary(self, messages: List[Dict[str, Any]]) -> str:
+        """Ask the LLM (without tools) to merge messages into the running summary."""
+        transcript = "\n".join(
+            f"{msg.get('name') or msg['role']}: {msg['content']}"
+            for msg in messages
+            if isinstance(msg.get("content"), str) and msg["content"]
+        )
+        if not transcript:
+            return self._memory_summary
+
+        prompt = (
+            f"Previous summary:\n{self._memory_summary or '(none)'}\n\n"
+            f"New messages:\n{transcript}"
+        )
+        response = ""
+        async for event in self._llm.chat_completion(
+            [{"role": "user", "content": prompt}], MEMORY_SUMMARY_SYSTEM_PROMPT
+        ):
+            if isinstance(event, dict):
+                if event.get("type") == "text_delta":
+                    response += event.get("text", "")
+                elif event.get("type") == "error":
+                    raise RuntimeError(event.get("message"))
+            elif isinstance(event, str):
+                if not response and (
+                    event.startswith("Error calling the chat endpoint")
+                    or event == "__API_NOT_SUPPORT_TOOLS__"
+                ):
+                    raise RuntimeError(event)
+                response += event
+        return re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
+
+    def _reset_memory_summary(self) -> None:
+        """Forget the running summary, e.g. when another chat history is loaded."""
+        if self._summary_task and not self._summary_task.done():
+            self._summary_task.cancel()
+        self._summary_task = None
+        self._pending_summary_messages = []
+        self._memory_summary = ""
+
     def _add_message(
         self,
         message: Union[str, List[Dict[str, Any]]],
@@ -173,10 +308,15 @@ class BasicMemoryAgent(AgentInterface):
 
         self._memory.append(message_data)
 
+        # Trim after the assistant reply, so summarizing runs between turns.
+        if role == "assistant":
+            self._enforce_memory_limit()
+
     def set_memory_from_history(self, conf_uid: str, history_uid: str) -> None:
         """Load memory from chat history."""
         messages = get_history(conf_uid, history_uid)
 
+        self._reset_memory_summary()
         self._memory = []
         for msg in messages:
             role = "user" if msg["role"] == "human" else "assistant"
@@ -191,6 +331,7 @@ class BasicMemoryAgent(AgentInterface):
             else:
                 logger.warning(f"Skipping invalid message from history: {msg}")
         logger.info(f"Loaded {len(self._memory)} messages from history.")
+        self._enforce_memory_limit()
 
     def handle_interrupt(self, heard_response: str) -> None:
         """Handle user interruption."""
@@ -221,6 +362,7 @@ class BasicMemoryAgent(AgentInterface):
             }
         )
         logger.info(f"Handled interrupt with role '{interrupt_role}'.")
+        self._enforce_memory_limit()
 
     def _to_text_prompt(self, input_data: BatchInput) -> str:
         """Format input data to text prompt."""
@@ -299,7 +441,9 @@ class BasicMemoryAgent(AgentInterface):
         current_assistant_message_content = []
 
         while True:
-            stream = self._llm.chat_completion(messages, self._system, tools=tools)
+            stream = self._llm.chat_completion(
+                messages, self._system_prompt(), tools=tools
+            )
             pending_tool_calls.clear()
             current_assistant_message_content.clear()
 
@@ -400,6 +544,48 @@ class BasicMemoryAgent(AgentInterface):
                     self._add_message(current_turn_text, "assistant")
                 return
 
+    @staticmethod
+    def _append_openai_tool_results(
+        messages: List[Dict[str, Any]],
+        tool_results: List[Dict[str, Any]],
+        last_image_message: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Append OpenAI tool results, sending tool images in a follow-up user message.
+
+        OpenAI tool messages can only hold text, so images returned by tools
+        (e.g. screenshots) are sent as a user message right after them. Only the
+        newest tool images are kept: older ones are replaced by a short note so
+        the context does not fill up with screenshots during a long tool loop.
+
+        Returns:
+            The user message holding the newest tool images, or the previous one
+            if these results had no images.
+        """
+        image_urls: List[str] = []
+        for result in tool_results:
+            image_urls.extend(result.pop("_images", []))
+            messages.append(result)
+
+        if not image_urls:
+            return last_image_message
+
+        if last_image_message is not None:
+            last_image_message["content"] = "[Older tool image omitted]"
+
+        image_message = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "[Image(s) returned by the tool call above]"},
+                *(
+                    {"type": "image_url", "image_url": {"url": url}}
+                    for url in image_urls
+                ),
+            ],
+        }
+        messages.append(image_message)
+        return image_message
+
     async def _openai_tool_interaction_loop(
         self,
         initial_messages: List[Dict[str, Any]],
@@ -409,20 +595,21 @@ class BasicMemoryAgent(AgentInterface):
         messages = initial_messages.copy()
         current_turn_text = ""
         pending_tool_calls: Union[List[ToolCallObject], List[Dict[str, Any]]] = []
-        current_system_prompt = self._system
+        current_system_prompt = self._system_prompt()
+        last_tool_image_message: Optional[Dict[str, Any]] = None
 
         while True:
             if self.prompt_mode_flag:
                 if self._mcp_prompt_string:
                     current_system_prompt = (
-                        f"{self._system}\n\n{self._mcp_prompt_string}"
+                        f"{self._system_prompt()}\n\n{self._mcp_prompt_string}"
                     )
                 else:
                     logger.warning("Prompt mode active but mcp_prompt_string is empty!")
-                    current_system_prompt = self._system
+                    current_system_prompt = self._system_prompt()
                 tools_for_api = None
             else:
-                current_system_prompt = self._system
+                current_system_prompt = self._system_prompt()
                 tools_for_api = tools
 
             stream = self._llm.chat_completion(
@@ -570,7 +757,9 @@ class BasicMemoryAgent(AgentInterface):
                     )
 
                 if tool_results_for_llm:
-                    messages.extend(tool_results_for_llm)
+                    last_tool_image_message = self._append_openai_tool_results(
+                        messages, tool_results_for_llm, last_tool_image_message
+                    )
                 continue
 
             else:
@@ -643,7 +832,9 @@ class BasicMemoryAgent(AgentInterface):
                 return
             else:
                 logger.info("Starting simple chat completion.")
-                token_stream = self._llm.chat_completion(messages, self._system)
+                token_stream = self._llm.chat_completion(
+                    messages, self._system_prompt()
+                )
                 complete_response = ""
                 async for event in token_stream:
                     text_chunk = ""

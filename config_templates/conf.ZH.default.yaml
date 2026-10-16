@@ -68,6 +68,12 @@ character_config:
         # 'Plus' 意味着它包含了通过 OpenAI API 调用工具的能力。
         use_mcpp: False
         mcp_enabled_servers: ["time", "ddg-search"] # 启用的 MCP 服务器
+        # 记忆中保留的最大消息数（0 = 不限制）。
+        # 超出时会丢弃最早的用户/助手对话轮次，避免长时间会话（如直播）超出 LLM 上下文窗口。
+        max_memory_messages: 0
+        # 是否用同一个 LLM 将被丢弃的消息总结为简短的滚动摘要并加入系统提示词。
+        # 仅在 max_memory_messages > 0 时生效。
+        summarize_memory: False
 
       hume_ai_agent:
         api_key: ''
@@ -274,7 +280,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts'
+    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts', 'piper_tts', 'vieneu_tts'
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
@@ -313,6 +319,18 @@ character_config:
       volume: 1.0               # 音量（0.0-1.0，1.0 为正常音量）
       normalize_audio: true     # 是否归一化音频（推荐启用，使音量更稳定）
       use_cuda: false           # 是否使用 GPU 加速（需要安装 onnxruntime-gpu）
+
+    # VieNeu-TTS：越南语/英语TTS，支持声音克隆（https://github.com/pnnbao97/VieNeu-TTS，Apache-2.0）
+    # 安装：uv pip install vieneu（首次运行时从 Hugging Face 下载模型）
+    vieneu_tts:
+      mode: 'v3turbo'           # 'v3turbo'（48 kHz，最佳）或 'v3nano'（24 kHz，仅CPU，适合弱CPU）
+      voice: 'Trúc Ly'          # 预设音色，如 'Trúc Ly'、'Đoan Trang'、'Ngọc Huyền'（女）、'Hải Đăng'、'Adam'（男）
+      ref_audio: ''             # 用于克隆声音的3-8秒音频路径；设置后覆盖 voice
+      backend: 'auto'           # 'auto'（CPU用ONNX，GPU用PyTorch）、'onnx' 或 'pytorch'
+      device: 'auto'            # 'auto'、'cpu' 或 'cuda'
+      precision: 'fp32'         # ONNX/CPU：'fp32' 或 'int8'（约快3倍，需要支持VNNI的CPU）
+      threads: 0                # ONNX/CPU 线程数，0 = 自动
+      temperature: 0.8
 
     cosyvoice_tts: # Cosy Voice TTS 连接到 gradio webui
       # 查看他们的文档以了解部署和以下配置的含义
@@ -500,6 +518,7 @@ live_config:
   tiktok_live:
     # 主播的TikTok用户名（例如 '@your_name'）。运行: uv run python scripts/run_tiktok_live.py
     # 需要额外依赖: uv sync --extra tiktok
+    # 需要 system_config.enable_proxy: true，且网页客户端连接到 ws://localhost:12393/proxy-ws
     unique_id: ""
     batch_size: 3 # 每次回复合并的最近评论数上限
     max_pending_comments: 20 # VTuber忙碌时最多保留的评论数（超出时丢弃最旧的）
@@ -507,3 +526,17 @@ live_config:
     response_timeout: 90.0 # 等待回复结束的最长时间（秒）
     include_nickname: true # 在每条评论前加上观众昵称
     blocked_words: [] # 包含这些词的评论将被忽略
+  # 游玩为 Neuro-sama 制作的游戏（Neuro Game SDK, https://github.com/VedalAI/neuro-sdk）。
+  # 运行: uv run python scripts/run_neuro_game.py，然后用 NEURO_SDK_WS_URL=ws://localhost:8000 启动游戏
+  # 需要 system_config.enable_proxy: true 角色才能评论游戏。
+  neuro_game:
+    host: 'localhost'
+    port: 8000
+    model: '' # 选择动作的LLM；留空则与角色使用同一模型（需支持工具调用）
+    temperature: 0.3 # 越低越稳定
+    max_retries: 3 # 动作无效或失败时的重试次数
+    max_context: 20 # 决策时保留的最近游戏消息数
+    act_on_context: false # 游戏未要求时也主动执行动作
+    comment_on_context: true # 评论游戏事件
+    comment_on_actions: true # 评论自己执行的动作
+    max_pending_comments: 3 # 角色说话时最多保留的游戏消息数
