@@ -1,4 +1,4 @@
-"""Generate one local VieNeu sample for the isolated mesh preview, never the live queue."""
+"""Generate one local VieNeu sample for the Draco preview page, never the live queue."""
 from pathlib import Path
 import os
 import sys

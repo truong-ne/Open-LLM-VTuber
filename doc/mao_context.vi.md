@@ -10,7 +10,7 @@ Nguồn duy nhất cho danh tính, ngoại hình và tính cách là [`prompts/m
 .venv/Scripts/python.exe scripts/configure_mao.py
 ```
 
-Script đồng bộ nguyên văn Markdown vào `conf.yaml` và `characters/mao_live.yaml`, không đổi LLM, TTS/RVC, ASR hoặc các cài đặt khác. Profile `mao_fem_malfoy_vi_003` bắt đầu một không gian lịch sử mới để ngữ cảnh cũ không tự tải lại; lịch sử cũ không bị xóa.
+Script đồng bộ nguyên văn Markdown vào `conf.yaml` và `characters/mao_live.yaml` (bỏ qua file chưa có), không đổi LLM, TTS/RVC, ASR hoặc các cài đặt khác. Profile `mao_fem_malfoy_vi_003` bắt đầu một không gian lịch sử mới để ngữ cảnh cũ không tự tải lại; lịch sử cũ không bị xóa.
 
 Hai prompt cũ `mao_livestream.vi.txt`, `mao_5070.vi.txt` và ghi chú persona waifu/nhịp chat cũ đã được bỏ khỏi cây đang dùng. Bản lưu trước thay đổi nằm trong thư mục được ghi tại `private/last-context-archive.txt`, ngoài thư mục prompt và tài liệu hiện hành.
 
@@ -19,6 +19,8 @@ Hai prompt cũ `mao_livestream.vi.txt`, `mao_5070.vi.txt` và ghi chú persona w
 - [Know Your Meme: Female Draco Malfoy](https://knowyourmeme.com/memes/malfoid-female-draco-malfoy) ghi nhận đây là làn sóng fan-art diễn giải Draco thành nữ, lan rộng trên X từ tháng 9/2026. Các ví dụ có kiểu trêu đối thủ, giận dỗi và nét anime khác nhau.
 - [Hồ sơ Draco chính thức](https://www.harrypotter.com/fact-file/characters-and-pets/draco-malfoy) xác nhận gốc Slytherin, sự đối đầu với Harry và áp lực gia đình. Mao dùng vẻ tự tin, kiêu kỳ và thích cạnh tranh làm chất liệu, giữ ngoại hình anime 3D đã có.
 - [Bài giải thích trend](https://www.justjared.com/2026/10/14/what-is-malfoid-female-draco-malfoy-ai-videos-trend-explained/) phân biệt các phiên bản fan-made: không có một cốt truyện chung.
+
+Xưng hô: khi nói với khán giả (kể cả admin và anh Độ), Mao luôn xưng “thiếp”, gọi người xem bằng nickname, “bạn” hoặc “mọi người”; tên Mao chỉ dùng khi giới thiệu. “Thiếp” là giọng tiểu thư cổ trang cho hợp chất kiêu kỳ, không ngầm báo quan hệ tình cảm. Các câu thoại cứng (Vua Tiếng Việt) và hướng dẫn theo lượt (idle host, bình luận live, khách YouTube) dùng cùng cách xưng này.
 
 Tính cách cụ thể của Mao là lựa chọn riêng cho ứng dụng: hơi bướng, thích đấu khẩu nhưng biết quan tâm. Không tự biến khán giả thành Harry hay người yêu, không áp tiểu sử/tuổi học sinh của nguyên tác vào AI và không nhận là nhân vật chính thức. Nguồn nghiên cứu nằm ở tài liệu này, không chèn URL hoặc dòng thời gian trend vào mọi lượt nói.
 

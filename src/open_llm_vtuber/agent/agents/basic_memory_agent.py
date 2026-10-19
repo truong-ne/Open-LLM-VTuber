@@ -898,7 +898,7 @@ class BasicMemoryAgent(AgentInterface):
                             "role": "user",
                             "content": (
                                 "Lượt vừa rồi chưa có câu nào để đọc. Dựa vào chủ đề hiện tại, "
-                                "nói một nhận xét cụ thể của Mao trong một hoặc hai câu ngắn, "
+                                "nói một nhận xét cụ thể của Mao, xưng thiếp, trong một hoặc hai câu ngắn, "
                                 "có dấu chấm kết câu. Chỉ xuất lời thoại hoàn chỉnh; không chỉ "
                                 "xuất thẻ cảm xúc, không hỏi người xem."
                             ),

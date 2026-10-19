@@ -6,6 +6,42 @@ from dataclasses import dataclass, replace
 
 NATIVE_CUES = {"cười", "thở dài", "hắng giọng"}
 CUE_PATTERN = re.compile(r"\[(cười|thở dài|hắng giọng)\]", re.IGNORECASE)
+TAG_PATTERN = re.compile(r"\[([^\[\]]+)\]")
+SOLEMN_PATTERN = re.compile(
+    r"\b(tưởng niệm|hy sinh|hi sinh|liệt sĩ|mất mát|chia buồn|qua đời)\b", re.I
+)
+PROUD_PATTERN = re.compile(r"\b(tự hào|biết ơn|quê hương|yêu nước)\b", re.I)
+TAG_MOODS = {
+    "sadness": ("gentle", 0.92, 180),
+    "sad": ("gentle", 0.92, 180),
+    "fear": ("gentle", 0.92, 180),
+    "shy": ("bashful", 0.94, 170),
+    "smirk": ("playful", 0.98, 110),
+    "joy": ("bright", 1.06, 80),
+    "surprise": ("curious", 0.97, 150),
+    "surprised": ("curious", 0.97, 150),
+    "tilt": ("curious", 0.97, 150),
+    "refuse": ("firm", 1.0, 140),
+    "anger": ("firm", 1.0, 100),
+    "neutral": ("neutral", 1.0, 0),
+}
+# Untagged fallbacks, checked in order.
+TEXT_MOODS = tuple(
+    (re.compile(pattern, re.I), mood)
+    for pattern, mood in (
+        (
+            r"\b((?:mình|thiếp) (?:nghe|hiểu)|không sao|buồn|mệt mỏi|chia buồn|tiếc quá|tiếc ghê)\b",
+            ("gentle", 0.92, 180),
+        ),
+        (r"\b(ngại quá|ngượng|mắc cỡ)\b", ("bashful", 0.94, 170)),
+        (r"\b(trêu|ngọt thế|ghẹo)\b", ("playful", 0.98, 110)),
+        (
+            r"\b(vui quá|hay quá|tuyệt quá|thích quá|chúc mừng)\b",
+            ("bright", 1.06, 80),
+        ),
+    )
+)
+GREETING_PATTERN = re.compile(r"\b(cảm ơn|xin chào|hi|chào|mới ghé)\b", re.I)
 
 
 @dataclass(frozen=True)
@@ -18,50 +54,22 @@ class SpeechProsody:
 
 def plan_speech(text: str) -> SpeechProsody:
     """Prefer the model's explicit intent; use modest text-based fallbacks."""
-    tags = re.findall(r"\[([^\[\]]+)\]", text.casefold())
+    tags = TAG_PATTERN.findall(text.casefold())
     cue = next((tag for tag in tags if tag in NATIVE_CUES), None)
     # Respectful subjects override an accidental smile/laugh emitted by the LLM.
-    if re.search(
-        r"\b(tưởng niệm|hy sinh|hi sinh|liệt sĩ|mất mát|chia buồn|qua đời)\b",
-        text,
-        re.I,
-    ):
+    if SOLEMN_PATTERN.search(text):
         return SpeechProsody("solemn", 0.95, 180)
-    if re.search(r"\b(tự hào|biết ơn|quê hương|yêu nước)\b", text, re.I):
+    if PROUD_PATTERN.search(text):
         return SpeechProsody("proud", 0.98, 140)
-    moods = {
-        "sadness": ("gentle", 0.92, 180),
-        "sad": ("gentle", 0.92, 180),
-        "fear": ("gentle", 0.92, 180),
-        "shy": ("bashful", 0.94, 170),
-        "smirk": ("playful", 0.98, 110),
-        "joy": ("bright", 1.06, 80),
-        "surprise": ("curious", 0.97, 150),
-        "surprised": ("curious", 0.97, 150),
-        "tilt": ("curious", 0.97, 150),
-        "refuse": ("firm", 1.0, 140),
-        "anger": ("firm", 1.0, 100),
-        "neutral": ("neutral", 1.0, 0),
-    }
     for tag in tags:
-        if tag in moods:
-            mood, tempo, pause = moods[tag]
-            return SpeechProsody(mood, tempo, pause, cue)
-    if re.search(
-        r"\b(mình nghe|mình hiểu|không sao|buồn|mệt mỏi|chia buồn|tiếc quá|tiếc ghê)\b",
-        text,
-        re.I,
-    ):
-        return SpeechProsody("gentle", 0.92, 180, cue)
-    if re.search(r"\b(ngại quá|ngượng|mắc cỡ)\b", text, re.I):
-        return SpeechProsody("bashful", 0.94, 170, cue)
-    if re.search(r"\b(trêu|ngọt thế|ghẹo)\b", text, re.I):
-        return SpeechProsody("playful", 0.98, 110, cue)
-    if re.search(r"\b(vui quá|hay quá|tuyệt quá|thích quá|chúc mừng)\b", text, re.I):
-        return SpeechProsody("bright", 1.06, 80, cue)
+        if tag in TAG_MOODS:
+            return SpeechProsody(*TAG_MOODS[tag], cue)
+    for pattern, mood in TEXT_MOODS:
+        if pattern.search(text):
+            return SpeechProsody(*mood, cue)
     if "?" in text:
         return SpeechProsody("curious", 0.97, 150, cue)
-    if re.search(r"\b(cảm ơn|xin chào|hi|chào|mới ghé)\b", text, re.I):
+    if GREETING_PATTERN.search(text):
         return SpeechProsody("warm", 0.98, 100, cue)
     return SpeechProsody(native_cue=cue)
 

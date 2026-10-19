@@ -29,7 +29,7 @@ const path=require('node:path');
   await page.evaluate(()=>{
    document.body.dataset.mode='window';
    const subtitle=document.createElement('section');subtitle.id='mao-window-subtitle';Object.assign(subtitle.style,{position:'fixed',bottom:'12px',left:'50%',transform:'translateX(-50%)'});
-   const box=document.createElement('div'),text=document.createElement('p');text.textContent='Hết giờ! Tiếc quá nè, Mao đợi mà chưa thấy ai thử đoán! Đáp án là mưa rào. Mưa rào là cơn mưa thường đến nhanh, hạt to và có thể tạnh khá nhanh. Kiểu đang đi giữa trời nắng mà phải chạy vội vào mái hiên trú mưa đó!';box.append(text);subtitle.append(box);document.body.append(subtitle);
+   const box=document.createElement('div'),text=document.createElement('p');text.textContent='Hết giờ! Tiếc quá nè, thiếp đợi mà chưa thấy ai thử đoán! Đáp án là mưa rào. Mưa rào là cơn mưa thường đến nhanh, hạt to và có thể tạnh khá nhanh. Kiểu đang đi giữa trời nắng mà phải chạy vội vào mái hiên trú mưa đó!';box.append(text);subtitle.append(box);document.body.append(subtitle);
   });
   for(const width of [1000,460]){
    await page.setViewportSize({width,height:700});

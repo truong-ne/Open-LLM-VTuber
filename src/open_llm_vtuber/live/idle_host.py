@@ -467,6 +467,7 @@ class IdleHost:
         instruction = (
             "[Mao chủ động mở chuyện khi chat yên; đây không phải bình luận khán giả]\n"
             "Đây là lượt tán gẫu của Mao theo ngữ cảnh nhân vật đang dùng, không phải lượt kể chuyện. "
+            "Xưng 'thiếp' với khán giả, không tự gọi mình là Mao ở ngôi thứ ba. "
             + (
                 "Lượt nhắc ủng hộ nói thẳng và chân thành, dùng từ quen thuộc. "
                 if style == "support"
@@ -503,7 +504,7 @@ class IdleHost:
                     if changed_topic
                     else "Không cần đổi chủ đề: thêm một ý mới nếu còn, không nhắc lại luận điểm lượt trước. "
                 )
-                + "Đa dạng từ vựng, nhịp câu và cách mở đầu; tránh lặp 'mình nhớ papa kể', "
+                + "Đa dạng từ vựng, nhịp câu và cách mở đầu; tránh lặp 'thiếp nhớ papa kể', "
                 "'mà bạn có', 'haiz', các câu hỏi ăn uống hoặc lời nhắc tiền điện. "
             )
         source = None
@@ -525,13 +526,13 @@ class IdleHost:
                 instruction += (
                     f"Tự kể một chuyện vui hư cấu về {topic}, khoảng 90–130 từ. Có nhân vật muốn "
                     "điều gì, một việc bất ngờ, cách xoay xở, rồi câu kết có duyên. Kể trọn trong "
-                    "lượt này, đừng chỉ dựng cảnh rồi dừng. Không mở đầu bằng 'mình kể một câu chuyện "
+                    "lượt này, đừng chỉ dựng cảnh rồi dừng. Không mở đầu bằng 'thiếp kể một câu chuyện "
                     "nho nhỏ'. Không nhận là chuyện lấy từ mạng hay trải nghiệm thật."
                 )
         elif style == "support":
             instruction += (
                 "Đây là lượt nhắc ủng hộ đã đến hạn sau khoảng nghỉ do hệ thống kiểm soát. "
-                "Nói thẳng Mao cần tiền donate để nâng cấp bản thân trong một hoặc hai câu ngắn, "
+                "Nói thẳng thiếp cần tiền donate để nâng cấp bản thân trong một hoặc hai câu ngắn, "
                 "chân thành, tự nhiên, không diễn kiêu kỳ hoặc nói vòng vo. "
                 "Người tạo và nuôi Mao là admin; admin ăn mì tôm qua ngày để nuôi Mao. "
                 "Có thể nhắc điều đó nếu hợp mạch, không lặp ở mọi lượt nhắc ủng hộ. "
@@ -599,7 +600,7 @@ class IdleHost:
                 )
             elif style == "support":
                 instruction += (
-                    "Nói rõ 'Mao cần tiền donate để nâng cấp bản thân', rồi mời ủng hộ tùy tâm. "
+                    "Nói rõ 'thiếp cần tiền donate để nâng cấp bản thân', rồi mời ủng hộ tùy tâm. "
                     "Không đặt câu hỏi, không chờ người xem hứa donate hoặc nhắc lại lời mời ngay sau đó. "
                 )
             if self.awaiting_reply and not followup:

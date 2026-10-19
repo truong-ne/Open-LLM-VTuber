@@ -23,11 +23,14 @@ LiteralDumper.add_representer(
 
 def main():
     persona = (ROOT / PERSONA_PATH).read_text(encoding="utf-8")
-    if PERSONA_MARKER not in persona or not persona.strip():
+    if PERSONA_MARKER not in persona:
         raise ValueError("Mao's Markdown persona is missing its identity marker")
-    paths = ["conf.yaml", "characters/mao_live.yaml"]
-    for relative in paths:
+    for relative in ("conf.yaml", "characters/mao_live.yaml"):
         path = ROOT / relative
+        # The optional live character file is private and may not exist yet.
+        if not path.is_file():
+            print(f"Skipped missing {relative}")
+            continue
         config = yaml.safe_load(path.read_text(encoding="utf-8"))
         character = config["character_config"]
         character.update(
