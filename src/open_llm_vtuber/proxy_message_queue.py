@@ -14,6 +14,7 @@ class ProxyMessageQueue:
         """Initialize the message queue manager"""
         self.message_queue: Deque[Dict] = deque()
         self._conversation_active = False
+        self.external_busy = False
         self.lock = asyncio.Lock()
         self._consumer_task = None
         self._forward_func = None
@@ -29,7 +30,9 @@ class ProxyMessageQueue:
         self._forward_func = forward_func
         logger.debug("Message queue initialized with forward function")
 
-    def queue_message(self, message: Dict, sender_id: Optional[str] = None) -> None:
+    def queue_message(
+        self, message: Dict, sender_id: Optional[str] = None, *, priority: bool = False
+    ) -> None:
         """
         Add a message to the queue.
 
@@ -37,12 +40,26 @@ class ProxyMessageQueue:
             message: The message to queue
             sender_id: Optional ID of the client that sent the message
         """
+        # Supersede only queued automatic chatter. The active spoken turn always
+        # runs to completion; real comments and operator input keep their order.
+        if message.get("source") == "mao-idle-host":
+            if self.message_queue:
+                return
+        else:
+            self.message_queue = deque(
+                item
+                for item in self.message_queue
+                if item["message"].get("source") != "mao-idle-host"
+            )
         # Store the message along with its sender ID
         queue_item = {"message": message, "sender_id": sender_id}
         logger.info(
             f"Queuing message: {message.get('text', '')} (active conversation: {self._conversation_active})"
         )
-        self.message_queue.append(queue_item)
+        if priority:
+            self.message_queue.appendleft(queue_item)
+        else:
+            self.message_queue.append(queue_item)
 
         # Start consumer if needed
         self._ensure_consumer_running()
@@ -97,7 +114,11 @@ class ProxyMessageQueue:
 
                 # Try to consume a message if appropriate
                 async with self.lock:
-                    if not self._conversation_active and self.has_pending_messages():
+                    if (
+                        not self.external_busy
+                        and not self._conversation_active
+                        and self.has_pending_messages()
+                    ):
                         # Get next message
                         queue_item = self.message_queue.popleft()
                         message = queue_item["message"]

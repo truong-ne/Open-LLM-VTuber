@@ -39,8 +39,10 @@ def init_logger(console_log_level: str = "INFO") -> None:
     logger.add(
         "logs/debug_{time:YYYY-MM-DD}.log",
         rotation="10 MB",
-        retention="30 days",
-        level="DEBUG",
+        retention="7 days",
+        compression="gz",
+        level=console_log_level,
+        enqueue=True,
         format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {message} | {extra}",
         backtrace=True,
         diagnose=True,

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+import math
 from typing import Dict, Optional
 from fastapi import WebSocket
 from loguru import logger
@@ -8,6 +9,7 @@ import aiohttp
 from starlette.websockets import WebSocketDisconnect
 
 from .proxy_message_queue import ProxyMessageQueue
+from .live.comment_feed import CommentFeed
 
 
 class ProxyHandler:
@@ -16,7 +18,12 @@ class ProxyHandler:
     This enables scenarios like having a web client and a live platform both connected to the same VTuber server.
     """
 
-    def __init__(self, server_url: str = "ws://localhost:12393/client-ws"):
+    def __init__(
+        self,
+        server_url: str = "ws://localhost:12393/client-ws",
+        word_game=None,
+        singing=None,
+    ):
         """
         Initialize the proxy handler.
 
@@ -24,10 +31,19 @@ class ProxyHandler:
             server_url: The WebSocket URL of the actual server
         """
         self.server_url = server_url
+        self.word_game = word_game
+        self.singing = singing
+        self._last_sing_notice = float("-inf")
+        if singing is not None:
+            singing.proxy = self
+        self.comment_feed = CommentFeed()
+        if word_game is not None:
+            word_game.proxy = self
         self.server_ws: Optional[aiohttp.ClientWebSocketResponse] = None
         self.clients: Dict[str, WebSocket] = {}
         self.connected = False
         self.server_task: Optional[asyncio.Task] = None
+        self._init_config: Optional[dict] = None
         self.lock = asyncio.Lock()
 
         # Initialize message queue manager
@@ -46,6 +62,7 @@ class ProxyHandler:
                 return
 
             try:
+                self._init_config = None
                 # Create session if not exists
                 if not self._session:
                     self._session = aiohttp.ClientSession()
@@ -109,10 +126,29 @@ class ProxyHandler:
         if not self.connected:
             await self.connect_to_server()
 
+        await websocket.send_json(
+            {
+                "type": "conversation-state",
+                "active": self.message_queue.conversation_active,
+            }
+        )
+        if self.word_game is not None:
+            await websocket.send_json(self.word_game.game.snapshot())
+        if self.singing is not None:
+            await websocket.send_json(self.singing.snapshot())
+
         if self.connected:
             try:
-                init_request = {"type": "request-init-config", "client_id": client_id}
-                await self.forward_to_server(init_request, client_id)
+                if self._init_config is not None:
+                    # A chat reader reconnect must not reload the avatar or set
+                    # the already-speaking desktop back to idle.
+                    await websocket.send_json(self._init_config)
+                else:
+                    init_request = {
+                        "type": "request-init-config",
+                        "client_id": client_id,
+                    }
+                    await self.forward_to_server(init_request, client_id)
             except Exception as e:
                 logger.error(f"Failed to request initialization: {e}")
 
@@ -121,17 +157,40 @@ class ProxyHandler:
             while True:
                 message = await websocket.receive_json()
 
+                if message.get("type") == "live-comment":
+                    self.comment_feed.add(message)
+                    continue
+                if message.get("type") == "text-input" and message.get(
+                    "source"
+                ) not in (
+                    "mao-idle-host",
+                    "tiktok-live",
+                    "youtube-live",
+                    "vua-tieng-viet",
+                ):
+                    self.comment_feed.add({**message, "source": "desktop"})
+
+                if self.singing is not None and await self.handle_sing_message(
+                    message, client_id
+                ):
+                    continue
+                if self.word_game is not None and await self.handle_game_message(
+                    message, client_id
+                ):
+                    continue
+                # Speech scripts are produced only by the local game service.
+                for field in ("game_speech", "game_round_id", "game_kind"):
+                    message.pop(field, None)
+                if message.get("source") == "vua-tieng-viet":
+                    message.pop("source", None)
+
                 # Process text-input messages through the queue
                 if message.get("type") == "text-input":
                     # Queue the message with the sender's ID
                     self.message_queue.queue_message(message, client_id)
                 # Handle interrupt signals
                 elif message.get("type") == "interrupt-signal":
-                    logger.info(
-                        "Received interrupt signal, marking conversation as inactive"
-                    )
-                    # Mark conversation as inactive to allow processing of next message
-                    self.message_queue.conversation_active = False
+                    logger.info("Received interrupt; wait for backend to end the turn")
                     # Forward the interrupt signal directly
                     await self.forward_to_server(message, client_id)
                 else:
@@ -143,6 +202,137 @@ class ProxyHandler:
         except Exception as e:
             logger.error(f"Error handling client connection: {e}")
             await self.handle_client_disconnect(client_id)
+
+    async def handle_sing_message(self, message, client_id):
+        from .live.singing import parse_song_command
+        from .live.vua_tieng_viet import COMMAND
+
+        kind, source = message.get("type"), message.get("source")
+        if kind not in ("game-comment", "text-input"):
+            return False
+        text = str(message.get("text", ""))[:300]
+        if parse_song_command(text) is not None:
+            stamp = message.get("created_at", 0)
+            if (
+                not isinstance(stamp, (int, float))
+                or isinstance(stamp, bool)
+                or not math.isfinite(stamp)
+            ):
+                stamp = 0
+            result = await self.singing.submit(
+                text,
+                message.get("nickname", "bạn"),
+                event_id=f"{source}:{message.get('event_id')}"
+                if message.get("event_id")
+                else "",
+                created_at=stamp,
+                operator=kind == "text-input"
+                and source not in ("youtube-live", "tiktok-live", "mao-idle-host"),
+            )
+            if (
+                result["status"] not in ("duplicate", "stale")
+                and kind == "game-comment"
+            ):
+                self.comment_feed.add(message)
+            await self.clients[client_id].send_json(result)
+            if (
+                result["status"] not in ("duplicate", "stale")
+                and self.singing.clock() - self._last_sing_notice >= 3
+            ):
+                self._last_sing_notice = self.singing.clock()
+                # Feedback stays on Mao's own screen; do not post to live chat
+                # or produce one spoken reply for every repeated command.
+                await self.broadcast_to_clients(result, exclude_client=client_id)
+            if kind == "game-comment":
+                await self.clients[client_id].send_json(
+                    {
+                        "type": "game-comment-ack",
+                        "event_id": message.get("event_id", ""),
+                        "status": result["status"],
+                    }
+                )
+            # Restore the game reader's state if an earlier command paused it.
+            if self.word_game:
+                await self.clients[client_id].send_json(self.word_game.game.snapshot())
+            return True
+        if self.singing.active and COMMAND.fullmatch(text.strip()):
+            await self.clients[client_id].send_json(
+                self.singing.reply(
+                    "busy", "Mao đang hát; chờ hết tiết mục rồi chơi nhé!"
+                )
+            )
+            if kind == "game-comment":
+                self.comment_feed.add(message)
+                await self.clients[client_id].send_json(
+                    {
+                        "type": "game-comment-ack",
+                        "event_id": message.get("event_id", ""),
+                        "status": "busy",
+                    }
+                )
+            if self.word_game:
+                await self.clients[client_id].send_json(self.word_game.game.snapshot())
+            return True
+        if self.singing.active and source == "mao-idle-host":
+            await self.clients[client_id].send_json(self.singing.snapshot())
+            return True
+        return False
+
+    async def handle_game_message(self, message, client_id):
+        from .live.vua_tieng_viet import COMMAND
+
+        kind, source = message.get("type"), message.get("source")
+        game = self.word_game.game
+        if kind == "game-comment":
+            text = str(message.get("text", ""))[:300]
+            author = str(
+                message.get("author_id") or message.get("nickname") or client_id
+            )[:120]
+            stamp = message.get("created_at", 0)
+            if (
+                not isinstance(stamp, (int, float))
+                or isinstance(stamp, bool)
+                or not math.isfinite(stamp)
+            ):
+                stamp = 0
+            status = await self.word_game.submit(
+                str(message.get("nickname") or "bạn")[:40],
+                text,
+                player_id=f"{str(source)[:80]}:{author}",
+                event_id=str(message.get("event_id", ""))[:160],
+                created_at=stamp,
+            )
+            if status not in ("duplicate", "stale"):
+                self.comment_feed.add(message)
+            await self.clients[client_id].send_json(
+                {
+                    "type": "game-comment-ack",
+                    "event_id": message.get("event_id", ""),
+                    "status": status,
+                }
+            )
+            # A reader optimistically pauses normal chat on the command. Even
+            # a rejected cooldown command must restore its authoritative state.
+            if COMMAND.fullmatch(text.strip()):
+                await self.clients[client_id].send_json(game.snapshot())
+            return True
+        if kind != "text-input":
+            return False
+        text = str(message.get("text", ""))[:300]
+        if source == "mao-idle-host" and game.active:
+            await self.clients[client_id].send_json(game.snapshot())
+            return True
+        if COMMAND.fullmatch(text.strip()) or (
+            game.active
+            and source not in ("mao-idle-host", "youtube-live", "tiktok-live")
+        ):
+            await self.word_game.submit(
+                str(message.get("nickname") or "Bạn trên desktop")[:40],
+                text,
+                player_id="desktop:" + client_id,
+            )
+            return True
+        return False
 
     async def handle_client_disconnect(self, client_id: str):
         """
@@ -220,13 +410,17 @@ class ProxyHandler:
                             if not data:  # Check if parsed data is empty
                                 continue
 
-                            # Check for conversation end signal
-                            if (
-                                data.get("type") == "control"
-                                and data.get("text") == "conversation-chain-end"
-                            ):
-                                logger.info("Received conversation end signal")
-                                self.message_queue.conversation_active = False
+                            if data.get("type") == "set-model-and-conf":
+                                self._init_config = {
+                                    **(self._init_config or {}),
+                                    **data,
+                                }
+                            if data.get("type") == "control":
+                                if data.get("text") == "conversation-chain-start":
+                                    self.message_queue.conversation_active = True
+                                elif data.get("text") == "conversation-chain-end":
+                                    logger.info("Received conversation end signal")
+                                    self.message_queue.conversation_active = False
 
                             # Broadcast the message to all clients
                             await self.broadcast_to_clients(data)
@@ -269,11 +463,11 @@ class ProxyHandler:
             if "audio" not in message
             else {
                 **{k: v for k, v in message.items() if k != "audio"},
-                "audio": f"[Audio data, {len(message.get('audio', ''))} bytes truncated]",
+                "audio": f"[Audio data, {len(message.get('audio') or '')} bytes truncated]",
             }
         )
 
-        if "volumes" in log_msg and len(log_msg.get("volumes", [])) > 10:
+        if "volumes" in log_msg and len(log_msg.get("volumes") or []) > 10:
             log_msg["volumes"] = f"[{len(message.get('volumes', []))} volume values]"
 
         logger.debug(f"Broadcasting to clients (excluding {exclude_client}): {log_msg}")
@@ -303,9 +497,24 @@ class ProxyHandler:
             message: The message to forward
             sender_id: ID of the client sending the message
         """
-        # Forward to server
-        await self.forward_to_server(message, sender_id)
-
-        # For transcription messages, broadcast to other clients
+        if self.word_game is not None and message.get("source") == "vua-tieng-viet":
+            if not self.word_game.game.announcement_valid(
+                message.get("game_round_id"), message.get("game_kind")
+            ):
+                if message.get("type") == "text-input":
+                    self.message_queue.conversation_active = False
+                    await self.broadcast_to_clients(
+                        {"type": "conversation-state", "active": False}
+                    )
+                return
+        # Queue-generated transcripts are local display/activity events, not
+        # another backend input (which would be interpreted twice).
         if message.get("type") == "user-input-transcription":
-            await self.broadcast_to_clients(message, exclude_client=sender_id)
+            await self.broadcast_to_clients(
+                message,
+                exclude_client=None
+                if message.get("source") in ("tiktok-live", "youtube-live")
+                else sender_id,
+            )
+            return
+        await self.forward_to_server(message, sender_id)

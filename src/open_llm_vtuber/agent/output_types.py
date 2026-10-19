@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
-from typing import List, Optional
+from typing import List, Optional, Dict
 from abc import ABC, abstractmethod
+from ..tts.prosody import SpeechProsody
 
 
 @dataclass
@@ -8,8 +9,11 @@ class Actions:
     """Represents actions that can be performed alongside text output"""
 
     expressions: Optional[List[str] | List[int]] = None
+    motions: Optional[List[str]] = None
     pictures: Optional[List[str]] = None
     sounds: Optional[List[str]] = None
+    body: Optional[Dict[str, str]] = None
+    pose: Optional[Dict[str, float]] = None
 
     def to_dict(self) -> dict:
         """Convert Actions object to a dictionary for JSON serialization"""
@@ -57,6 +61,7 @@ class SentenceOutput(BaseOutput):
     display_text: DisplayText  # Changed from str to DisplayText
     tts_text: str  # Text for TTS
     actions: Actions
+    speech: Optional[SpeechProsody] = None
 
     async def __aiter__(self):
         """Yield the sentence pair and actions"""

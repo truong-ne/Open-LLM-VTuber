@@ -8,6 +8,7 @@ It uses FastAPI for the server and Starlette for static file serving.
 
 import os
 import shutil
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -17,6 +18,8 @@ from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
 from .service_context import ServiceContext
 from .config_manager.utils import Config
+from .live.vua_tieng_viet import WordGameService
+from .live.singing import SingingService
 
 
 # Create a custom StaticFiles class that adds CORS headers
@@ -72,8 +75,27 @@ class WebSocketServer:
     """
 
     def __init__(self, config: Config, default_context_cache: ServiceContext = None):
-        self.app = FastAPI(title="Open-LLM-VTuber Server")  # Added title for clarity
         self.config = config
+        self.word_game = WordGameService(require_presentation=True)
+        self.singing = SingingService()
+
+        @asynccontextmanager
+        async def lifespan(app):
+            self.word_game.configure_speech(self.default_context_cache.tts_engine)
+            await self.word_game.start()
+            await self.singing.start()
+            try:
+                yield
+            finally:
+                await self.word_game.stop()
+                await self.singing.stop()
+
+        self.app = FastAPI(title="Open-LLM-VTuber Server", lifespan=lifespan)
+
+        @self.app.get("/api/vuatiengviet/state")
+        async def word_game_state():
+            return self.word_game.game.snapshot()
+
         self.default_context_cache = (
             default_context_cache or ServiceContext()
         )  # Use provided context or initialize a new empty one waiting to be loaded
@@ -105,7 +127,11 @@ class WebSocketServer:
             port = system_config.port
             server_url = f"ws://{host}:{port}/client-ws"
             self.app.include_router(
-                init_proxy_route(server_url=server_url),
+                init_proxy_route(
+                    server_url=server_url,
+                    word_game=self.word_game,
+                    singing=self.singing,
+                ),
             )
 
         # Mount cache directory first (to ensure audio file access)

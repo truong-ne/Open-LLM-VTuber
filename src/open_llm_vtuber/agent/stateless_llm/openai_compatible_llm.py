@@ -30,6 +30,7 @@ class AsyncLLM(StatelessLLMInterface):
         organization_id: str = "z",
         project_id: str = "z",
         temperature: float = 1.0,
+        extra_body: Dict[str, Any] | None = None,
     ):
         """
         Initializes an instance of the `AsyncLLM` class.
@@ -45,6 +46,7 @@ class AsyncLLM(StatelessLLMInterface):
         self.base_url = base_url
         self.model = model
         self.temperature = temperature
+        self.extra_body = extra_body
         self.client = AsyncOpenAI(
             base_url=base_url,
             organization=organization_id,
@@ -93,9 +95,13 @@ class AsyncLLM(StatelessLLMInterface):
                     {"role": "system", "content": system},
                     *messages,
                 ]
-            logger.debug(f"Messages: {messages_with_system}")
-
             available_tools = tools if self.support_tools else NOT_GIVEN
+            logger.debug(
+                "Chat request: model={}, messages={}, tools={}",
+                self.model,
+                len(messages_with_system),
+                len(available_tools) if isinstance(available_tools, list) else 0,
+            )
 
             stream: AsyncStream[
                 ChatCompletionChunk
@@ -105,9 +111,7 @@ class AsyncLLM(StatelessLLMInterface):
                 stream=True,
                 temperature=self.temperature,
                 tools=available_tools,
-            )
-            logger.debug(
-                f"Tool Support: {self.support_tools}, Available tools: {available_tools}"
+                extra_body=self.extra_body,
             )
 
             async for chunk in stream:

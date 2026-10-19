@@ -95,7 +95,16 @@ class WebSocketHandler:
             "audio-play-start": self._handle_audio_play_start,
             "request-init-config": self._handle_init_config_request,
             "heartbeat": self._handle_heartbeat,
+            "pet-motion-played": self._handle_pet_motion_played,
         }
+
+    async def _handle_pet_motion_played(self, websocket, client_uid, data):
+        """Acknowledge a gesture after the desktop renders its first frame."""
+        motion = data.get("motion")
+        if motion not in self.default_context_cache.live2d_model.CONTEXT_MOTIONS:
+            return
+        logger.info(f"Pet context gesture rendered: {motion} (client {client_uid})")
+        await websocket.send_json({"type": "pet-motion-played", "motion": motion})
 
     async def handle_new_connection(
         self, websocket: WebSocket, client_uid: str
@@ -390,6 +399,9 @@ class WebSocketHandler:
                 context=context,
                 heard_response=heard_response,
             )
+            await websocket.send_text(
+                json.dumps({"type": "control", "text": "conversation-chain-end"})
+            )
 
     async def _handle_history_list_request(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
@@ -504,7 +516,8 @@ class WebSocketHandler:
                     # Detected audio activity (voice)
                     self.received_data_buffers[client_uid] = np.append(
                         self.received_data_buffers[client_uid],
-                        np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32),
+                        np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
+                        / 32768.0,
                     )
                     await websocket.send_text(
                         json.dumps({"type": "control", "text": "mic-audio-end"})

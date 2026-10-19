@@ -96,12 +96,17 @@ class OllamaConfig(OpenAICompatibleConfig):
     llm_api_key: str = Field("default_api_key", alias="llm_api_key")
     keep_alive: float = Field(-1, alias="keep_alive")
     unload_at_exit: bool = Field(True, alias="unload_at_exit")
+    think: bool | None = Field(None, alias="think")
     interrupt_method: Literal["system", "user"] = Field(
         "system", alias="interrupt_method"
     )
 
     # Ollama-specific descriptions
     _OLLAMA_DESCRIPTIONS: ClassVar[dict[str, Description]] = {
+        "think": Description(
+            en="Enable reasoning for supported Ollama models; false gives faster direct replies, null uses the model default.",
+            zh="为支持的 Ollama 模型启用思考；false 直接回复，null 使用模型默认值。",
+        ),
         "llm_api_key": Description(
             en="API key for authentication (defaults to 'default_api_key' for Ollama)",
             zh="API 认证密钥 (Ollama 默认为 'default_api_key')",

@@ -109,6 +109,7 @@ async def handle_sentence_output(
             live2d_model=live2d_model,
             tts_engine=tts_engine,
             websocket_send=websocket_send,
+            speech=output.speech,
         )
     return full_response
 
@@ -151,10 +152,29 @@ async def process_user_input(
     """Process user input, converting audio to text if needed"""
     if isinstance(user_input, np.ndarray):
         logger.info("Transcribing audio input...")
-        input_text = await asr_engine.async_transcribe_np(user_input)
+        detailed = getattr(asr_engine, "async_transcribe_with_details", None)
+        uncertain = False
+        if callable(detailed):
+            result = await detailed(user_input)
+            input_text, uncertain = result.text, result.uncertain
+        else:
+            input_text = await asr_engine.async_transcribe_np(user_input)
         await websocket_send(
-            json.dumps({"type": "user-input-transcription", "text": input_text})
+            json.dumps(
+                {
+                    "type": "user-input-transcription",
+                    "text": input_text,
+                    "uncertain": uncertain,
+                }
+            )
         )
+        if uncertain and input_text.strip():
+            # Do not present unreliable words to the agent as a user's claim.
+            return (
+                "[Thông báo nhận diện giọng nói: câu vừa rồi nghe không rõ. "
+                "Hãy nhờ người nói nhắc lại bằng một câu tiếng Việt ngắn, tự nhiên. "
+                "Không đoán nội dung hay cảm xúc của người nói.]"
+            )
         return input_text
     return user_input
 
@@ -167,16 +187,26 @@ async def finalize_conversation_turn(
 ) -> None:
     """Finalize a conversation turn"""
     if tts_manager.task_list:
-        await asyncio.gather(*tts_manager.task_list)
-        await websocket_send(json.dumps({"type": "backend-synth-complete"}))
-
-        response = await message_handler.wait_for_response(
-            client_uid, "frontend-playback-complete"
+        await tts_manager.wait_for_completion()
+        # Register before notifying the frontend: a fast/empty audio turn can
+        # acknowledge immediately, before a later waiter would be installed.
+        completion = asyncio.create_task(
+            message_handler.wait_for_response(
+                client_uid, "frontend-playback-complete", timeout=60
+            )
         )
-
+        await asyncio.sleep(0)
+        try:
+            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
+            response = await completion
+        finally:
+            if not completion.done():
+                completion.cancel()
+                await asyncio.gather(completion, return_exceptions=True)
         if not response:
             logger.warning(f"No playback completion response from {client_uid}")
-            return
+            # Always release the conversation queue, including a disconnected
+            # or broken player. Do not leave live chat or the host blocked.
 
     await websocket_send(json.dumps({"type": "force-new-message"}))
 

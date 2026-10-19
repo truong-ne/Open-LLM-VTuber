@@ -15,6 +15,7 @@ class OllamaLLM(AsyncLLM):
         temperature: float = 1.0,
         keep_alive: float = -1,
         unload_at_exit: bool = True,
+        think: bool | None = None,
     ):
         self.keep_alive = keep_alive
         self.unload_at_exit = unload_at_exit
@@ -26,6 +27,11 @@ class OllamaLLM(AsyncLLM):
             organization_id=organization_id,
             project_id=project_id,
             temperature=temperature,
+            # The OpenAI-compatible /v1/chat/completions endpoint ignores the
+            # native /api/chat 'think' field. 'none' actually disables thinking.
+            extra_body={"reasoning_effort": "medium" if think else "none"}
+            if think is not None
+            else None,
         )
         try:
             # preload model

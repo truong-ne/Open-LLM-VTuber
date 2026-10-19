@@ -3,8 +3,8 @@ import json
 from uuid import uuid4
 import numpy as np
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, UploadFile, File, Response
-from starlette.responses import JSONResponse
+from fastapi import APIRouter, WebSocket, UploadFile, File, Response, HTTPException
+from starlette.responses import JSONResponse, FileResponse
 from starlette.websockets import WebSocketDisconnect
 from loguru import logger
 from .service_context import ServiceContext
@@ -45,7 +45,7 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
     return router
 
 
-def init_proxy_route(server_url: str) -> APIRouter:
+def init_proxy_route(server_url: str, word_game=None, singing=None) -> APIRouter:
     """
     Create and return API routes for handling proxy connections.
 
@@ -56,7 +56,43 @@ def init_proxy_route(server_url: str) -> APIRouter:
         APIRouter: Configured router with proxy WebSocket endpoint
     """
     router = APIRouter()
-    proxy_handler = ProxyHandler(server_url)
+    proxy_handler = ProxyHandler(server_url, word_game=word_game, singing=singing)
+
+    if word_game is not None:
+
+        @router.post("/api/vuatiengviet/presentation")
+        async def word_game_presented(event: dict):
+            return {"accepted": word_game.mark_presented(event.get("round_id"))}
+
+    if singing is not None:
+
+        @router.get("/api/sing/state")
+        async def sing_state():
+            return singing.snapshot()
+
+        @router.get("/api/sing/songs")
+        async def sing_songs():
+            return {"songs": singing.catalog.public()}
+
+        @router.post("/api/sing/playback")
+        async def sing_playback(event: dict):
+            return await singing.playback(event)
+
+        @router.get("/api/sing/audio/{song_id}")
+        async def sing_audio(song_id: str):
+            song = singing.catalog.songs.get(song_id)
+            if not song or not song["available"] or not song["path"].is_file():
+                raise HTTPException(status_code=404, detail="Song unavailable")
+            # Re-resolve on every request so a replaced symlink cannot expose
+            # files outside the explicitly prepared song directory.
+            path = song["path"].resolve()
+            if not path.is_relative_to(singing.catalog.root):
+                raise HTTPException(status_code=404, detail="Song unavailable")
+            return FileResponse(path, headers={"Cache-Control": "no-store"})
+
+    @router.get("/api/comments")
+    async def comment_feed(after: int = 0, session: str = ""):
+        return proxy_handler.comment_feed.snapshot(after=after, session=session)
 
     @router.websocket("/proxy-ws")
     async def proxy_endpoint(websocket: WebSocket):

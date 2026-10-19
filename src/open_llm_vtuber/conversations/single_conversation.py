@@ -54,10 +54,48 @@ async def process_single_conversation(
         await send_conversation_start_signals(websocket_send)
         logger.info(f"New Conversation Chain {session_emoji} started!")
 
+        if metadata and metadata.get("game_speech"):
+            from ..agent.output_types import DisplayText
+            from ..live.game_speech import (
+                game_speech_chunks,
+                game_speech_prosody,
+                prepared_game_engine,
+            )
+
+            script = metadata["game_speech"]
+            for phrase in game_speech_chunks(script):
+                await tts_manager.speak(
+                    tts_text=phrase,
+                    display_text=DisplayText(
+                        text=phrase,
+                        name=context.character_config.character_name,
+                        avatar=context.character_config.avatar,
+                    ),
+                    actions=None,
+                    live2d_model=context.live2d_model,
+                    tts_engine=prepared_game_engine(context.tts_engine),
+                    websocket_send=websocket_send,
+                    speech=game_speech_prosody(phrase),
+                )
+                # Send each phrase as soon as it is synthesized. Generate the
+                # next while the client plays this one, with one TTS job at a
+                # time rather than competing GPU jobs for the entire script.
+                await tts_manager.wait_for_completion()
+            await finalize_conversation_turn(tts_manager, websocket_send, client_uid)
+            return script
+
         # Process user input
         input_text = await process_user_input(
             user_input, context.asr_engine, websocket_send
         )
+        if not input_text.strip():
+            # Silence is not a conversational turn for the language model.
+            await finalize_conversation_turn(
+                tts_manager=tts_manager,
+                websocket_send=websocket_send,
+                client_uid=client_uid,
+            )
+            return ""
 
         # Create batch input
         batch_input = create_batch_input(
@@ -90,9 +128,9 @@ async def process_single_conversation(
             agent_output_stream = context.agent_engine.chat(batch_input)
 
             async for output_item in agent_output_stream:
-                if (
-                    isinstance(output_item, dict)
-                    and output_item.get("type") == "tool_call_status"
+                if isinstance(output_item, dict) and output_item.get("type") in (
+                    "tool_call_status",
+                    "error",
                 ):
                     # Handle tool status event: send WebSocket message
                     output_item["name"] = context.character_config.character_name
@@ -136,11 +174,6 @@ async def process_single_conversation(
             )
             # full_response will contain partial response before error
         # --- End processing agent response ---
-
-        # Wait for any pending TTS tasks
-        if tts_manager.task_list:
-            await asyncio.gather(*tts_manager.task_list)
-            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
 
         await finalize_conversation_turn(
             tts_manager=tts_manager,

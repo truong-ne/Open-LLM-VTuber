@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections import deque
 from typing import Dict, Optional, Callable
 
 import numpy as np
@@ -33,6 +34,14 @@ async def handle_conversation_trigger(
     metadata = None
 
     if msg_type == "ai-speak-signal":
+        if (
+            data.get("idle_time")
+            and "pet_action_prompt" in context.system_config.tool_prompts
+        ):
+            logger.debug(
+                "Ignoring idle speech trigger while context pet mode is enabled"
+            )
+            return
         try:
             # Get proactive speak prompt from config
             prompt_name = "proactive_speak_prompt"
@@ -63,6 +72,14 @@ async def handle_conversation_trigger(
             )
         )
     elif msg_type == "text-input":
+        if data.get("source") == "vua-tieng-viet" and isinstance(
+            data.get("game_speech"), str
+        ):
+            metadata = {
+                "game_speech": data["game_speech"][:500],
+                "skip_history": True,
+                "skip_memory": True,
+            }
         user_input = data.get("text", "")
     else:  # mic-audio-end
         user_input = received_data_buffers[client_uid]
@@ -95,9 +112,13 @@ async def handle_conversation_trigger(
                 )
             )
     else:
-        # Use client_uid as task key for individual conversations
-        current_conversation_tasks[client_uid] = asyncio.create_task(
-            process_single_conversation(
+        # Microphone turns also reach this handler directly, outside the proxy's
+        # text queue. One worker owns agent memory and playback for this client.
+        queue = getattr(context, "_individual_turn_queue", None)
+        if queue is None:
+            queue = context._individual_turn_queue = deque(maxlen=20)
+        queue.append(
+            dict(
                 context=context,
                 websocket_send=websocket.send_text,
                 client_uid=client_uid,
@@ -107,6 +128,27 @@ async def handle_conversation_trigger(
                 metadata=metadata,
             )
         )
+        active = current_conversation_tasks.get(client_uid)
+        if active and not active.done():
+            return
+
+        async def drain():
+            try:
+                while queue:
+                    turn = queue.popleft()
+                    try:
+                        await process_single_conversation(**turn)
+                    except Exception as error:
+                        logger.error("Conversation turn failed: {}", error)
+                        await websocket.send_text(
+                            json.dumps(
+                                {"type": "control", "text": "conversation-chain-end"}
+                            )
+                        )
+            finally:
+                queue.clear()
+
+        current_conversation_tasks[client_uid] = asyncio.create_task(drain())
 
 
 async def handle_individual_interrupt(
@@ -119,6 +161,10 @@ async def handle_individual_interrupt(
         task = current_conversation_tasks[client_uid]
         if task and not task.done():
             task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
             logger.info("🛑 Conversation task was successfully interrupted")
 
         try:

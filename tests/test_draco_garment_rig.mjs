@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import * as T from '../web_tool/mao-5070/3d/vendor/three.module.js';
+import {prepareGarmentRig,clothBoneName,ROLL_IDS} from '../web_tool/mao-5070/draco/garment-rig.mjs';
+import {createDracoRig} from './helpers/draco_fixture.mjs';
+
+const root=createDracoRig(),bones=[];root.traverse(b=>{if(b.isBone)bones.push(b);});
+const source=root.getObjectByName('draco_bone_0080'),index=bones.indexOf(source);
+const geometry=new T.BufferGeometry();
+geometry.setAttribute('position',new T.Float32BufferAttribute([.36,1.04,.08],3));
+geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute([index,0,0,0],4));
+geometry.setAttribute('skinWeight',new T.Float32BufferAttribute([1,0,0,0],4));
+const sourceSkeleton=new T.Skeleton(bones);sourceSkeleton.calculateInverses();
+const make=name=>{const material=new T.MeshBasicMaterial();material.name=name;const mesh=new T.SkinnedMesh(geometry,material);root.add(mesh);mesh.bind(sourceSkeleton,new T.Matrix4());return mesh;};
+const robe=make('V8_Robe_Seams_Fabric_Lining'),hand=make('V8_Hands_Soft_Skin_Anatomy');
+const vertex=()=>new T.Vector3().fromBufferAttribute(geometry.attributes.position,0);
+const before=robe.applyBoneTransform(0,vertex());
+prepareGarmentRig(root);root.updateMatrixWorld(true);
+assert.ok(robe.applyBoneTransform(0,vertex()).distanceTo(before)<1e-9,'garment bind pose changed');
+assert.equal(robe.skeleton.bones[index].name,clothBoneName(80));
+assert.equal(hand.skeleton.bones[index],source,'skin mesh was rebound with the garment');
+assert.equal(robe.geometry,geometry,'source vertex geometry was replaced');
+source.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),.6));root.updateMatrixWorld(true);
+assert.ok(robe.applyBoneTransform(0,vertex()).distanceTo(before)<1e-9,'loose sleeve inherits full forearm roll');
+assert.ok(hand.applyBoneTransform(0,vertex()).distanceTo(before)>.01,'skin does not follow forearm rotation');
+const count=()=>{let n=0;root.traverse(b=>{if(b.isBone)n++;});return n;};
+assert.equal(count(),bones.length+ROLL_IDS.length);prepareGarmentRig(root);assert.equal(count(),bones.length+ROLL_IDS.length,'preparation is not idempotent');
+console.log('Garment rig: bind pose preserved, robe/skin roll separated, eight unique proxy joints, repeat preparation safe.');

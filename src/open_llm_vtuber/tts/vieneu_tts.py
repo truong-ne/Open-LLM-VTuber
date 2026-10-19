@@ -1,7 +1,15 @@
 import os
+import shutil
+import subprocess
+import asyncio
+import re
+
+import numpy as np
 
 from loguru import logger
 from .tts_interface import TTSInterface
+from .prosody import SpeechProsody, NATIVE_CUES
+from ..utils.math_speech import normalize_vietnamese_math
 
 try:
     from vieneu import Vieneu
@@ -23,6 +31,8 @@ except ImportError:
 
 
 class TTSEngine(TTSInterface):
+    supports_prosody = True
+
     def __init__(
         self,
         mode: str = "v3turbo",
@@ -33,6 +43,9 @@ class TTSEngine(TTSInterface):
         precision: str = "fp32",
         threads: int = 0,
         temperature: float = 0.8,
+        speed: float = 1.0,
+        expressive: bool = True,
+        rvc: dict | None = None,
     ):
         """Initializes the VieNeu-TTS engine using the Python API.
 
@@ -45,6 +58,7 @@ class TTSEngine(TTSInterface):
             precision: ONNX/CPU precision, 'fp32' or 'int8' (faster, needs a CPU with VNNI).
             threads: ONNX/CPU threads, 0 = automatic.
             temperature: Sampling temperature (v3turbo).
+            speed: Speech tempo multiplier, preserving pitch (requires ffmpeg).
         """
         if not VIENEU_AVAILABLE:
             raise ImportError("vieneu is required. Install with: uv pip install vieneu")
@@ -53,6 +67,14 @@ class TTSEngine(TTSInterface):
         self.voice = voice or None
         self.ref_audio = ref_audio or None
         self.temperature = temperature
+        if not 0.75 <= speed <= 1.5:
+            raise ValueError("VieNeu speech speed must be between 0.75 and 1.5")
+        self.speed = speed
+        self.expressive = expressive
+        self.rvc = None
+        self.ffmpeg = shutil.which("ffmpeg")
+        if speed != 1.0 and not self.ffmpeg:
+            raise FileNotFoundError("ffmpeg is required to adjust VieNeu speech speed")
 
         if self.ref_audio and not os.path.exists(self.ref_audio):
             raise FileNotFoundError(
@@ -70,13 +92,22 @@ class TTSEngine(TTSInterface):
                 precision=precision,
                 threads=threads,
             )
-            logger.info("VieNeu-TTS loaded successfully")
+            if rvc and rvc.get("enabled"):
+                from .rvc_converter import RVCConverter
+
+                self.rvc = RVCConverter(rvc)
+            logger.info(
+                "VieNeu-TTS loaded: voice={}, speed={}x", self.voice, self.speed
+            )
         except Exception as e:
             logger.critical(f"Failed to load VieNeu-TTS: {e}")
             raise
 
     def generate_audio(
-        self, text: str, file_name_no_ext: str | None = None
+        self,
+        text: str,
+        file_name_no_ext: str | None = None,
+        prosody: SpeechProsody | None = None,
     ) -> str | None:
         """Generates a speech audio file using VieNeu-TTS.
 
@@ -98,13 +129,102 @@ class TTSEngine(TTSInterface):
             kwargs["temperature"] = self.temperature
 
         try:
+            text = normalize_vietnamese_math(text)
+            speed = self.speed
+            pause_ms = 0
+            if self.expressive and prosody:
+                # VieNeu v3's `style` parameter is ignored. Its three native
+                # non-verbal cues work through inline text, not arbitrary labels.
+                text = re.sub(r"\[[^\[\]]*\]", "", text).strip()
+                if self.mode == "v3turbo" and prosody.native_cue in NATIVE_CUES:
+                    ending = re.search(r"[.!?…]+$", text)
+                    if ending:
+                        text = (
+                            text[: ending.start()].rstrip()
+                            + f" [{prosody.native_cue}]"
+                            + ending.group()
+                        )
+                    else:
+                        text += f" [{prosody.native_cue}]."
+                if self.ffmpeg:
+                    speed = min(1.5, max(0.75, self.speed * prosody.tempo))
+                pause_ms = max(0, min(200, prosody.pause_ms))
+                logger.debug(
+                    "VieNeu prosody: mood={}, tempo={}x, pause={}ms, native_cue={}",
+                    prosody.mood,
+                    round(speed, 3),
+                    pause_ms,
+                    prosody.native_cue,
+                )
             audio = self.tts.infer(text, **kwargs)
             if audio is None or len(audio) == 0:
                 logger.warning(f"VieNeu-TTS produced no audio for: {text!r}")
                 return None
-            self.tts.save(audio, file_name)
+            sample_rate = self.tts.sample_rate
+            if self.rvc is not None:
+                audio, sample_rate = self.rvc.convert(audio, sample_rate)
+            audio = self._adjust_speed(audio, speed, sample_rate=sample_rate)
+            if pause_ms:
+                audio = np.concatenate(
+                    (
+                        audio,
+                        np.zeros(
+                            round(sample_rate * pause_ms / 1000),
+                            dtype=np.float32,
+                        ),
+                    )
+                )
+            if self.rvc is not None:
+                import soundfile as sf
+
+                sf.write(file_name, audio, sample_rate, subtype="PCM_16")
+            else:
+                self.tts.save(audio, file_name)
             logger.info(f"Generated audio file: {file_name}")
             return file_name
         except Exception as e:
             logger.critical(f"Error: VieNeu-TTS unable to generate audio: {e}")
             return None
+
+    async def async_generate_audio(self, text, file_name_no_ext=None, prosody=None):
+        return await asyncio.to_thread(
+            self.generate_audio, text, file_name_no_ext, prosody
+        )
+
+    def _adjust_speed(
+        self, audio: np.ndarray, speed=None, sample_rate=None
+    ) -> np.ndarray:
+        speed = self.speed if speed is None else speed
+        if speed == 1.0:
+            return audio
+        # Filter in memory at the original sample rate; no extra audio files.
+        result = subprocess.run(
+            [
+                self.ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "f32le",
+                "-ar",
+                str(sample_rate or self.tts.sample_rate),
+                "-ac",
+                "1",
+                "-i",
+                "pipe:0",
+                "-af",
+                f"atempo={speed}",
+                "-f",
+                "f32le",
+                "pipe:1",
+            ],
+            input=np.asarray(audio, dtype="<f4").tobytes(),
+            capture_output=True,
+            check=True,
+            timeout=30,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+        adjusted = np.frombuffer(result.stdout, dtype="<f4").copy()
+        if not adjusted.size:
+            raise RuntimeError("VieNeu tempo adjustment produced no audio")
+        return adjusted

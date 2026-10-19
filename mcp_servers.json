@@ -1,20 +1,17 @@
 {
-    "mcp_servers": {
-      "time": {
-        "command": "uvx",
-        "args": ["mcp-server-time", "--local-timezone=Asia/Shanghai"]
-      },
-      "ddg-search": {
-        "command": "uvx",
-        "args": ["duckduckgo-mcp-server"]
-      },
-      "game-control": {
-        "command": "uv",
-        "args": [
-          "run", "--extra", "game", "python", "scripts/game_control_mcp.py",
-          "--window", "Your Game Window Title",
-          "--max-side", "1024"
-        ]
-      }
+  "mcp_servers": {
+    "time": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-time",
+        "--local-timezone=Asia/Ho_Chi_Minh"
+      ]
+    },
+    "ddg-search": {
+      "command": "uvx",
+      "args": [
+        "duckduckgo-mcp-server"
+      ]
     }
+  }
 }

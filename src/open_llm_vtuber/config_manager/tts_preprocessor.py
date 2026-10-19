@@ -105,6 +105,7 @@ class TTSPreprocessorConfig(I18nMixin):
     ignore_parentheses: bool = Field(default=True, alias="ignore_parentheses")
     ignore_asterisks: bool = Field(default=True, alias="ignore_asterisks")
     ignore_angle_brackets: bool = Field(default=True, alias="ignore_angle_brackets")
+    vietnamese_math: bool = False
     translator_config: TranslatorConfig = Field(..., alias="translator_config")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {

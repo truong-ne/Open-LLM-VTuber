@@ -2,6 +2,7 @@ import re
 import unicodedata
 from loguru import logger
 from ..translate.translate_interface import TranslateInterface
+from .math_speech import normalize_vietnamese_math
 
 
 def tts_filter(
@@ -12,6 +13,7 @@ def tts_filter(
     ignore_asterisks: bool,
     ignore_angle_brackets: bool,
     translator: TranslateInterface | None = None,
+    vietnamese_math: bool = False,
 ) -> str:
     """
     Filter or do anything to the text before TTS generates the audio.
@@ -30,6 +32,9 @@ def tts_filter(
     Returns:
         str: The filtered text.
     """
+    if vietnamese_math:
+        # Do this before filters erase ^, superscripts, products or groups.
+        text = normalize_vietnamese_math(text)
     if ignore_asterisks:
         try:
             text = filter_asterisks(text)
@@ -82,7 +87,7 @@ def tts_filter(
 
 def remove_special_characters(text: str) -> str:
     """
-    Filter text to remove all non-letter, non-number, and non-punctuation characters.
+    Remove special characters while preserving arithmetic for TTS normalization.
 
     Args:
         text (str): The text to filter.
@@ -98,6 +103,9 @@ def remove_special_characters(text: str) -> str:
             category.startswith("L")
             or category.startswith("N")
             or category.startswith("P")
+            # Dropping these symbols turns e.g. '1+1=2' into '112'.
+            # Leave arithmetic intact for the speech engine's own normalizer.
+            or char in "+=−×÷"
             or char.isspace()
         )
 

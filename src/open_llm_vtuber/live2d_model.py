@@ -1,5 +1,6 @@
 import json
 import chardet
+import re
 from loguru import logger
 
 # This class will only prepare the payload for the live2d model
@@ -24,6 +25,36 @@ class Live2dModel:
     model_info: dict
     emo_map: dict
     emo_str: str
+    CONTEXT_MOTIONS = frozenset({"nod", "shake", "tilt", "shy", "sway", "refuse", "squint", "flat", "surprised"})
+
+    def extract_context_motions(self, text: str) -> list[str]:
+        """Accept only supported gestures explicitly selected by the agent."""
+        return list(dict.fromkeys(
+            tag.lower()
+            for tag in re.findall(r"\[([a-z]+)\]", text, flags=re.I)
+            if tag.lower() in self.CONTEXT_MOTIONS
+        ))[:1]
+
+    def remove_context_motion_tags(self, text: str) -> str:
+        return re.sub(
+            r"\[([a-z]+)\]",
+            lambda match: "" if match[1].lower() in self.CONTEXT_MOTIONS else match[0],
+            text,
+            flags=re.I,
+        ).strip()
+
+    def context_motions_for_sentence(self, text: str) -> list[str]:
+        explicit = self.extract_context_motions(text)
+        if explicit:
+            return explicit
+        # Small models sometimes omit gesture tags even for an obvious greeting.
+        spoken = self.remove_emotion_keywords(text).strip()
+        if re.match(r"^(?:hi\b|hello\b|xin chào\b|chào bạn\b)", spoken, re.I):
+            return ["nod"]
+        for emotion, motion in (("joy", "sway"), ("smirk", "shy"), ("surprise", "tilt")):
+            if f"[{emotion}]" in text.lower():
+                return [motion]
+        return []
 
     def __init__(
         self, live2d_model_name: str, model_dict_path: str = "model_dict.json"

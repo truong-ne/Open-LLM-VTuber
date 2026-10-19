@@ -1,0 +1,27 @@
+{
+  "bytes": 68995368,
+  "clips": [
+    "idle",
+    "greet",
+    "talk",
+    "nod",
+    "shift",
+    "bow",
+    "turn",
+    "chuckle",
+    "laugh",
+    "surprise",
+    "think",
+    "shy",
+    "sad",
+    "shrug",
+    "emphasize",
+    "reassure",
+    "celebrate"
+  ],
+  "loopSeamError": 3.5762786865234375e-7,
+  "version": "story-actions-v4-hand-poses",
+  "bowTrunkDegrees": 29.82178411490294,
+  "replayGreetingHandHeight": 1.6335721706558433,
+  "laughThumbY": 0.02084445502780663
+}

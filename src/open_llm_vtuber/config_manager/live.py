@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import Dict, ClassVar, List
+from typing import Dict, ClassVar, List, Literal
 from .i18n import I18nMixin, Description
 
 
@@ -24,10 +24,11 @@ class TikTokLiveConfig(I18nMixin):
     """Configuration for TikTok Live platform."""
 
     unique_id: str = Field("", alias="unique_id")
-    batch_size: int = Field(3, alias="batch_size")
-    max_pending_comments: int = Field(20, alias="max_pending_comments")
+    batch_size: int = Field(3, ge=1, le=10, alias="batch_size")
+    max_pending_comments: int = Field(20, ge=1, le=100, alias="max_pending_comments")
+    batch_window: float = Field(2.0, ge=0, le=10, alias="batch_window")
     min_interval: float = Field(2.0, alias="min_interval")
-    response_timeout: float = Field(90.0, alias="response_timeout")
+    response_timeout: float = Field(90.0, gt=0, alias="response_timeout")
     include_nickname: bool = Field(True, alias="include_nickname")
     blocked_words: List[str] = Field([], alias="blocked_words")
 
@@ -37,8 +38,12 @@ class TikTokLiveConfig(I18nMixin):
             zh="主播的TikTok用户名（例如 '@your_name'）",
         ),
         "batch_size": Description(
-            en="Max number of recent comments merged into one VTuber reply",
-            zh="每次回复合并的最近评论数上限",
+            en="Max distinct topics answered from a bounded comment digest",
+            zh="每批评论摘要最多回复的不同话题数",
+        ),
+        "batch_window": Description(
+            en="Seconds to collect a burst of comments before replying",
+            zh="回复前收集一批评论的等待秒数",
         ),
         "max_pending_comments": Description(
             en="Max comments kept while the VTuber is busy (oldest dropped first)",
@@ -49,8 +54,8 @@ class TikTokLiveConfig(I18nMixin):
             zh="两次VTuber回复之间的最短间隔（秒）",
         ),
         "response_timeout": Description(
-            en="Seconds to wait for a reply to finish before sending the next comments",
-            zh="等待回复结束的最长时间（秒），超时后发送下一批评论",
+            en="Warn after this many seconds without progress; never ends a spoken turn",
+            zh="无进展时发出警告的秒数；不会中断正在播放的回复",
         ),
         "include_nickname": Description(
             en="Prefix each comment with the viewer's nickname",
@@ -63,57 +68,22 @@ class TikTokLiveConfig(I18nMixin):
     }
 
 
-class NeuroGameConfig(I18nMixin):
-    """Configuration for the Neuro Game API bridge (games made for Neuro-sama)."""
+class YouTubeLiveConfig(TikTokLiveConfig):
+    """Read public YouTube live chat; no credentials stored in config."""
 
-    host: str = Field("localhost", alias="host")
-    port: int = Field(8000, alias="port")
-    model: str = Field("", alias="model")
-    temperature: float = Field(0.3, alias="temperature")
-    max_retries: int = Field(3, alias="max_retries")
-    max_context: int = Field(20, alias="max_context")
-    act_on_context: bool = Field(False, alias="act_on_context")
-    comment_on_context: bool = Field(True, alias="comment_on_context")
-    comment_on_actions: bool = Field(True, alias="comment_on_actions")
-    max_pending_comments: int = Field(3, alias="max_pending_comments")
-
+    channel: str = Field("", alias="channel")
+    video_url: str = Field("", alias="video_url")
+    poll_interval: float = Field(30, ge=10, le=300, alias="poll_interval")
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
-        "host": Description(en="Host the game connects to", zh="游戏连接的主机地址"),
-        "port": Description(
-            en="Port the game connects to (NEURO_SDK_WS_URL=ws://host:port)",
-            zh="游戏连接的端口（NEURO_SDK_WS_URL=ws://host:port）",
+        **TikTokLiveConfig.DESCRIPTIONS,
+        "channel": Description(
+            en="YouTube channel URL or @handle", zh="YouTube频道网址或标识"
         ),
-        "model": Description(
-            en="LLM used to pick actions; empty = same model as the character",
-            zh="用于选择游戏动作的LLM；留空则与角色使用同一模型",
+        "video_url": Description(
+            en="Optional explicit livestream URL", zh="可选的直播网址"
         ),
-        "temperature": Description(
-            en="Sampling temperature for picking actions (lower = steadier play)",
-            zh="选择动作时的温度（越低越稳定）",
-        ),
-        "max_retries": Description(
-            en="Retries when the chosen action is invalid or fails",
-            zh="动作无效或失败时的重试次数",
-        ),
-        "max_context": Description(
-            en="Number of recent game messages kept for decisions",
-            zh="决策时保留的最近游戏消息数",
-        ),
-        "act_on_context": Description(
-            en="Let the character act on game events without being asked by the game",
-            zh="允许角色在游戏未要求时主动执行动作",
-        ),
-        "comment_on_context": Description(
-            en="Let the character talk about game events",
-            zh="让角色评论游戏事件",
-        ),
-        "comment_on_actions": Description(
-            en="Let the character talk about the actions it takes",
-            zh="让角色评论自己执行的动作",
-        ),
-        "max_pending_comments": Description(
-            en="Max game texts kept while the character is talking (oldest dropped first)",
-            zh="角色说话时最多保留的游戏消息数（超出时丢弃最旧的）",
+        "poll_interval": Description(
+            en="Seconds between checks while offline", zh="离线时检查间隔秒数"
         ),
     }
 
@@ -125,17 +95,20 @@ class LiveConfig(I18nMixin):
         BiliBiliLiveConfig(), alias="bilibili_live"
     )
     tiktok_live: TikTokLiveConfig = Field(TikTokLiveConfig(), alias="tiktok_live")
-    neuro_game: NeuroGameConfig = Field(NeuroGameConfig(), alias="neuro_game")
+    active_platform: Literal["local", "youtube", "tiktok"] = "local"
+    youtube_live: YouTubeLiveConfig = Field(default_factory=YouTubeLiveConfig)
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "active_platform": Description(
+            en="Default local livestream chat reader", zh="默认直播聊天来源"
+        ),
+        "youtube_live": Description(
+            en="YouTube live chat configuration", zh="YouTube直播聊天配置"
+        ),
         "bilibili_live": Description(
             en="Configuration for BiliBili Live platform", zh="B站直播平台配置"
         ),
         "tiktok_live": Description(
             en="Configuration for TikTok Live platform", zh="TikTok直播平台配置"
-        ),
-        "neuro_game": Description(
-            en="Neuro Game API bridge for games made for Neuro-sama",
-            zh="Neuro游戏API桥接（适配为Neuro-sama制作的游戏）",
         ),
     }

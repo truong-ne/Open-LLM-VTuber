@@ -1,0 +1,17 @@
+{
+  "tool": "Built-in image_gen",
+  "views": [
+    {
+      "file": "07-top.png",
+      "prompt": "Create a technical ORTHOGRAPHIC ZENITH/TOP turnaround of the exact fully dressed adult25anime figure in the reference, unchanged neutral A-pose. Camera is DIRECTLY OVER THE CROWN looking straight down the vertical body axis, exactly90degrees above the horizon. Body remains standing upright. Geometric top footprint only: the crown is the central dominant rounded shape; the shoulders and arms extend outward on both sides; most of torso, legs and shoes are HIDDEN BEHIND the head/shoulders. Do not show the face, front chest lettering, front leg length, or an oblique overhead portrait. We want the flattened silhouette seen directly by a drone exactly overhead, no perspective. Forward direction toward image bottom. Same platinum bob and left whiteflower/purple ribbon, navy/purple costume, white cuffs, hands in the same neutral A-pose, all costume detail consistent with reference. Studio object-turnaround product render, white background, no shadows, no annotation, one view only. Portrait1024x1536, compact silhouette centered with ample whitespace; do not stretch or invent frontal visibility. Lock every costume design detail and limb pose to the reference."
+    },
+    {
+      "file": "08-bottom.png",
+      "prompt": "Use case: product-mockup. A single technical orthographic UNDERSIDE VIEW of the fully dressed adult anime collectible figure shown in the reference, for a 3D reconstruction turnaround. Same figure, same symmetrical neutral A-pose, same platinum bob and navy/purple stage costume, opaque dark tights and black ankle boots. Exact camera below the figure along its vertical standing axis looking straight up, no perspective. Show the two solid flat dark BOOT SOLES closest to camera, heels and simple tread, then the dark opaque clothing shell and closed solid navy costume lining behind them, sleeve ends and hands projecting to the sides in the same A-pose. All body details are covered/occluded by the solid costume; only external garment surfaces and footwear are depicted. No facial/front torso portrait. This is a neutral product underside diagram with realistic depth occlusion, not a pose illustration. Toes toward the top of image. The feet should not be enlarged through perspective: use orthographic geometry and a compact centered footprint on portrait1024x1536 white canvas. Same clean anime collectible rendering and materials, white background, no captions, props, support base, floor or watermark."
+    }
+  ],
+  "status": {
+    "07-top.png": "generated",
+    "08-bottom.png": "generation rejected by image tool; no file created"
+  }
+}

@@ -36,6 +36,7 @@ class FasterWhisperConfig(I18nMixin):
         "int8", alias="compute_type"
     )
     prompt: str | None = Field(None, alias="prompt")
+    cpu_threads: int = Field(4, ge=1, le=64, alias="cpu_threads")
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "model_path": Description(
             en="Path to the Faster Whisper model", zh="Faster Whisper 模型路径"

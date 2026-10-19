@@ -7,6 +7,10 @@ from ..config_manager import TTSPreprocessorConfig
 from ..utils.sentence_divider import SentenceDivider
 from ..utils.sentence_divider import SentenceWithTags, TagState
 from loguru import logger
+from ..tts.prosody import TurnSpeechPlanner, hide_native_cues
+from .body_context import extract_body_tag, read_body_state
+from .motor_intent import extract_pose_tag, PoseStreamGuard
+from uuid import uuid4
 
 
 def sentence_divider(
@@ -40,10 +44,24 @@ def sentence_divider(
                 valid_tags=valid_tags or [],
             )
             stream_from_func = func(*args, **kwargs)
+            pose_guard = PoseStreamGuard()
+
+            async def guarded_stream():
+                async for event in stream_from_func:
+                    if isinstance(event, str):
+                        safe = pose_guard.feed(event)
+                        if safe:
+                            yield safe
+                    else:
+                        yield event
+                tail = pose_guard.feed("", final=True)
+                if tail:
+                    yield tail
 
             # Process the mixed stream using the updated SentenceDivider
-            async for item in divider.process_stream(stream_from_func):
+            async for item in divider.process_stream(guarded_stream()):
                 if isinstance(item, SentenceWithTags):
+                    item.text = pose_guard.restore(item.text)
                     logger.debug(f"sentence_divider yielding sentence: {item}")
                 elif isinstance(item, dict):
                     logger.debug(f"sentence_divider yielding dict: {item}")
@@ -74,6 +92,9 @@ def actions_extractor(live2d_model: Live2dModel):
             Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]
         ]:  # Yield type hint
             stream = func(*args, **kwargs)
+            body_used = False
+            pending_body = None
+            pending_pose = None
             async for item in stream:
                 if isinstance(item, SentenceWithTags):
                     sentence = item
@@ -83,9 +104,48 @@ def actions_extractor(live2d_model: Live2dModel):
                         tag.state in [TagState.START, TagState.END]
                         for tag in sentence.tags
                     ):
+                        sentence.text, pose = extract_pose_tag(sentence.text)
+                        if pose:
+                            pending_pose = pose
+                        sentence.text, body_command = extract_body_tag(sentence.text)
+                        if body_command and not body_used and not pending_body:
+                            pending_body = body_command
+                        if pending_body and sentence.text.strip() and not body_used:
+                            state = read_body_state()
+                            if (
+                                state
+                                and state.get("mode") == "window"
+                                and state.get("bodyPhase") == "idle"
+                                and not state.get("bodyStopped")
+                            ):
+                                actions.body = {
+                                    "id": uuid4().hex,
+                                    "command": pending_body,
+                                }
+                            body_used = True
+                            pending_body = None
+                        if body_command and not sentence.text.strip():
+                            continue
                         expressions = live2d_model.extract_emotion(sentence.text)
+                        # A gesture such as [shy] also carries a vocal intention.
+                        # Keep it for the planner before removing it from speech
+                        # and subtitles; it must never become a spoken label.
+                        sentence.speech_text = sentence.text
                         if expressions:
                             actions.expressions = expressions
+                        motions = live2d_model.context_motions_for_sentence(
+                            sentence.text
+                        )
+                        if motions:
+                            actions.motions = motions
+                            sentence.text = live2d_model.remove_context_motion_tags(
+                                sentence.text
+                            )
+                        if pending_pose and sentence.text.strip():
+                            actions.pose = pending_pose
+                            pending_pose = None
+                        if not sentence.text.strip():
+                            continue
                     yield sentence, actions  # Yield the tuple
                 elif isinstance(item, dict):
                     # Pass through dictionaries
@@ -178,6 +238,7 @@ def tts_filter(
         ) -> AsyncIterator[Union[SentenceOutput, Dict[str, Any]]]:  # Yield type hint
             stream = func(*args, **kwargs)
             config = tts_preprocessor_config or TTSPreprocessorConfig()
+            speech_planner = TurnSpeechPlanner()
 
             async for item in stream:
                 if (
@@ -186,9 +247,14 @@ def tts_filter(
                     and isinstance(item[1], DisplayText)
                 ):
                     sentence, display, actions = item
+                    speech = None
                     if any(tag.name == "think" for tag in sentence.tags):
                         tts = ""
                     else:
+                        speech = speech_planner.plan(
+                            sentence.speech_text or display.text
+                        )
+                        display.text = hide_native_cues(display.text)
                         tts = filter_text(
                             text=display.text,
                             remove_special_char=config.remove_special_char,
@@ -196,6 +262,7 @@ def tts_filter(
                             ignore_parentheses=config.ignore_parentheses,
                             ignore_asterisks=config.ignore_asterisks,
                             ignore_angle_brackets=config.ignore_angle_brackets,
+                            vietnamese_math=getattr(config, "vietnamese_math", False),
                         )
 
                     logger.debug(f"[{display.name}] display: {display.text}")
@@ -205,6 +272,7 @@ def tts_filter(
                         display_text=display,
                         tts_text=tts,
                         actions=actions,
+                        speech=speech,
                     )
                 elif isinstance(item, dict):
                     # Pass through dictionaries

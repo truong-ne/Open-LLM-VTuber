@@ -1,0 +1,72 @@
+[
+  {
+    "file": "01-front.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1407314,
+    "sha256": "2956d785a9cbad7b5675dda6bcb68fac2667db83f7c211c0544b7de716095b7a"
+  },
+  {
+    "file": "02-front-left.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1737685,
+    "sha256": "111a4f0f41ce679d949a3f8ccf733cd4f9c538d17beac0d4bc4308254a18f81d"
+  },
+  {
+    "file": "03-front-right.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1422173,
+    "sha256": "533a64001d7a53b160a37aba7f096e522200d8db88cdac9a0b3113bfa224a6d5"
+  },
+  {
+    "file": "04-left.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1642298,
+    "sha256": "058fcd630ea4840408dabeeda761c4e0b5bc7643280090bee0e5ab4b10217db6"
+  },
+  {
+    "file": "05-right.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1624417,
+    "sha256": "a4d5ef576c808c437294a9d0d2b466725a839da2be01dbdf3d4c9053735b86a0"
+  },
+  {
+    "file": "06-back.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1687328,
+    "sha256": "fed95edbbda57226203a07ab4f2fd595e38fb868ecd007718c3ba074d1c30fae"
+  },
+  {
+    "file": "07-top.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGB",
+    "bytes": 1148082,
+    "sha256": "08dcbf75815508df58746c411ce476fb8a9a3f7ecd0b42e1f0aa72679fb6ef73"
+  }
+]

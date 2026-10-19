@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mao Theatre · Xem trước chuyển cảnh</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b201a}#scene{position:absolute;inset:0}nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;gap:8px;align-items:center;padding:9px 14px;border:1px solid #aec8b877;border-radius:16px;background:#0d2d25ed;color:#d9e7cd;font:12px 'Segoe UI',sans-serif;white-space:nowrap}button{background:#d2dfc7;border:0;border-radius:8px;padding:8px 12px;color:#163d30;cursor:pointer}@media(max-width:600px){nav{white-space:normal;width:90%;gap:5px}button{padding:8px;font-size:11px}}</style>
+<script type="importmap">{"imports":{"three":"./3d/vendor/three.module.js"}}</script></head><body><div id="scene"></div>
+<nav><span>Bản xem trước · không phát nhạc</span><button data-scene="lounge">Phòng Mao</button><button data-scene="studio">Vua Tiếng Việt</button><button data-scene="concert">Sân khấu hát</button></nav>
+<script type="module">
+import {mountNativeAvatar} from './draco/native-avatar.mjs?v=41';
+import {createWordGameOverlay} from './draco/word-game-overlay.mjs?v=10';
+let selected='lounge';
+function game(){const now=Date.now()/1000;return {phase:selected==='studio'?'playing':'idle',round_id:'illustration',revision:selected,server_now:now,ends_at:now+60,participants:12,category:'Văn hóa Việt',slots:[2,3],letters:['D','Á','I','À','O'],hint_index:0,hints:['Trang phục có hai tà, quen thuộc trong những ngày lễ.'],leaderboard:[]};}
+function song(){return {type:'mao-sing-state',phase:selected==='concert'?'playing':'idle',run_id:'illustration-only',server_now:Date.now()/1000,requester:'cả nhà',song:{id:'illustration',title:'Tiết mục của Mao',bpm:120,duration:180},position:0};}
+window.maoWordGame=createWordGameOverlay({fetcher:async()=>({ok:true,json:async()=>game()})});
+window.previewBridge={state:{frames:0,socket:'open'},options:{mode:'window',scale:1,pointerInteractive:true,forceIgnoreMouse:false,scrollToResize:true},
+  singingFetcher:async()=>({ok:true,json:async()=>song()}),
+  commentFeedFetcher:async()=>({ok:true,json:async()=>({session:'illustration',revision:2,comments:[{id:2,nickname:'Bắp',text:'Mao lên sân khấu thôi!',platform:'youtube'},{id:1,nickname:'Lan',text:'!vuatiengviet',platform:'youtube'}]})})};
+window.previewAvatar=await mountNativeAvatar(document.getElementById('scene'),window.previewBridge);
+window.selectScene=scene=>{selected=scene;window.maoWordGame.render(game());};
+for(const button of document.querySelectorAll('button'))button.onclick=()=>window.selectScene(button.dataset.scene);
+</script></body></html>

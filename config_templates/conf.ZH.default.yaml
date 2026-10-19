@@ -520,23 +520,10 @@ live_config:
     # 需要额外依赖: uv sync --extra tiktok
     # 需要 system_config.enable_proxy: true，且网页客户端连接到 ws://localhost:12393/proxy-ws
     unique_id: ""
-    batch_size: 3 # 每次回复合并的最近评论数上限
+    batch_size: 3 # 每批评论摘要最多回复的不同话题数
+    batch_window: 2.0 # 回复前收集评论的等待秒数
     max_pending_comments: 20 # VTuber忙碌时最多保留的评论数（超出时丢弃最旧的）
     min_interval: 2.0 # 两次回复之间的最短间隔（秒）
-    response_timeout: 90.0 # 等待回复结束的最长时间（秒）
+    response_timeout: 90.0 # 无进展时发出警告；不会中断正在播放的回复
     include_nickname: true # 在每条评论前加上观众昵称
     blocked_words: [] # 包含这些词的评论将被忽略
-  # 游玩为 Neuro-sama 制作的游戏（Neuro Game SDK, https://github.com/VedalAI/neuro-sdk）。
-  # 运行: uv run python scripts/run_neuro_game.py，然后用 NEURO_SDK_WS_URL=ws://localhost:8000 启动游戏
-  # 需要 system_config.enable_proxy: true 角色才能评论游戏。
-  neuro_game:
-    host: 'localhost'
-    port: 8000
-    model: '' # 选择动作的LLM；留空则与角色使用同一模型（需支持工具调用）
-    temperature: 0.3 # 越低越稳定
-    max_retries: 3 # 动作无效或失败时的重试次数
-    max_context: 20 # 决策时保留的最近游戏消息数
-    act_on_context: false # 游戏未要求时也主动执行动作
-    comment_on_context: true # 评论游戏事件
-    comment_on_actions: true # 评论自己执行的动作
-    max_pending_comments: 3 # 角色说话时最多保留的游戏消息数

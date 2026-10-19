@@ -1,0 +1,6 @@
+Draco_Malfoy by xunbile (https://sketchfab.com/xunbile)
+Source: https://sketchfab.com/3d-models/draco-malfoy-40ee60d6a7214c949ff0b1338a48309c
+License: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+Changes: joint node names normalized; procedural body animation, constrained hair/garment dynamics, eight independent sleeve-roll joints, and baked animation clips added. Geometry, skin weights and textures retained.
+Local desktop profile additionally clones facial geometry, adds speech-driven jaw/lip targets and skinned oral meshes, and adjusts material color handling/atlas masking. The original downloaded GLB and texture assets are retained on disk.

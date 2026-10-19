@@ -296,6 +296,7 @@ class SentenceWithTags:
 
     text: str
     tags: List[TagInfo]  # List of tags from outermost to innermost
+    speech_text: Optional[str] = None  # Reading intent before avatar tags are removed
 
 
 class SentenceDivider:

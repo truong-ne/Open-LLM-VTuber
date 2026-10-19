@@ -585,6 +585,23 @@ class PiperTTSConfig(I18nMixin):
     }
 
 
+class RVCConfig(I18nMixin):
+    """Optional persistent RVC stage following local speech synthesis."""
+
+    enabled: bool = False
+    python_path: str = "private/rvc-env/Scripts/python.exe"
+    applio_path: str = "private/tools/applio"
+    model_path: str = ""
+    index_path: str = ""
+    device: str = "cuda:0"
+    pitch: int = Field(0, ge=-24, le=24)
+    index_rate: float = Field(0.6, ge=0, le=1)
+    protect: float = Field(0.33, ge=0, le=0.5)
+    threads: int = Field(4, ge=1, le=32)
+    timeout: float = Field(30, gt=0, le=300)
+    startup_timeout: float = Field(180, gt=0, le=600)
+
+
 class VieNeuTTSConfig(I18nMixin):
     """Configuration for VieNeu TTS (Vietnamese)."""
 
@@ -596,8 +613,19 @@ class VieNeuTTSConfig(I18nMixin):
     precision: Literal["fp32", "int8"] = Field("fp32", alias="precision")
     threads: int = Field(0, alias="threads")
     temperature: float = Field(0.8, alias="temperature")
+    speed: float = Field(1.0, ge=0.75, le=1.5, alias="speed")
+    expressive: bool = Field(True, alias="expressive")
+    rvc: RVCConfig = Field(default_factory=RVCConfig)
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "rvc": Description(
+            en="Optional RVC voice conversion after VieNeu synthesis",
+            zh="在 VieNeu 合成之后执行可选的 RVC 音色转换",
+        ),
+        "expressive": Description(
+            en="Per-sentence reading tempo, pauses and supported native emotion cues",
+            zh="逐句语速、停顿及受支持的原生情感提示",
+        ),
         "mode": Description(
             en="'v3turbo' (48 kHz, best quality) or 'v3nano' (24 kHz, CPU only, for weak CPUs)",
             zh="'v3turbo'（48 kHz，最佳质量）或 'v3nano'（24 kHz，仅CPU，适合弱CPU）",
@@ -626,6 +654,10 @@ class VieNeuTTSConfig(I18nMixin):
         ),
         "temperature": Description(
             en="Sampling temperature (v3turbo)", zh="采样温度（v3turbo）"
+        ),
+        "speed": Description(
+            en="Speech tempo multiplier, preserving pitch; requires ffmpeg (1.0 = normal)",
+            zh="保持音高的语速倍率；需要 ffmpeg（1.0 = 正常）",
         ),
     }
 

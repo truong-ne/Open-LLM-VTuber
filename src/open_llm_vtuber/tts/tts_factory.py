@@ -223,6 +223,9 @@ class TTSFactory:
                 precision=kwargs.get("precision"),
                 threads=kwargs.get("threads"),
                 temperature=kwargs.get("temperature"),
+                speed=kwargs.get("speed", 1.0),
+                expressive=kwargs.get("expressive", True),
+                rvc=kwargs.get("rvc"),
             )
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")

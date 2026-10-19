@@ -525,23 +525,10 @@ live_config:
     # Requires the extra dependency: uv sync --extra tiktok
     # Requires system_config.enable_proxy: true, and the web client connected to ws://localhost:12393/proxy-ws
     unique_id: ""
-    batch_size: 3 # Max number of recent comments merged into one reply
+    batch_size: 3 # Max distinct topics answered from each comment digest
+    batch_window: 2.0 # Collect a burst before replying (seconds)
     max_pending_comments: 20 # Max comments kept while the VTuber is busy (oldest dropped first)
     min_interval: 2.0 # Minimum seconds between two replies
-    response_timeout: 90.0 # Seconds to wait for a reply to finish before sending the next comments
+    response_timeout: 90.0 # Warn without progress; never interrupts unfinished speech
     include_nickname: true # Prefix each comment with the viewer's nickname
     blocked_words: [] # Comments containing any of these words are ignored
-  # Play games made for Neuro-sama (Neuro Game SDK, https://github.com/VedalAI/neuro-sdk).
-  # Run: uv run python scripts/run_neuro_game.py, then start the game with NEURO_SDK_WS_URL=ws://localhost:8000
-  # Requires system_config.enable_proxy: true for the character to talk about the game.
-  neuro_game:
-    host: 'localhost'
-    port: 8000
-    model: '' # LLM that picks actions; empty = same model as the character (needs tool calling)
-    temperature: 0.3 # Lower = steadier play
-    max_retries: 3 # Retries when the chosen action is invalid or fails
-    max_context: 20 # Recent game messages kept for decisions
-    act_on_context: false # Act on game events without being asked by the game
-    comment_on_context: true # Talk about game events
-    comment_on_actions: true # Talk about the actions taken
-    max_pending_comments: 3 # Game texts kept while the character is talking

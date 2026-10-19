@@ -3,6 +3,7 @@ import json
 import re
 import uuid
 from datetime import datetime
+from dataclasses import replace
 from typing import List, Optional, Dict
 from loguru import logger
 
@@ -11,6 +12,7 @@ from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
 from .types import WebSocketSend
+from ..tts.prosody import SpeechProsody
 
 
 class TTSTaskManager:
@@ -26,6 +28,7 @@ class TTSTaskManager:
         # Counter for maintaining order
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
+        self._native_cue_used = False
 
     async def speak(
         self,
@@ -35,6 +38,7 @@ class TTSTaskManager:
         live2d_model: Live2dModel,
         tts_engine: TTSInterface,
         websocket_send: WebSocketSend,
+        speech: Optional[SpeechProsody] = None,
     ) -> None:
         """
         Queue a TTS task while maintaining order of delivery.
@@ -70,6 +74,13 @@ class TTSTaskManager:
         current_sequence = self._sequence_counter
         self._sequence_counter += 1
 
+        # One non-verbal cue per turn, even if the LLM tags every sentence.
+        if speech and speech.native_cue:
+            if self._native_cue_used:
+                speech = replace(speech, native_cue=None)
+            else:
+                self._native_cue_used = True
+
         # Start sender task if not running
         if not self._sender_task or self._sender_task.done():
             self._sender_task = asyncio.create_task(
@@ -85,6 +96,7 @@ class TTSTaskManager:
                 live2d_model=live2d_model,
                 tts_engine=tts_engine,
                 sequence_number=current_sequence,
+                speech=speech,
             )
         )
         self.task_list.append(task)
@@ -135,11 +147,12 @@ class TTSTaskManager:
         live2d_model: Live2dModel,
         tts_engine: TTSInterface,
         sequence_number: int,
+        speech: Optional[SpeechProsody] = None,
     ) -> None:
         """Process TTS generation and queue the result for ordered delivery"""
         audio_file_path = None
         try:
-            audio_file_path = await self._generate_audio(tts_engine, tts_text)
+            audio_file_path = await self._generate_audio(tts_engine, tts_text, speech)
             payload = prepare_audio_payload(
                 audio_path=audio_file_path,
                 display_text=display_text,
@@ -163,20 +176,39 @@ class TTSTaskManager:
                 tts_engine.remove_file(audio_file_path)
                 logger.debug("Audio cache file cleaned.")
 
-    async def _generate_audio(self, tts_engine: TTSInterface, text: str) -> str:
+    async def _generate_audio(
+        self,
+        tts_engine: TTSInterface,
+        text: str,
+        speech: Optional[SpeechProsody] = None,
+    ) -> str:
         """Generate audio file from text"""
         logger.debug(f"🏃Generating audio for '''{text}'''...")
+        kwargs = {}
+        if speech and getattr(tts_engine, "supports_prosody", False) is True:
+            kwargs["prosody"] = speech
         return await tts_engine.async_generate_audio(
             text=text,
             file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",
+            **kwargs,
         )
+
+    async def wait_for_completion(self):
+        """Finish generation AND ordered sending before ending the audio stream."""
+        if self.task_list:
+            await asyncio.gather(*self.task_list)
+        await self._payload_queue.join()
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""
+        for task in self.task_list:
+            if not task.done():
+                task.cancel()
         self.task_list.clear()
         if self._sender_task:
             self._sender_task.cancel()
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
+        self._native_cue_used = False
         # Create a new queue to clear any pending items
         self._payload_queue = asyncio.Queue()
