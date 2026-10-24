@@ -1,6 +1,6 @@
 import * as T from '../3d/vendor/three.module.js';
 import {GarmentDynamics} from './secondary.mjs';
-import {prepareGarmentRig,clothBoneName} from './garment-rig.mjs';
+import {prepareGarmentRig,narrowSleeves,clothBoneName} from './garment-rig.mjs?v=2';
 import {SkirtClearance} from './skirt-clearance.mjs?v=3';
 
 import {ACTIONS,STORY_ACTIONS} from './actions.mjs';
@@ -27,7 +27,7 @@ const HAND_POSES={
 
 export class BodyActor{
   constructor(asset){
-    prepareGarmentRig(asset);
+    prepareGarmentRig(asset);narrowSleeves(asset);
     this.asset=asset;this.time=0;this.accumulator=0;this.action='idle';this.started=0;this.state=new Map();this.from=new Map();this.rms=0;
     asset.updateMatrixWorld(true);this.bones=[];this.rest=new Map();
     asset.traverse(b=>{if(!b.isBone)return;this.bones.push(b);const world=b.getWorldQuaternion(new T.Quaternion());this.rest.set(b,{position:b.position.clone(),quaternion:b.quaternion.clone(),world,worldInverse:world.clone().invert(),worldPosition:b.getWorldPosition(new T.Vector3())});});

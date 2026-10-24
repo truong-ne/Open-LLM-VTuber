@@ -3,15 +3,18 @@ import {OrbitControls} from '../3d/vendor/OrbitControls.js';
 import {GLTFLoader} from '../3d/vendor/loaders/GLTFLoader.js';
 import {GLTFExporter} from '../3d/vendor/GLTFExporter.js';
 import {clone} from '../3d/vendor/utils/SkeletonUtils.js';
-import {bakeBodyClips} from './motion.mjs?v=29';
+import {bakeBodyClips} from './motion.mjs?v=30';
 import {ACTIONS as BASE_ACTIONS,STORY_ACTIONS,SAMPLE_STORY} from './actions.mjs';
 import {faceForAction,planPerformanceStory as planStory} from './performance-context.mjs?v=2';
-import {PERFORMANCE_ACTIONS as ACTIONS,PERFORMANCE_META as ACTION_META} from './performance-motion.mjs?v=1';
+import {PERFORMANCE_ACTIONS as ACTIONS,PERFORMANCE_META as ACTION_META} from './performance-motion.mjs?v=2';
 import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs';
 import {AdaptiveFaceRig} from './motor-face.mjs';
 import {attachMotorPreview} from './motor-preview.mjs';
 import {FACE_PRESETS} from './performance-face.mjs?v=1';
+import {validateDance} from './dance-body.mjs?v=2';
+import whiteTopDance from './dances/white-top-dance.mjs';
 const $=id=>document.getElementById(id),canvas=$('scene');
+const DANCES=Object.fromEntries([whiteTopDance].map(raw=>{const dance=validateDance(raw);return [dance.id,dance];}));
 const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;
 const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.02,30);camera.position.set(0,1.1,3.6);
 const controls=new OrbitControls(camera,canvas);controls.target.set(0,.95,0);controls.enableDamping=true;controls.minDistance=.6;controls.maxDistance=8;controls.maxPolarAngle=Math.PI*.60;controls.update();
@@ -44,6 +47,45 @@ $('story-play').onclick=()=>{demo=false;$('audio').pause();const beats=planStory
 attachMotorPreview({actor:()=>actor,face,start(){demo=false;stopStory();$('auto').checked=false;$('pause').checked=false;$('hold').checked=false;}});
 $('story-stop').onclick=()=>{demo=false;stopStory();$('story-progress').textContent='Đã dừng đoạn diễn.';select('idle');};
 function resetBind(){for(const b of actor.bones){const r=actor.rest.get(b);b.position.copy(r.position);b.quaternion.copy(r.quaternion);}asset.updateMatrixWorld(true);}
+// Dance preview: plays on its own clock (no song needed) or freezes on one frame.
+let danceDef=null,danceClock=0,danceFrozen=false;
+for(const dance of Object.values(DANCES)){const option=document.createElement('option');option.value=dance.id;option.textContent=dance.label||dance.id;$('dance-select').append(option);}
+const danceCycle=()=>danceDef.frames.length/danceDef.fps;
+function showDanceClock(){const cycle=danceCycle(),t=((danceClock%cycle)+cycle)%cycle;$('dance-time').max=String(cycle);$('dance-time').value=String(t);$('dance-clock').textContent=`${t.toFixed(1).replace('.',',')} s`;canvas.dataset.danceTime=t.toFixed(3);}
+function beginDance(){demo=false;stopStory();$('audio').pause();$('auto').checked=false;$('pause').checked=false;$('hold').checked=false;actor.clearMotor();select('idle');setFace('smile');$('face-auto').checked=false;danceDef=DANCES[$('dance-select').value];}
+function playDance(){beginDance();danceClock=0;danceFrozen=false;actor.setDance(danceDef,0);showDanceClock();}
+function stopDance(){danceDef=null;danceFrozen=false;actor.clearDance();canvas.dataset.danceTime='';}
+function seekDance(time){
+  beginDance();resetBind();actor=new BodyActor(asset);for(let i=0;i<180;i++)actor.update(1/120);actor.play('idle');
+  danceClock=Math.max(0,time);
+  for(let i=0;i<180;i++){actor.setDance(danceDef,danceClock);actor.update(1/120);}
+  danceFrozen=true;asset.updateMatrixWorld(true);showDanceClock();
+}
+$('dance-play').onclick=playDance;$('dance-stop').onclick=stopDance;
+$('dance-time').oninput=e=>seekDance(Number(e.target.value));
+// Renders one frame on demand (also used by QA captures while the tab is hidden).
+function snapshot(){fitCanvas();asset.updateMatrixWorld(true);renderer.render(scene,camera);return canvas.toDataURL('image/jpeg',.88);}
+// Offline clip: the dance advances only when asked, so every frame is a fixed
+// 1/fps step of the same simulation (hair and cloth stay continuous).
+function startClip(){
+  playDance();danceFrozen=true;
+  for(let i=0;i<150;i++){actor.setDance(danceDef,0);actor.update(1/120);}
+}
+function stepClip(dt){
+  // Advance the dance at the solver's own 120 Hz, so arms, hair and cloth move
+  // continuously between video frames instead of in one jump per frame.
+  const steps=Math.max(1,Math.round(dt*120));
+  for(let i=0;i<steps;i++){danceClock+=dt/steps;actor.setDance(danceDef,danceClock);actor.update(dt/steps);}
+  face.update(0,false,dt);showDanceClock();
+  return snapshot();
+}
+// Fixed output size and camera, so a clip never depends on the window layout.
+function setClipLook({background=0xe9e4f0,eye=[0,1.12,4.5],target=[0,.98,0],width=720,height=860}={}){
+  clipSize={width,height};renderer.setPixelRatio(1);renderer.setSize(width,height,false);
+  camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setClearColor(background,1);
+  controls.target.set(...target);camera.position.set(...eye);controls.update();
+}
+window.dracoPreview={playDance,stopDance,seekDance,snapshot,startClip,stepClip,setClipLook};
 function holdPose(){resetBind();actor=new BodyActor(asset);for(let i=0;i<180;i++)actor.update(1/120);actor.play(selected);for(let i=0;i<Math.round((ACTION_META[selected].at||2)*120);i++)actor.update(1/120);}
 document.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>{demo=false;stopStory();$('auto').checked=false;select(button.dataset.action);});
 $('face-auto').onchange=()=>{if($('face-auto').checked)setFace(faceForAction(selected));};
@@ -51,22 +93,32 @@ $('demo').onclick=()=>{stopStory();$('audio').pause();$('auto').checked=false;$(
 $('hold').onchange=()=>{if($('hold').checked){demo=false;stopStory();$('auto').checked=false;holdPose();}};
 $('auto').onchange=()=>{demo=false;if($('auto').checked){stopStory();$('pause').checked=false;$('hold').checked=false;next=actor.time;}};
 $('skeleton').onchange=e=>skeleton.visible=e.target.checked;
-const frameRatio=()=>Math.max(1,.72/(canvas.clientWidth/canvas.clientHeight));
+// A canvas that has no layout yet (hidden tab, fresh pane) must not poison the camera with NaN.
+const frameRatio=()=>{const ratio=.72/(canvas.clientWidth/canvas.clientHeight);return Number.isFinite(ratio)?Math.max(1,ratio):1;};
 let framing=frameRatio();
 camera.position.sub(controls.target).multiplyScalar(framing).add(controls.target);controls.update();
+let clipSize=null;
+function fitCanvas(){
+  if(clipSize)return;
+  const w=canvas.clientWidth,h=canvas.clientHeight,dpr=renderer.getPixelRatio();
+  if(!w||!h||(canvas.width===Math.round(w*dpr)&&canvas.height===Math.round(h*dpr)))return;
+  const fitted=frameRatio();camera.position.sub(controls.target).multiplyScalar(fitted/framing).add(controls.target);framing=fitted;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
 function view(p,t){controls.target.set(...t);camera.position.set(...p).sub(controls.target).multiplyScalar(framing).add(controls.target);controls.update();}
 $('front').onclick=()=>view([0,1.1,3.6],[0,.95,0]);$('side').onclick=()=>view([2.5,1.25,2.8],[0,1,0]);$('back').onclick=()=>view([0,1.1,-3.6],[0,.95,0]);$('close').onclick=()=>view([.1,1.5,1.6],[.04,1.35,0]);
 $('face-close').onclick=()=>view([0,1.64,.58],[0,1.64,.04]);
 let context,analyser,samples;
 $('speak').onclick=async()=>{try{demo=false;if(!context){context=new AudioContext();analyser=context.createAnalyser();analyser.fftSize=1024;samples=new Float32Array(1024);context.createMediaElementSource($('audio')).connect(analyser);analyser.connect(context.destination);}await context.resume();$('audio').currentTime=0;await $('audio').play();stopStory();$('auto').checked=false;$('hold').checked=false;$('pause').checked=false;select('talk');}catch(error){$('status').textContent=error.message;}};
 let last=performance.now(),metric=last,frames=0,next=actor.time+7.5,index=0;const sequence=['hipSway','refuse',...STORY_ACTIONS,...BASE_ACTIONS.filter(a=>!STORY_ACTIONS.includes(a))];
-function tick(now){requestAnimationFrame(tick);const dt=(now-last)/1000;last=now;let rms=0;if(analyser&&!$('audio').paused){analyser.getFloatTimeDomainData(samples);rms=Math.sqrt(samples.reduce((s,x)=>s+x*x,0)/samples.length);}if(!$('pause').checked&&!$('hold').checked)actor.update(dt,rms);
+function tick(now){requestAnimationFrame(tick);const dt=(now-last)/1000;last=now;let rms=0;if(analyser&&!$('audio').paused){analyser.getFloatTimeDomainData(samples);rms=Math.sqrt(samples.reduce((s,x)=>s+x*x,0)/samples.length);}if(danceDef&&!danceFrozen&&!$('pause').checked){danceClock+=dt;actor.setDance(danceDef,danceClock,undefined,{live:true});showDanceClock();}
+  if(!$('pause').checked&&!$('hold').checked&&!danceFrozen)actor.update(dt,rms);
   face.setMotor(actor.motorRaw?actor.motorPolicy.apply(actor.motorRaw):null,actor.motorAmount);
   face.update(rms*5,!$('audio').paused,$('pause').checked||$('hold').checked?0:dt);asset.updateMatrixWorld(true);
   if(storyQueue.length&&actor.time>=storyDue){storyIndex++;if(storyIndex<storyQueue.length)playStoryBeat();else{stopStory();$('story-progress').textContent='Đã diễn xong câu chuyện.';select('idle');}}
   if($('auto').checked&&actor.time>=next){index=(index+1)%sequence.length;select(sequence[index]);next=actor.time+7.5;}
   if(demo&&actor.time>=next){demoIndex=(demoIndex+1)%demoBeats.length;select(demoBeats[demoIndex][0]);setFace(demoBeats[demoIndex][1]);next=actor.time+6.8;}
-  controls.update();const w=canvas.clientWidth,h=canvas.clientHeight,dpr=renderer.getPixelRatio();if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){const fitted=frameRatio();camera.position.sub(controls.target).multiplyScalar(fitted/framing).add(controls.target);framing=fitted;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}renderer.render(scene,camera);frames++;
+  controls.update();fitCanvas();renderer.render(scene,camera);frames++;
   if(now-metric>1000){$('metrics').textContent=`${Math.round(frames*1000/(now-metric))} FPS`;frames=0;metric=now;$('diagnostics').textContent=`${actor.bones.length} khớp; ${actor.dynamics.segments.length} đoạn tóc/vải; độ lệch cổ chân ${(actor.audit.footDrift*1000).toFixed(3)} mm; tiếp xúc ${actor.dynamics.audit.contacts}`;}
   canvas.dataset.action=actor.action;canvas.dataset.footDrift=actor.audit.footDrift.toFixed(8);canvas.dataset.bones=String(actor.bones.length);canvas.dataset.actionCount=String(ACTIONS.length);canvas.dataset.clothSegments=String(actor.dynamics.segments.length);canvas.dataset.clothContacts=String(actor.dynamics.audit.contacts);canvas.dataset.clothStretch=actor.dynamics.audit.maxStretch.toFixed(8);
 }

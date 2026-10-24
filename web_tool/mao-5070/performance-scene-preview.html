@@ -4,7 +4,7 @@
 <script type="importmap">{"imports":{"three":"./3d/vendor/three.module.js"}}</script></head><body><div id="scene"></div>
 <nav><span>Bản xem trước · không phát nhạc</span><button data-scene="lounge">Phòng Mao</button><button data-scene="studio">Vua Tiếng Việt</button><button data-scene="concert">Sân khấu hát</button></nav>
 <script type="module">
-import {mountNativeAvatar} from './draco/native-avatar.mjs?v=41';
+import {mountNativeAvatar} from './draco/native-avatar.mjs?v=43';
 import {createWordGameOverlay} from './draco/word-game-overlay.mjs?v=10';
 let selected='lounge';
 function game(){const now=Date.now()/1000;return {phase:selected==='studio'?'playing':'idle',round_id:'illustration',revision:selected,server_now:now,ends_at:now+60,participants:12,category:'Văn hóa Việt',slots:[2,3],letters:['D','Á','I','À','O'],hint_index:0,hints:['Trang phục có hai tà, quen thuộc trong những ngày lễ.'],leaderboard:[]};}

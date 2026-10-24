@@ -2,7 +2,7 @@
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mao · Cảnh chơi anime</title><style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#142b24}#scene{position:absolute;inset:0}nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;align-items:center;gap:8px;padding:8px 14px;background:#f8f3e7e8;border-radius:16px;color:#214e3c;font:12px system-ui}button{border:0;border-radius:12px;background:#215e49;color:#fff;padding:8px 12px;cursor:pointer}
 </style><script type="importmap">{"imports":{"three":"./3d/vendor/three.module.js"}}</script></head><body><div id="scene"></div><nav aria-label="Xem trước"><span>Dữ liệu minh họa</span><button data-phase="playing">Đang chơi</button><button data-phase="finished">Kết quả</button><button data-phase="idle">Về disco</button></nav><script type="module">
-import {mountNativeAvatar} from './draco/native-avatar.mjs?v=41';
+import {mountNativeAvatar} from './draco/native-avatar.mjs?v=43';
 import {createWordGameOverlay} from './draco/word-game-overlay.mjs?v=10';
 let phase='idle';
 function fixture(){const now=Date.now()/1000;return {phase,round_id:'scene-preview',revision:phase,server_now:now,ends_at:now+43,show_until:now+300,participants:18,category:'Văn hóa Việt',slots:[2,3],letters:['D','Á','I','À','O'],hint_index:1,hints:['Trang phục hay được mặc khi chụp ảnh Tết hoặc dự lễ cưới.','Nhiều nữ sinh mặc bộ màu trắng này đến trường.'],...(phase==='finished'?{answer:'áo dài'}:{}),leaderboard:phase==='finished'?[{nickname:'Người chơi A',score:100,seconds:8.4}]:[]};}

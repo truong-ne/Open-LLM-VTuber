@@ -99,6 +99,17 @@ class CatalogTests(SongFixture, unittest.TestCase):
         self.write([self.row, {**self.row, "id": "another", "title": "Bai thu"}])
         self.assertEqual(SongCatalog(self.manifest, self.root).public(), [])
 
+    def test_choreography_name_is_optional_and_validated(self):
+        self.assertEqual(self.catalog.public()[0]["dance"], "")
+        self.write([{**self.row, "dance": "white-top-dance"}])
+        song = SongCatalog(self.manifest, self.root).public()[0]
+        self.assertEqual(song["dance"], "white-top-dance")
+        self.assertNotIn("path", song)
+        # The name becomes a module path in the renderer, so it must stay a slug.
+        for bad in ("../secret", "Conan Dance", "a/b", "x" * 65, 7, ["conan"]):
+            self.write([{**self.row, "dance": bad}])
+            self.assertEqual(SongCatalog(self.manifest, self.root).public(), [], bad)
+
 
 class SingingTests(SongFixture, unittest.IsolatedAsyncioTestCase):
     async def start(self):

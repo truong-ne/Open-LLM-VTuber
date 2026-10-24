@@ -1,7 +1,7 @@
 import * as T from '../3d/vendor/three.module.js';
 import {GLTFLoader} from '../3d/vendor/loaders/GLTFLoader.js';
-import {PERFORMANCE_ACTIONS} from './performance-motion.mjs?v=3';
-import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs?v=3';
+import {PERFORMANCE_ACTIONS} from './performance-motion.mjs?v=4';
+import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs?v=5';
 import {MotorPolicy} from './motor-policy.mjs';
 import {FACE_PRESETS} from './performance-face.mjs?v=1';
 import {AdaptiveFaceRig as FaceRig} from './motor-face.mjs';
@@ -16,6 +16,20 @@ import {headingDegrees,cardinal} from './room-orientation.mjs?v=4';
 import {mountCommentPanel} from './comment-panel.mjs?v=3';
 import {createSceneTransition} from './scene-transition.mjs?v=2';
 import {mountSingingPlayer} from './singing-player.mjs';
+import {validateDance} from './dance-body.mjs?v=2';
+
+// Each song may name a choreography (knowledge/mao_songs.vi.json "dance"). The
+// module loads once; until it is ready, or when it is missing, Mao keeps the
+// default hip sway.
+const dances=new Map();
+function danceFor(name){
+  if(!/^[a-z0-9-]{1,64}$/.test(name||''))return null;
+  if(!dances.has(name)){
+    dances.set(name,null);
+    import(`./dances/${name}.mjs?v=1`).then(module=>dances.set(name,validateDance(module.default))).catch(()=>dances.set(name,false));
+  }
+  return dances.get(name)||null;
+}
 
 export async function mountNativeAvatar(container,bridge){
   const {state}=bridge,ipc=window.electron?.ipcRenderer;
@@ -204,8 +218,13 @@ export async function mountNativeAvatar(container,bridge){
       actor.setLocomotion(locomotionFrame(space,feet,dt));
       const audio=bridge.audio,playing=songPose.playing||!!audio&&!audio.paused&&!audio.ended;
       actor.songPerformance=songPose.playing?songPose:null;
-      if(songPose.playing){actor.clearMotor();if(actor.action!=='hipSway')actor.play('hipSway');actor.started=actor.time-2;manualActionUntil=actor.time+.3;}
-      else if(wasSinging){actor.play('bow');manualActionUntil=actor.time+6.7;}
+      const choreography=songPose.playing?danceFor(singing.state?.song?.dance):null;
+      if(songPose.playing){
+        actor.clearMotor();
+        if(choreography){actor.setDance(choreography,songPose.time,songPose.bpm,{live:true});if(actor.action!=='idle')actor.play('idle');}
+        else{actor.clearDance();if(actor.action!=='hipSway')actor.play('hipSway');actor.started=actor.time-2;}
+        manualActionUntil=actor.time+.3;
+      }else{actor.clearDance();if(wasSinging){actor.play('bow');manualActionUntil=actor.time+6.7;}}
       wasSinging=songPose.playing;
       if(playing&&!songPose.playing&&audio!==lastAudio){
         lastAudio=audio;const text=bridge.payload?.displayText?.text||'',performance=selectPerformance(text,bridge.payload?.expressions,bridge.payload?.motions);

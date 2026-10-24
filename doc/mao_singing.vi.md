@@ -24,13 +24,13 @@ Hiện danh sách **trống**, chưa có bản thu giọng Mao. Khung đã hỗ 
 }
 ```
 
-Đây chỉ là mẫu cấu hình, không phải một bài đã cài. `id` dùng chữ thường a–z, số và dấu gạch ngang; `bpm` trong khoảng 40–220. Đường dẫn phải tương đối bên trong thư mục bài hát. Tên/bí danh giữa hai bài không được trùng sau khi bỏ dấu. Lỗi cấu trúc hoặc tên mơ hồ làm danh sách bị từ chối để tránh hát nhầm bài.
+Đây chỉ là mẫu cấu hình, không phải một bài đã cài. `id` dùng chữ thường a–z, số và dấu gạch ngang; `bpm` trong khoảng 40–220. Trường tùy chọn `dance` gắn vũ đạo riêng cho bài, xem [`mao_dance.vi.md`](mao_dance.vi.md). Đường dẫn phải tương đối bên trong thư mục bài hát. Tên/bí danh giữa hai bài không được trùng sau khi bỏ dấu. Lỗi cấu trúc hoặc tên mơ hồ làm danh sách bị từ chối để tránh hát nhầm bài.
 
 ## Luồng tiết mục
 
 - Nhận đúng lệnh và bài có sẵn → chờ Mao nói hết lượt và xử lý các lượt đã chờ.
 - Chuyển bằng rèm từ phòng sang sân khấu xanh ngọc/bạc; camera chính diện, vẫn thấy chân. Hết chuyển cảnh mới cho phép phát nhạc.
-- Một màn hình nhận quyền phát cho mỗi tiết mục, tránh hai cửa sổ phát chồng. Mao đứng giữa sân khấu, lắc hông theo BPM và thời gian phát thực của file; đèn nền cùng nhịp. Nhép miệng theo mức âm lượng bản phối, chưa phải phân tích âm vị hoặc tách giọng hát.
+- Một màn hình nhận quyền phát cho mỗi tiết mục, tránh hai cửa sổ phát chồng. Mao đứng giữa sân khấu, nhảy vũ đạo riêng của bài nếu có khai báo `dance`, nếu không thì lắc hông theo BPM và thời gian phát thực của file; đèn nền cùng nhịp. Nhép miệng theo mức âm lượng bản phối, chưa phải phân tích âm vị hoặc tách giọng hát.
 - Tạm dừng lời dẫn tự động và lượt trả lời bình luận trong lúc hát; bình luận vẫn hiện trên Mao Link. Lượt đang nói được nghe đến hết trước khi hát.
 - Hết file → đóng/mở rèm về phòng. Lỗi phát, đóng cửa sổ, mất heartbeat trên 12 giây, chuẩn bị quá 20 giây hoặc chờ lượt quá 120 giây đều giải phóng hàng đợi thoại.
 - CD chung **60 giây**, bắt đầu khi tiết mục kết thúc hoặc bị dừng; thời gian chuẩn bị/hát không trừ vào CD. Lệnh spam không xếp bài mới, không kéo dài CD, không tạo tiếng nhắc liên tục. Lệnh cũ gửi trong CD rồi phát lại sau reconnect bị bỏ qua. Không nhận lệnh hát trong vòng Vua Tiếng Việt/khi bảng kết quả còn hiện; không cho mở game trong lúc chuẩn bị/hát.

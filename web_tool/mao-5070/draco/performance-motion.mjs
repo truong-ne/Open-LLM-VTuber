@@ -1,5 +1,5 @@
 import * as T from '../3d/vendor/three.module.js';
-import {BodyActor} from './motion.mjs?v=29';
+import {BodyActor} from './motion.mjs?v=30';
 import {ACTION_META} from './actions.mjs';
 
 export const PERFORMANCE_META={...ACTION_META,

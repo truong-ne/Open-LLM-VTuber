@@ -51,6 +51,12 @@ class SongCatalog:
         ident, title = row["id"], row["title"]
         aliases = row.get("aliases", [])
         bpm = row.get("bpm", 120)
+        # Optional name of a choreography module (web_tool/.../dances/<name>.mjs).
+        dance = row.get("dance", "")
+        if not isinstance(dance, str):
+            raise ValueError("Invalid dance name")
+        if dance and not re.fullmatch(r"[a-z0-9-]{1,64}", dance):
+            raise ValueError("Invalid dance name")
         if (
             not isinstance(ident, str)
             or not re.fullmatch(r"[a-z0-9-]{1,64}", ident)
@@ -93,6 +99,7 @@ class SongCatalog:
             "title": title.strip(),
             "aliases": aliases,
             "bpm": bpm,
+            "dance": dance,
             "duration": duration if available else 0,
             "available": available,
             "path": path,

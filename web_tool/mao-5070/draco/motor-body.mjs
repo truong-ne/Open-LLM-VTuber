@@ -1,11 +1,11 @@
 import * as T from '../3d/vendor/three.module.js';
-import {PerformanceBodyActor} from './performance-motion.mjs?v=3';
+import {DanceBodyActor} from './dance-body.mjs?v=2';
 import {MotorPolicy,validateMotor} from './motor-policy.mjs';
 const smooth=n=>{n=T.MathUtils.clamp(n,0,1);return n*n*(3-2*n);};
 
 // New poses are composed from continuous goals. No clips are created, and the
 // existing IK, palm constraints, cloth and skirt clearance remain authoritative.
-export class AdaptiveBodyActor extends PerformanceBodyActor{
+export class AdaptiveBodyActor extends DanceBodyActor{
   constructor(asset,policy=new MotorPolicy()){
     super(asset);this.motorPolicy=policy;this.motorRaw=null;this.motorStarted=0;this.motorUntil=0;this.motorGuard=1;this.motorRejected=0;
   }

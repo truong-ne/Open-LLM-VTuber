@@ -1,5 +1,5 @@
 import {storyAction} from './actions.mjs';
-import {PERFORMANCE_ACTIONS} from './performance-motion.mjs?v=1';
+import {PERFORMANCE_ACTIONS} from './performance-motion.mjs?v=2';
 
 const faceMap={hipSway:'smile',refuse:'flat',laugh:'squint',chuckle:'squint',celebrate:'squint',surprise:'surprised',shy:'smile',reassure:'smile',sad:'flat',shrug:'flat',greet:'smile'};
 export const faceForAction=action=>faceMap[action]||'neutral';
