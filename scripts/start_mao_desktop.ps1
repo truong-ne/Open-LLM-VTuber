@@ -4,7 +4,7 @@ $taskRoot = Split-Path -Parent $PSScriptRoot
 & (Join-Path $taskRoot 'private/start-local.ps1')
 $taskDeadline = (Get-Date).AddSeconds(150)
 do {
-    try { $taskResponse = Invoke-WebRequest -Uri 'http://127.0.0.1:12393/' -TimeoutSec 3; break } catch {
+    try { $taskResponse = Invoke-WebRequest -Uri 'http://127.0.0.1:12393/' -UseBasicParsing -TimeoutSec 3; break } catch {
         if ((Get-Date) -gt $taskDeadline) { throw 'Mao backend did not finish initialization. Check logs/server.stderr.log.' }
         Start-Sleep -Seconds 2
     }

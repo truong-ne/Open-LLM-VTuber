@@ -224,6 +224,9 @@ class WebSocketHandler:
             while True:
                 try:
                     data = await websocket.receive_json()
+                    autonomy = getattr(self.default_context_cache, "autonomy", None)
+                    if autonomy:
+                        autonomy.observe_input(data)
                     message_handler.handle_message(client_uid, data)
                     await self._route_message(websocket, client_uid, data)
                 except WebSocketDisconnect:
@@ -308,16 +311,16 @@ class WebSocketHandler:
 
         # Clean up other client data
         self.client_connections.pop(client_uid, None)
-        self.client_contexts.pop(client_uid, None)
+        context = self.client_contexts.pop(client_uid, None)
         self.received_data_buffers.pop(client_uid, None)
         if client_uid in self.current_conversation_tasks:
             task = self.current_conversation_tasks[client_uid]
             if task and not task.done():
                 task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
             self.current_conversation_tasks.pop(client_uid, None)
 
         # Call context close to clean up resources (e.g., MCPClient)
-        context = self.client_contexts.get(client_uid)
         if context:
             await context.close()
 
@@ -327,7 +330,7 @@ class WebSocketHandler:
     async def _cleanup_failed_connection(self, client_uid: str) -> None:
         """Clean up failed connection data"""
         self.client_connections.pop(client_uid, None)
-        self.client_contexts.pop(client_uid, None)
+        context = self.client_contexts.pop(client_uid, None)
         self.received_data_buffers.pop(client_uid, None)
         self.chat_group_manager.client_group_map.pop(client_uid, None)
 
@@ -335,9 +338,12 @@ class WebSocketHandler:
             task = self.current_conversation_tasks[client_uid]
             if task and not task.done():
                 task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
             self.current_conversation_tasks.pop(client_uid, None)
 
         message_handler.cleanup_client(client_uid)
+        if context:
+            await context.close()
 
     async def broadcast_to_group(
         self, group_members: list[str], message: dict, exclude_uid: str = None

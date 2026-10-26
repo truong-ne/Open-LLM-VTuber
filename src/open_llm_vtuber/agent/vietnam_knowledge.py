@@ -9,7 +9,7 @@ from pathlib import Path
 from loguru import logger
 
 # Gate Mao's runtime helpers by identity, independently of a biography section.
-PERSONA_MARKER = "MAO_FEM_MALFOY_V1"
+PERSONA_MARKER = "CHARACTER_RUNTIME_V1"
 REFERENCE_PATH = (
     Path(__file__).resolve().parents[3] / "knowledge/vietnam_history.vi.json"
 )

@@ -23,6 +23,7 @@ class ProxyHandler:
         server_url: str = "ws://localhost:12393/client-ws",
         word_game=None,
         singing=None,
+        activity=None,
     ):
         """
         Initialize the proxy handler.
@@ -31,6 +32,7 @@ class ProxyHandler:
             server_url: The WebSocket URL of the actual server
         """
         self.server_url = server_url
+        self.activity = activity
         self.word_game = word_game
         self.singing = singing
         self._last_sing_notice = float("-inf")
@@ -156,6 +158,8 @@ class ProxyHandler:
             # Handle messages from this client
             while True:
                 message = await websocket.receive_json()
+                if self.activity:
+                    self.activity(message)
 
                 if message.get("type") == "live-comment":
                     self.comment_feed.add(message)

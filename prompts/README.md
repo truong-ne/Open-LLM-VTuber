@@ -15,3 +15,10 @@ This directory contains utility prompts used in the Open-LLM-VTuber project. The
 They are located in:
 *   Your main `conf.yaml` file.
 *   The YAML files within the `characters/` directory if you are defining multiple characters.
+# Mao persona source
+
+Mao uses PostgreSQL `mao_hybrid.character_profiles`, not Markdown persona files.
+Use `/mao-5070/persona.html` on the local playroom server or `scripts/mao_profile.py`.
+Do not restore the removed Mao persona or sync it into YAML. Generic prompt
+templates below belong to the reusable application framework; PostgreSQL persona
+mode skips the legacy character prompt loader.

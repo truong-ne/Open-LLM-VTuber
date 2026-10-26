@@ -1,0 +1,43 @@
+# Merge under character_config.agent_config.agent_settings.basic_memory_agent.
+# scripts/mao_hybrid.py enable does this for conf.yaml and characters/mao_live.yaml.
+hybrid:
+  enabled: true
+  persona_source: postgres
+  database_url_env: MAO_DATABASE_URL
+  database_env_file: private/mao-hybrid.env
+  scope: mao
+  embedding_url: http://127.0.0.1:11434/api/embed
+  embedding_model: qwen3-embedding:0.6b
+  embedding_digest: '' # optional operator pin; runtime profiles always include actual digest
+  embedding_dimensions: 1024
+  embedding_timeout: 4
+  search_mode: exact
+  minimum_similarity: 0.35
+  lexical_min_overlap: 2
+  memory_limit: 2000
+  retention_days: 180
+  tool_rounds: 6
+  exploration_enabled: false
+  exploration_steps: 3
+  exploration_seconds: 30
+  learning_enabled: true
+  learning_timezone: Asia/Ho_Chi_Minh
+  learning_min_turns: 20
+  learning_min_feedback: 3
+  learning_retention_days: 90
+  autonomy:
+    enabled: false # operator can enable the read-only idle curiosity service
+    idle_seconds: 120
+    interval_seconds: 300
+    daily_cycles: 24
+    cycle_seconds: 60
+    model: mao-companion
+  external_read_tools: [get_current_time, convert_time, search, fetch_content]
+  computer:
+    enabled: false
+    allowed_origins: []
+    actions_per_minute: 12
+    timeout_seconds: 15
+    approval_seconds: 120
+    cdp_url: ''
+    headless: false

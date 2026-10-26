@@ -116,8 +116,11 @@ class AsyncLLM(StatelessLLMInterface):
                 if msg["role"] != "system"
             ]
 
-            logger.debug(f"Sending messages to Claude API: {converted_messages}")
-            logger.debug(f"Tools provided: {tools}")
+            logger.debug(
+                "Sending {} messages to Claude API (content omitted)",
+                len(converted_messages),
+            )
+            logger.debug("Tools provided: {}", len(tools) if tools else 0)
 
             async with self.client.messages.stream(
                 messages=converted_messages,
@@ -170,7 +173,7 @@ class AsyncLLM(StatelessLLMInterface):
                             ):
                                 partial_json_accumulator += event.delta.partial_json
                                 logger.trace(
-                                    f"Stream: input_json_delta - Tool ID: {current_tool_call_info['id']}, Partial: {event.delta.partial_json}"
+                                    f"Stream: input_json_delta - Tool ID: {current_tool_call_info['id']}, bytes: {len(event.delta.partial_json)}"
                                 )
                             else:
                                 logger.warning(
@@ -195,7 +198,7 @@ class AsyncLLM(StatelessLLMInterface):
                                     tool_input = json.loads(partial_json_accumulator)
                                 current_tool_call_info["input"] = tool_input
                                 logger.debug(
-                                    f"Stream: tool_use completed - ID: {current_tool_call_info['id']}, Input: {tool_input}"
+                                    f"Stream: tool_use completed - ID: {current_tool_call_info['id']} (input omitted)"
                                 )
                                 # Yield the complete tool call info
                                 yield {
@@ -204,7 +207,7 @@ class AsyncLLM(StatelessLLMInterface):
                                 }
                             except json.JSONDecodeError as e:
                                 logger.error(
-                                    f"Failed to decode tool input JSON: {partial_json_accumulator}. Error: {e}"
+                                    f"Failed to decode tool input JSON for ID {current_tool_call_info['id']}, position {e.pos} (input omitted)"
                                 )
                                 yield {
                                     "type": "error",
@@ -236,7 +239,7 @@ class AsyncLLM(StatelessLLMInterface):
                     # The outer try/except handles SDK-level errors.
 
         except Exception as e:
-            logger.error(f"Claude API error occurred: {str(e)}")
+            logger.error("Claude API error: {}", type(e).__name__)
             logger.info(f"Model: {self.model}")
             # Yield an error event before raising
             yield {"type": "error", "message": f"Claude API error: {str(e)}"}

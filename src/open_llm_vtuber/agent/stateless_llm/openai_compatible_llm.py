@@ -127,7 +127,8 @@ class AsyncLLM(StatelessLLMInterface):
 
                     if has_tool_calls:
                         logger.debug(
-                            f"Tool calls detected in chunk: {chunk.choices[0].delta.tool_calls}"
+                            "Tool call deltas received: {}",
+                            len(chunk.choices[0].delta.tool_calls),
                         )
                         in_tool_call = True
                         # Process tool calls in the current chunk
@@ -174,7 +175,10 @@ class AsyncLLM(StatelessLLMInterface):
                     elif in_tool_call and not has_tool_calls:
                         in_tool_call = False
                         # Convert accumulated tool calls to the required format and output
-                        logger.info(f"Complete tool calls: {accumulated_tool_calls}")
+                        logger.info(
+                            "Complete tool calls: {} (arguments omitted)",
+                            len(accumulated_tool_calls),
+                        )
 
                         # Use the from_dict method to create a ToolCallObject instance from a dictionary
                         complete_tool_calls = [
@@ -195,7 +199,10 @@ class AsyncLLM(StatelessLLMInterface):
 
             # If stream ends while still in a tool call, make sure to yield the tool call
             if in_tool_call and accumulated_tool_calls:
-                logger.info(f"Final tool call at stream end: {accumulated_tool_calls}")
+                logger.info(
+                    "Final tool calls at stream end: {} (arguments omitted)",
+                    len(accumulated_tool_calls),
+                )
 
                 # Create a ToolCallObject instance from a dictionary using the from_dict method.
                 complete_tool_calls = [
@@ -225,10 +232,14 @@ class AsyncLLM(StatelessLLMInterface):
                 )
                 yield "__API_NOT_SUPPORT_TOOLS__"
                 return
-            logger.error(f"LLM API: Error occurred: {e}")
+            logger.error(
+                "LLM API error: {}, status={}",
+                type(e).__name__,
+                getattr(e, "status_code", None),
+            )
             logger.info(f"Base URL: {self.base_url}")
             logger.info(f"Model: {self.model}")
-            logger.info(f"Messages: {messages}")
+            logger.info("Message count: {} (content omitted)", len(messages))
             logger.info(f"temperature: {self.temperature}")
             yield "Error calling the chat endpoint: Error occurred while generating response. See the logs for details."
 

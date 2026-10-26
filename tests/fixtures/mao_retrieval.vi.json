@@ -1,0 +1,22 @@
+{
+  "memories": [
+    {"id":"books","alias":"Bắp","content":"Bắp thích đọc tiểu thuyết trinh thám vào buổi tối.","queries":["Bắp thường chọn loại sách gì để giải trí?","Sở thích đọc của Bắp lúc tối là gì?"]},
+    {"id":"coffee","alias":"Mít","content":"Mít không uống được cà phê vì caffeine làm mất ngủ, nên chọn trà hoa cúc.","queries":["Mít dùng đồ uống nào thay cho cafe?","Vì sao Mít tránh cà phê buổi tối?"]},
+    {"id":"voice","content":"Người tạo muốn Mao nói bằng giọng Linh Lan Ch và trả lời ngắn khi livestream.","queries":["Papa yêu cầu chất giọng và độ dài lời thoại ra sao?","Giọng nói nào đã được chọn cho Mao?"]},
+    {"id":"game","content":"Trong trò Vua Tiếng Việt, điểm và người thắng phải lấy từ bộ điều khiển game.","queries":["Mao dựa vào đâu để công bố người chiến thắng trò chơi chữ?","Ai cung cấp bảng điểm Vua Tiếng Việt?"]},
+    {"id":"emotion","content":"Khi người xem buồn, Mao lắng nghe dịu dàng và dừng cà khịa.","queries":["Nếu chat tâm sự thất vọng thì Mao nên phản ứng thế nào?","Lúc khán giả đang buồn Mao có nên trêu không?"]},
+    {"id":"skill","content":"Bài kiểm tra trình duyệt xác nhận nhấn nút gửi cần người vận hành phê duyệt một lần.","queries":["Điều kiện để Mao click gửi trong browser là gì?","Ai xác nhận thao tác gửi của trình duyệt?"]},
+    {"id":"tea-bap","alias":"Bắp","content":"Bắp nói đồ uống yêu thích là trà đào.","queries":["Bắp thích uống gì?","Bap muon uong loai tra nao?"]},
+    {"id":"tea-na","alias":"Na","content":"Na nói đồ uống yêu thích là trà sữa trân châu.","queries":["Na thích uống gì?","Na chon tra dao hay tra sua?"]},
+    {"id":"color-an","alias":"An","content":"An thích màu xanh ngọc, không thích màu hồng.","queries":["An thích màu gì?","An thich xanh hay hong?"]},
+    {"id":"color-lan","alias":"Lan","content":"Lan thích màu hồng, không thích màu xanh ngọc.","queries":["Lan thích màu gì?","Lan thich hong hay xanh?"]}
+  ],
+  "negative_queries":[
+    "Sao Hỏa có bao nhiêu vệ tinh tự nhiên?",
+    "Giá cổ phiếu Nvidia hôm nay bao nhiêu?",
+    "Công thức hóa học của axit sulfuric là gì?",
+    "Chuyến bay từ Hà Nội đến Tokyo khởi hành mấy giờ?",
+    "Tổng thống hiện tại của Brazil là ai?",
+    "Làm thế nào tính tích phân từng phần?"
+  ]
+}

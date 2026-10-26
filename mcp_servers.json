@@ -1,14 +1,14 @@
 {
   "mcp_servers": {
     "time": {
-      "command": "uvx",
+      "command": "private/tools/uv/bin/uvx.exe",
       "args": [
         "mcp-server-time",
         "--local-timezone=Asia/Ho_Chi_Minh"
       ]
     },
     "ddg-search": {
-      "command": "uvx",
+      "command": "private/tools/uv/bin/uvx.exe",
       "args": [
         "duckduckgo-mcp-server"
       ]

@@ -7,6 +7,7 @@ It uses FastAPI for the server and Starlette for static file serving.
 """
 
 import os
+import asyncio
 import shutil
 from contextlib import asynccontextmanager
 
@@ -78,17 +79,45 @@ class WebSocketServer:
         self.config = config
         self.word_game = WordGameService(require_presentation=True)
         self.singing = SingingService()
+        self.autonomy = None
+        self.proxy_handler = None
 
         @asynccontextmanager
         async def lifespan(app):
             self.word_game.configure_speech(self.default_context_cache.tts_engine)
             await self.word_game.start()
             await self.singing.start()
+            learning_task = None
+            autonomy_task = None
+            hybrid = getattr(self.default_context_cache.agent_engine, "_hybrid", None)
+            if hybrid and hybrid.config.learning_enabled:
+                from .agent.hybrid.learning import DailyLearning
+
+                learning_task = asyncio.create_task(DailyLearning(hybrid.store).run())
+            if hybrid and hybrid.config.autonomy.enabled:
+                from .agent.hybrid.autonomy import AutonomyService
+
+                self.autonomy = AutonomyService(hybrid.config, busy=self._autonomy_busy)
+                self.default_context_cache.autonomy = self.autonomy
+                autonomy_task = asyncio.create_task(self.autonomy.run())
             try:
                 yield
             finally:
-                await self.word_game.stop()
-                await self.singing.stop()
+                if autonomy_task:
+                    autonomy_task.cancel()
+                    await asyncio.gather(autonomy_task, return_exceptions=True)
+                    await self.autonomy.close()
+                    self.default_context_cache.autonomy = None
+                if learning_task:
+                    learning_task.cancel()
+                    await asyncio.gather(learning_task, return_exceptions=True)
+                try:
+                    await self.word_game.stop()
+                finally:
+                    try:
+                        await self.singing.stop()
+                    finally:
+                        await self.default_context_cache.close()
 
         self.app = FastAPI(title="Open-LLM-VTuber Server", lifespan=lifespan)
 
@@ -112,9 +141,11 @@ class WebSocketServer:
 
         # Include routes, passing the context instance
         # The context will be populated during the initialize step
-        self.app.include_router(
-            init_client_ws_route(default_context_cache=self.default_context_cache),
+        client_routes = init_client_ws_route(
+            default_context_cache=self.default_context_cache
         )
+        self.client_handler = client_routes.mao_handler
+        self.app.include_router(client_routes)
         self.app.include_router(
             init_webtool_routes(default_context_cache=self.default_context_cache),
         )
@@ -126,13 +157,14 @@ class WebSocketServer:
             host = system_config.host
             port = system_config.port
             server_url = f"ws://{host}:{port}/client-ws"
-            self.app.include_router(
-                init_proxy_route(
-                    server_url=server_url,
-                    word_game=self.word_game,
-                    singing=self.singing,
-                ),
+            proxy_routes = init_proxy_route(
+                server_url=server_url,
+                word_game=self.word_game,
+                singing=self.singing,
+                activity=self._autonomy_input,
             )
+            self.proxy_handler = proxy_routes.mao_handler
+            self.app.include_router(proxy_routes)
 
         # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):
@@ -172,6 +204,28 @@ class WebSocketServer:
             "/",
             CORSStaticFiles(directory="frontend", html=True),
             name="frontend",
+        )
+
+    def _autonomy_input(self, message):
+        if self.autonomy:
+            self.autonomy.observe_input(message)
+
+    def _autonomy_busy(self):
+        proxy = self.proxy_handler
+        return bool(
+            any(
+                task and not task.done()
+                for task in self.client_handler.current_conversation_tasks.values()
+            )
+            or (
+                proxy
+                and (
+                    proxy.message_queue.conversation_active
+                    or proxy.message_queue.has_pending_messages()
+                )
+            )
+            or self.word_game.game.active
+            or self.singing.active
         )
 
     async def initialize(self):

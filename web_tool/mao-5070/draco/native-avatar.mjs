@@ -33,6 +33,7 @@ function danceFor(name){
 
 export async function mountNativeAvatar(container,bridge){
   const {state}=bridge,ipc=window.electron?.ipcRenderer;
+  const portrait=()=>bridge.options.presentation==='portrait';
   const gltf=await new GLTFLoader().loadAsync(new URL('character.glb',import.meta.url).href);
   if(!container.isConnected)return {dispose(){}};
   const canvas=document.createElement('canvas'),stage=document.createElement('div');
@@ -45,10 +46,10 @@ export async function mountNativeAvatar(container,bridge){
   const brand=document.createElement('span');brand.textContent='VTuber';mark.append(brand);
   const connection=document.createElement('span');connection.className='mao-studio-live';
   header.append(mark,connection);container.append(header);
-  const comments=mountCommentPanel(container,{getMode:()=>bridge.options.mode,fetcher:bridge.commentFeedFetcher||fetch});
+  const comments=portrait()?null:mountCommentPanel(container,{getMode:()=>bridge.options.mode,fetcher:bridge.commentFeedFetcher||fetch});
   let disposed=false,frame,last=performance.now(),lastAudio=null,mode,lastPublish=0,lastRegions=0;
   const renderer=new T.WebGLRenderer({canvas,alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,portrait()?1:1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;
   const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.02,30);
   scene.add(new T.HemisphereLight(0xfff9ff,0x807587,2));
   const light=new T.DirectionalLight(0xfff6ed,2);light.position.set(-2,3,4);scene.add(light);
@@ -65,6 +66,7 @@ export async function mountNativeAvatar(container,bridge){
   // Keep a slightly closer lounge view and the readable TV framing. Navigation
   // uses world coordinates and the actual camera bearing independently of UI.
   const roomView={kind:'room',studio:false,lounge:true,direction:new T.Vector3(0,.02,1)},fullRoomView={zoom:1.15},loungeView={zoom:1.32};
+  if(portrait())loungeView.zoom=1.52;
   const windowView=()=>roomView.lounge?loungeView:fullRoomView;
   const options=()=>bridge.options;
   document.body.dataset.mode=options().mode;
@@ -76,11 +78,11 @@ export async function mountNativeAvatar(container,bridge){
   let settingsScale=options().scale;
   const refresh=()=>{
     document.body.dataset.mode=options().mode;
-    header.style.display=options().mode==='window'?'flex':'none';
+    header.style.display=options().mode==='window'&&!portrait()?'flex':'none';
     layoutDirty=true;
-    stage.style.pointerEvents=options().mode==='pet'&&options().forceIgnoreMouse?'none':'auto';
+    stage.style.pointerEvents=portrait()||options().mode==='pet'&&options().forceIgnoreMouse?'none':'auto';
     const pet=options().mode==='pet';syncScene();
-    renderer.setClearColor(0x07111e,pet?0:1);
+    renderer.setClearColor(0x07111e,pet||portrait()?0:1);
     stage.style.cursor=pet?'grab':'default';
     if(Number.isFinite(options().scale)&&options().scale>0){
       const previous=settingsScale;settingsScale=options().scale;
@@ -114,7 +116,7 @@ export async function mountNativeAvatar(container,bridge){
     const pet=options().mode==='pet',key=pet?'pet':next==='studio'?'game':next==='concert'?'concert':'window';
     if(sceneKind===next&&sceneMode===options().mode&&space===spaces[key])return;
     sceneKind=next;sceneMode=options().mode;room=rooms[next];space=spaces[key];feet=footSets[key];
-    for(const [name,value] of Object.entries(rooms)){value.setMode(!pet&&name===next?'window':'pet');value.marker.visible=false;}
+    for(const [name,value] of Object.entries(rooms)){value.setMode(!pet&&!portrait()&&name===next?'window':'pet');value.marker.visible=false;}
     roomView.studio=next==='studio';roomView.lounge=next!=='studio';
     state.background=pet?'none':next==='studio'?'tv-studio':next==='concert'?'concert':'disco';
   }
@@ -131,7 +133,7 @@ export async function mountNativeAvatar(container,bridge){
   }
   function syncScene(){
     const pet=options().mode==='pet',controller=window.maoWordGame;
-    const next=['loading','playing'].includes(singing?.state?.phase)?'concert':sceneForGame(controller?.state,Date.now(),controller?.clockOffset||0);
+    const next=portrait()?'lounge':['loading','playing'].includes(singing?.state?.phase)?'concert':sceneForGame(controller?.state,Date.now(),controller?.clockOffset||0);
     if(!transition||pet||sceneMode!==options().mode){applyScene(next);if(transition)transition.element.hidden=true;}
     else{transition.request(next);transition.update();}
     state.sceneTransition=pet?'idle':transition?.timeline.phase||'idle';
@@ -157,7 +159,7 @@ export async function mountNativeAvatar(container,bridge){
     ipc?.send('mao-draco-hit-regions',{active:false,mode:options().mode,rectangles:[]});
     asset.traverse(mesh=>{if(!mesh.isMesh)return;mesh.geometry.dispose();for(const material of [].concat(mesh.material)){for(const value of Object.values(material))if(value?.isTexture)value.dispose();material.dispose();}});
     for(const value of Object.values(rooms))value.dispose();
-    renderer.dispose();comments.dispose();transition?.dispose();singing?.dispose();if(window.maoSinging===singing)delete window.maoSinging;clearTimeout(noticeTimer);motorNotice.remove();header.remove();canvas.remove();stage.remove();
+    renderer.dispose();comments?.dispose();transition?.dispose();singing?.dispose();if(window.maoSinging===singing)delete window.maoSinging;clearTimeout(noticeTimer);motorNotice.remove();header.remove();canvas.remove();stage.remove();
     if(bridge.renderer?.dispose===dispose){bridge.renderer=null;state.ready=false;}
   }
   let w=0,h=0,layoutDirty=true,observedFooter;
@@ -190,14 +192,15 @@ export async function mountNativeAvatar(container,bridge){
   if(bridge.pendingAction){performAction(bridge.pendingAction);bridge.pendingAction=null;}
   const tick=now=>{
     if(disposed)return;
+    if(options().maxFps&&now-last<1000/options().maxFps){frame=requestAnimationFrame(tick);return;}
     const dt=Math.min((now-last)/1000,.1);last=now;
     if(mode!==options().mode){mode=options().mode;refresh();}
     syncScene();
     if(layoutDirty){
       layoutDirty=false;const footer=document.getElementById('mao-window-footer');
       if(footer!==observedFooter){if(observedFooter)layoutObserver.unobserve(observedFooter);observedFooter=footer;if(footer)layoutObserver.observe(footer);}
-      const cw=container.clientWidth,ch=availableAvatarHeight(mode,container.getBoundingClientRect(),footer?.getBoundingClientRect());
-      if(cw!==w||ch!==h){w=cw;h=ch;canvas.style.height=`${h}px`;renderer.setSize(w,h,false);comments.setViewport(w,h);transition.setViewport(w,h);}
+      const cw=container.clientWidth,ch=portrait()?container.clientHeight:availableAvatarHeight(mode,container.getBoundingClientRect(),footer?.getBoundingClientRect());
+      if(cw!==w||ch!==h){w=cw;h=ch;canvas.style.height=`${h}px`;renderer.setSize(w,h,false);comments?.setViewport(w,h);transition.setViewport(w,h);}
     }
     if(w>0&&h>0&&document.visibilityState==='visible'){
       const view=placement.getState(),pet=mode==='pet';

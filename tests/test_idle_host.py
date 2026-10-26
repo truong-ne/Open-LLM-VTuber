@@ -30,6 +30,13 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
             "punchline": "Light attracts bugs.",
             "source": "https://official-joke-api.appspot.com/jokes/1",
         }
+        # Constructor timestamps must use the same clock as the assertions.
+        self.clock = patch("time.monotonic", return_value=1000)
+        self.clock_mock = self.clock.start()
+        self.addCleanup(self.clock.stop)
+        self.wall = patch("time.time", return_value=1000)
+        self.wall.start()
+        self.addCleanup(self.wall.stop)
         self.host = IdleHost(
             "ws://test",
             activity_path=self.activity,
@@ -38,18 +45,20 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
             rng=random.Random(3),
         )
         self.host.started_at = 900
-        self.clock = patch("time.monotonic", return_value=1000)
-        self.clock_mock = self.clock.start()
-        self.addCleanup(self.clock.stop)
-        self.wall = patch("time.time", return_value=1000)
-        self.wall.start()
-        self.addCleanup(self.wall.stop)
 
     def activity_at(self, last, pending=0, updated=1000):
         write_json(
             self.activity,
             {"last_comment_at": last, "pending_count": pending, "updated_at": updated},
         )
+
+    def test_fresh_curiosity_suppresses_automatic_chatter_but_stale_status_does_not(self):
+        self.activity_at(900)
+        status = self.settings.with_name("mao-autonomy-status.json")
+        write_json(status, {"phase": "reading", "updated_at": 1000})
+        self.assertFalse(self.host.ready(1000))
+        write_json(status, {"phase": "reading", "updated_at": 980})
+        self.assertTrue(self.host.ready(1000))
 
     def test_ten_second_threshold_resets_on_new_comment(self):
         self.activity_at(990.01)
@@ -220,7 +229,7 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.host.awaiting_reply)
         self.assertEqual(self.host.last_invitation_at, 1000)
         text = json.loads(ws.send.call_args.args[0])["text"]
-        self.assertIn("Mao chốt lựa chọn của mình", text)
+        self.assertIn("Nêu lựa chọn riêng trước", text)
         self.assertIn("không tự khởi động game", text)
         self.assertFalse(await self.host.dispatch_once(ws))
 
@@ -315,7 +324,7 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             json.loads(text.splitlines()[-1])["live_context"]["style"], "support"
         )
-        self.assertIn("tiền donate để nâng cấp Mao", text)
+        self.assertNotIn("donate để nâng cấp Mao", text)
         self.assertNotIn("Lượt này không tự chen", text)
         self.assertEqual(self.host.last_support_at, 1000)
         self.assertIsNone(self.host._planned_content)
@@ -344,7 +353,7 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         self.host.styles = ["chat"]
         text, label = await self.host.make_turn()
         self.assertTrue(label.startswith("idle:chat"))
-        self.assertIn("Lượt này không tự chen", text)
+        self.assertIn("Không tự trả lời thay khán giả", text)
         self.assertEqual(self.host.last_support_at, 0)
 
     async def test_support_does_not_interrupt_game_or_song(self):

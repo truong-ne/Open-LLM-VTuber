@@ -8,11 +8,11 @@ from .idle_host_storage import read_json, write_json
 
 ENGAGEMENT_TOPICS = (
     "chọn phe anh hùng hay phản diện trong anime",
-    "phối xanh ngọc với bạc cho trang phục của Mao",
-    "chọn một đối thủ hư cấu để Mao đấu khẩu trong anime",
+    "chọn bảng màu trang phục cho nhân vật",
+    "chọn một đối thủ hư cấu để nhân vật đấu khẩu trong anime",
     "chọn một siêu năng lực chỉ tiện cho việc nhỏ",
-    "chọn linh vật hư cấu cho hội người xem Mao",
-    "đặt một câu châm ngôn tự trào cho Mao",
+    "chọn linh vật hư cấu cho hội người xem nhân vật",
+    "đặt một câu châm ngôn tự trào cho nhân vật",
     "chọn mở màn bằng biểu cảm kiêu hay vui",
     "chọn một từ tiếng Việt làm biệt danh cho ngày hôm nay",
 )
@@ -92,11 +92,11 @@ TOPICS = (
 )
 
 ANGLES = (
-    "chọn một điều Mao thích và nói ngắn lý do",
+    "chọn một điều nhân vật thích và nói ngắn lý do",
     "so sánh hai lựa chọn bằng một khác biệt cụ thể",
     "nêu một điều hơi bất tiện bằng giọng tự trào nhẹ",
     "chú ý một chi tiết nhỏ dễ bị bỏ qua",
-    "nêu một điều Mao muốn thử, không nhận đã thực hiện",
+    "nêu một điều nhân vật muốn thử, không nhận đã thực hiện",
     "đổi ý nhẹ nếu có một lý do thuyết phục trong hội thoại",
     "nhận xét dí dỏm về một thói quen quen thuộc",
     "liên tưởng đến một màu sắc hoặc âm thanh phù hợp",
@@ -104,14 +104,14 @@ ANGLES = (
     "trêu nhẹ một nghịch lý nhỏ mà không nhắm vào người xem",
     "chọn một sở thích hơi khác thường và giải thích gọn",
     "chỉ ra một nét đối lập thú vị bằng một câu",
-    "nói điều Mao chưa hiểu rõ, không tự bịa kiến thức",
+    "nói điều nhân vật chưa hiểu rõ, không tự bịa kiến thức",
     "nêu một điều tò mò, chỉ đặt câu hỏi khi lượt này cho phép",
     "nối với một chi tiết thật trong hội thoại nếu có",
     "so sánh cách đơn giản với cách cầu kỳ",
     "chọn một thay đổi nhỏ có thể làm điều này dễ chịu hơn",
     "chia sẻ một ý ấm áp mà không khuyên dạy",
     "dùng một ví von ngắn, không phát triển thành chuyện kể",
-    "nói một điều khác với điều Mao đoán ban đầu",
+    "nói một điều khác với điều nhân vật đoán ban đầu",
     "đưa một ý kiến khác số đông mà không phán xét",
     "nhận xét về tên gọi hoặc cách diễn đạt nghe thú vị",
     "liên hệ với sở thích đã được xác nhận, không bịa ký ức",

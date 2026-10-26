@@ -1,5 +1,5 @@
 # config_manager/character.py
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from typing import Dict, ClassVar
 from .i18n import I18nMixin, Description
 from .asr import ASRConfig
@@ -69,13 +69,17 @@ class CharacterConfig(I18nMixin):
         ),
     }
 
-    @field_validator("persona_prompt")
-    def check_default_persona_prompt(cls, v):
-        if not v:
+    @model_validator(mode="after")
+    def check_default_persona_prompt(self):
+        basic = self.agent_config.agent_settings.basic_memory_agent
+        database_persona = (
+            basic and basic.hybrid.enabled and basic.hybrid.persona_source == "postgres"
+        )
+        if not self.persona_prompt and not database_persona:
             raise ValueError(
-                "Persona_prompt cannot be empty. Please provide a persona prompt."
+                "Persona_prompt cannot be empty when persona_source is config."
             )
-        return v
+        return self
 
     @field_validator("character_name")
     def set_default_character_name(cls, v, values):

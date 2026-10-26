@@ -25,6 +25,7 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
 
     router = APIRouter()
     ws_handler = WebSocketHandler(default_context_cache)
+    router.mao_handler = ws_handler
 
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
@@ -45,7 +46,9 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
     return router
 
 
-def init_proxy_route(server_url: str, word_game=None, singing=None) -> APIRouter:
+def init_proxy_route(
+    server_url: str, word_game=None, singing=None, activity=None
+) -> APIRouter:
     """
     Create and return API routes for handling proxy connections.
 
@@ -56,7 +59,10 @@ def init_proxy_route(server_url: str, word_game=None, singing=None) -> APIRouter
         APIRouter: Configured router with proxy WebSocket endpoint
     """
     router = APIRouter()
-    proxy_handler = ProxyHandler(server_url, word_game=word_game, singing=singing)
+    proxy_handler = ProxyHandler(
+        server_url, word_game=word_game, singing=singing, activity=activity
+    )
+    router.mao_handler = proxy_handler
 
     if word_game is not None:
 

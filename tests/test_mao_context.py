@@ -1,73 +1,30 @@
-import copy
-from pathlib import Path
-import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-import yaml
-
-from scripts import configure_mao
-from src.open_llm_vtuber.agent.vietnam_knowledge import PERSONA_MARKER
+from src.open_llm_vtuber.service_context import ServiceContext
+from src.open_llm_vtuber.agent.hybrid.persona import RUNTIME_POLICY
 
 
-class MaoContextSyncTests(unittest.TestCase):
-    def test_sync_only_changes_identity_and_preserves_runtime_settings(self):
-        persona = (configure_mao.ROOT / configure_mao.PERSONA_PATH).read_text(
-            encoding="utf-8"
-        )
-        original = {
-            "system_config": {
-                "host": "localhost",
-                "tool_prompts": {"pet_action_prompt": "mao_pet_actions"},
-            },
-            "character_config": {
-                "conf_name": "Previous Mao",
-                "conf_uid": "previous-mao",
-                "character_name": "Mao",
-                "persona_prompt": "old context",
-                "live2d_model_name": "mao_pro",
-                "tts_config": {"voice": "keep-voice"},
-                "agent_config": {"provider": "keep-model", "temperature": 0.42},
-                "asr_config": {"provider": "keep-asr"},
-                "custom": [1, 2, 3],
-            },
-        }
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            (root / "prompts").mkdir()
-            (root / "characters").mkdir()
-            (root / configure_mao.PERSONA_PATH).write_text(persona, encoding="utf-8")
-            paths = [root / "conf.yaml", root / "characters/mao_live.yaml"]
-            for path in paths:
-                path.write_text(yaml.safe_dump(original), encoding="utf-8")
-            with patch.object(configure_mao, "ROOT", root):
-                configure_mao.main()
-                first = [path.read_bytes() for path in paths]
-                configure_mao.main()
-                self.assertEqual(first, [path.read_bytes() for path in paths])
-            expected = copy.deepcopy(original)
-            expected["character_config"].update(
-                persona_prompt=persona,
-                character_name="Mao",
-                conf_name="Mao VTuber — Fem Malfoy",
-                conf_uid="mao_fem_malfoy_vi_003",
-            )
-            for path in paths:
-                self.assertEqual(
-                    yaml.safe_load(path.read_text(encoding="utf-8")), expected
+class DatabasePersonaSourceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_db_mode_ignores_yaml_and_legacy_markdown_tool_prompts(self):
+        context = ServiceContext()
+        context.character_config = SimpleNamespace(
+            agent_config=SimpleNamespace(
+                agent_settings=SimpleNamespace(
+                    basic_memory_agent=SimpleNamespace(
+                        hybrid=SimpleNamespace(persona_source="postgres")
+                    )
                 )
-            self.assertEqual(persona.count(PERSONA_MARKER), 1)
-
-    def test_invalid_context_is_rejected_before_config_mutation(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            (root / "prompts").mkdir()
-            (root / configure_mao.PERSONA_PATH).write_text(
-                "Incomplete context", encoding="utf-8"
             )
-            with (
-                patch.object(configure_mao, "ROOT", root),
-                self.assertRaises(ValueError),
-            ):
-                configure_mao.main()
-            self.assertFalse((root / "conf.yaml").exists())
+        )
+        context.system_config = SimpleNamespace(
+            tool_prompts={"pet_action_prompt": "removed_legacy_prompt"}
+        )
+        with patch(
+            "src.open_llm_vtuber.service_context.prompt_loader.load_util",
+            side_effect=AssertionError("Legacy prompt was read"),
+        ):
+            prompt = await context.construct_system_prompt("OLD CHARACTER PERSONALITY")
+        self.assertEqual(prompt, RUNTIME_POLICY)
+        self.assertNotIn("OLD CHARACTER", prompt)

@@ -1,0 +1,20 @@
+name: mao-hybrid
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17
+    restart: unless-stopped
+    env_file: private/mao-hybrid.env
+    environment:
+      POSTGRES_USER: mao_owner
+      POSTGRES_DB: mao
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - mao_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mao_owner -d mao"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  mao_pgdata:

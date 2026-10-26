@@ -51,6 +51,7 @@ class ServiceContext:
         self.asr_engine: ASRInterface = None
         self.tts_engine: TTSInterface = None
         self.agent_engine: AgentInterface = None
+        self._owns_agent = True
         # translate_engine can be none if translation is disabled
         self.vad_engine: VADInterface | None = None
         self.translate_engine: TranslateInterface | None = None
@@ -120,9 +121,10 @@ class ServiceContext:
                 return  # Exit if ToolAdapter is mandatory and not initialized
 
             try:
-                servers_info, raw_tools_dict = (
-                    await self.tool_adapter.get_server_and_tool_info(enabled_servers)
-                )
+                (
+                    servers_info,
+                    raw_tools_dict,
+                ) = await self.tool_adapter.get_server_and_tool_info(enabled_servers)
                 mcp_prompt_string = self.tool_adapter.construct_mcp_prompt_string(
                     servers_info
                 )
@@ -191,12 +193,18 @@ class ServiceContext:
     async def close(self):
         """Clean up resources, especially the MCPClient."""
         logger.info("Closing ServiceContext resources...")
-        if self.mcp_client:
-            logger.info(f"Closing MCPClient for context instance {id(self)}...")
-            await self.mcp_client.aclose()
-            self.mcp_client = None
-        if self.agent_engine and hasattr(self.agent_engine, "close"):
-            await self.agent_engine.close()  # Ensure agent resources are also closed
+        try:
+            if (
+                self._owns_agent
+                and self.agent_engine
+                and hasattr(self.agent_engine, "close")
+            ):
+                await self.agent_engine.close()
+        finally:
+            self.agent_engine = None
+            if self.mcp_client:
+                await self.mcp_client.aclose()
+                self.mcp_client = None
         logger.info("ServiceContext closed.")
 
     async def load_cache(
@@ -232,6 +240,7 @@ class ServiceContext:
         self.tts_engine = tts_engine
         self.vad_engine = vad_engine
         self.agent_engine = agent_engine
+        self._owns_agent = False
         self.translate_engine = translate_engine
         # Load potentially shared components by reference
         self.mcp_server_registery = mcp_server_registery
@@ -244,6 +253,16 @@ class ServiceContext:
             self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
             self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
         )
+
+        from .agent.agents.basic_memory_agent import BasicMemoryAgent
+
+        if isinstance(agent_engine, BasicMemoryAgent):
+            self.agent_engine = agent_engine.fork_session(
+                tool_manager=self.tool_manager,
+                tool_executor=self.tool_executor,
+                mcp_prompt_string=self.mcp_prompt,
+            )
+            self._owns_agent = True
 
         logger.debug(f"Loaded service context with cache: {character_config}")
 
@@ -380,7 +399,8 @@ class ServiceContext:
         avatar = self.character_config.avatar or ""  # Get avatar from config
 
         try:
-            self.agent_engine = AgentFactory.create_agent(
+            previous_agent = self.agent_engine if self._owns_agent else None
+            new_agent = AgentFactory.create_agent(
                 conversation_agent_choice=agent_config.conversation_agent_choice,
                 agent_settings=agent_config.agent_settings.model_dump(),
                 llm_configs=agent_config.llm_configs.model_dump(),
@@ -393,6 +413,14 @@ class ServiceContext:
                 tool_executor=self.tool_executor,
                 mcp_prompt_string=self.mcp_prompt,
             )
+            self.agent_engine = new_agent
+            self._owns_agent = True
+            if (
+                previous_agent
+                and previous_agent is not new_agent
+                and hasattr(previous_agent, "close")
+            ):
+                await previous_agent.close()
 
             logger.debug(f"Agent choice: {agent_config.conversation_agent_choice}")
             logger.debug(f"System prompt: {system_prompt}")
@@ -444,7 +472,13 @@ class ServiceContext:
         Returns:
         - str: The system prompt with all tool prompts appended.
         """
-        logger.debug(f"constructing persona_prompt: '''{persona_prompt}'''")
+        settings = self.character_config.agent_config.agent_settings.basic_memory_agent
+        if settings and settings.hybrid.persona_source == "postgres":
+            # Do not mix YAML/Markdown persona or legacy Mao style helpers with DB.
+            from .agent.hybrid.persona import RUNTIME_POLICY
+
+            return RUNTIME_POLICY
+        logger.debug("Constructing configured system prompt")
 
         for prompt_name, prompt_file in self.system_config.tool_prompts.items():
             if (
@@ -466,7 +500,7 @@ class ServiceContext:
             persona_prompt += prompt_content
 
         logger.debug("\n === System Prompt ===")
-        logger.debug(persona_prompt)
+        logger.debug("System prompt constructed")
 
         return persona_prompt
 

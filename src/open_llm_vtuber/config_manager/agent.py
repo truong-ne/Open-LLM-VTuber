@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, ClassVar, Optional, Literal, List
 from .i18n import I18nMixin, Description
 from .stateless_llm import StatelessLLMConfigs
+from ..agent.hybrid.config import HybridConfig
 
 # ======== Configurations for different Agents ========
 
@@ -35,6 +36,7 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
     max_memory_messages: Optional[int] = Field(0, ge=0, alias="max_memory_messages")
     summarize_memory: Optional[bool] = Field(False, alias="summarize_memory")
+    hybrid: HybridConfig = Field(default_factory=HybridConfig)
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "llm_provider": Description(

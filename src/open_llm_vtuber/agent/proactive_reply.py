@@ -25,7 +25,8 @@ def proactive_style(input_data):
     return None
 
 
-def limit_proactive_reply(text, style):
+def limit_proactive_reply(text, style, max_words=60):
+    max_words = max(40, min(60, int(max_words)))
     # Keep decimal points and punctuation inside pose/body tags intact.
     tags = []
 
@@ -55,7 +56,7 @@ def limit_proactive_reply(text, style):
         if is_question and style not in ("question", "initiative"):
             continue
         count = len(spoken.split())
-        if words + count > 60:
+        if words + count > max_words:
             closed = True
             continue
         accepted.append(sentence.strip())
@@ -67,7 +68,7 @@ def limit_proactive_reply(text, style):
     return re.sub(r"\ue000(\d+)\ue001", lambda m: tags[int(m[1])], result)
 
 
-async def collect_proactive_reply(stream, style):
+async def collect_proactive_reply(stream, style, max_words=60):
     """Buffer these short turns so rejected sentences cannot start speaking first."""
     text = ""
     try:
@@ -83,4 +84,4 @@ async def collect_proactive_reply(stream, style):
     finally:
         if hasattr(stream, "aclose"):
             await stream.aclose()
-    return limit_proactive_reply(text, style)
+    return limit_proactive_reply(text, style, max_words)

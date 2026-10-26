@@ -1,6 +1,7 @@
 from typing import Union, List, Dict, Any, Optional
 import asyncio
 import json
+import time
 from loguru import logger
 import numpy as np
 
@@ -48,6 +49,24 @@ async def process_single_conversation(
     # Create TTSTaskManager for this conversation
     tts_manager = TTSTaskManager()
     full_response = ""  # Initialize full_response here
+    started = time.monotonic()
+    metrics = {"audio_chunks": 0, "errors": 0, "cancelled": 0}
+    original_send = websocket_send
+
+    async def measured_send(message):
+        payload = json.loads(message)
+        if payload.get("type") == "audio" and payload.get("audio"):
+            metrics["audio_chunks"] += 1
+            metrics.setdefault("first_audio_ms", (time.monotonic() - started) * 1000)
+        if payload.get("type") == "error":
+            metrics["errors"] += 1
+        await original_send(message)
+
+    hybrid = getattr(context.agent_engine, "_hybrid", None)
+    learning_enabled = bool(hybrid) and hybrid.config.learning_enabled is True
+    if learning_enabled and not (metadata and metadata.get("game_speech")):
+        websocket_send = measured_send
+    input_text = ""
 
     try:
         # Send initial signals
@@ -195,6 +214,7 @@ async def process_single_conversation(
         return full_response  # Return accumulated full_response
 
     except asyncio.CancelledError:
+        metrics["cancelled"] = 1
         logger.info(f"🤡👍 Conversation {session_emoji} cancelled because interrupted.")
         raise
     except Exception as e:
@@ -205,3 +225,22 @@ async def process_single_conversation(
         raise
     finally:
         cleanup_conversation(tts_manager, session_emoji)
+        if learning_enabled and input_text.strip():
+            from ..agent.hybrid.learning import DailyLearning
+            from ..agent.proactive_reply import HOST_PREFIX
+
+            metrics["duration_ms"] = (time.monotonic() - started) * 1000
+            kind = "proactive" if input_text.startswith(HOST_PREFIX) else "conversation"
+            if metadata and metadata.get("rehearsal"):
+                kind = "rehearsal"
+            try:
+                identifier = await asyncio.to_thread(
+                    DailyLearning(hybrid.store).record,
+                    full_response,
+                    metrics,
+                    kind,
+                    hybrid.learning_profile["version"],
+                )
+                logger.info("Learning turn recorded: {}", identifier)
+            except Exception as error:
+                logger.warning("Learning metrics unavailable: {}", type(error).__name__)

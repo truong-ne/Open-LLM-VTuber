@@ -61,6 +61,7 @@ class BasicMemoryAgent(AgentInterface):
     """Agent with basic chat memory and tool calling support."""
 
     _system: str = "You are a helpful assistant."
+    _hybrid = None
 
     def __init__(
         self,
@@ -78,6 +79,7 @@ class BasicMemoryAgent(AgentInterface):
         mcp_prompt_string: str = "",
         max_memory_messages: int = 0,
         summarize_memory: bool = False,
+        hybrid_config: Optional[dict] = None,
     ):
         """Initialize agent with LLM and configuration."""
         super().__init__()
@@ -119,6 +121,42 @@ class BasicMemoryAgent(AgentInterface):
                 "ToolManager not provided, agent will not have pre-formatted tools."
             )
 
+        self._hybrid = None
+        if hybrid_config and hybrid_config.get("enabled", False):
+            from ..hybrid.runtime import HybridRuntime, TOOL
+            from ..hybrid.executor import HybridExecutor
+
+            self._hybrid = HybridRuntime(hybrid_config)
+            self._tool_manager = self._tool_manager or ToolManager()
+            self._tool_executor = HybridExecutor(
+                self._hybrid, tool_executor, self._tool_manager
+            )
+            allowed = self._hybrid.config.external_read_tools
+            self._formatted_tools_openai = [
+                t
+                for t in self._formatted_tools_openai
+                if t["function"]["name"] in allowed
+            ]
+            self._formatted_tools_claude = [
+                t for t in self._formatted_tools_claude if t["name"] in allowed
+            ]
+            self._formatted_tools_openai.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": TOOL["name"],
+                        "description": TOOL["description"],
+                        "parameters": TOOL["input_schema"],
+                    },
+                }
+            )
+            self._formatted_tools_claude.append(TOOL.copy())
+            self._mcp_prompt_string += (
+                "\nLocal tool: mcp_server=mao-local, tool=mao_hybrid, arguments="
+                + json.dumps(TOOL["input_schema"])
+            )
+            self._use_mcpp = True
+
         self._set_llm(llm)
         self.set_system(system if system else self._system)
 
@@ -152,7 +190,11 @@ class BasicMemoryAgent(AgentInterface):
 
     def set_system(self, system: str):
         """Set the system prompt."""
+        if self._hybrid and self._hybrid.config.persona_source == "postgres":
+            from ..hybrid.persona import RUNTIME_POLICY
+            system = RUNTIME_POLICY
         logger.debug(f"Memory Agent: Setting system prompt: '''{system}'''")
+        self._base_system = system
 
         if self.interrupt_method == "user":
             system = f"{system}\n\nIf you received `[interrupted by user]` signal, you were interrupted."
@@ -162,6 +204,8 @@ class BasicMemoryAgent(AgentInterface):
     def _system_prompt(self) -> str:
         """Return the system prompt plus the running memory summary, if any."""
         system = self._system
+        if self._hybrid:
+            system += self._hybrid.context()
         if PERSONA_MARKER in system:
             system += body_context() + motor_context()
             today = datetime.now(timezone(timedelta(hours=7))).date().isoformat()
@@ -530,7 +574,12 @@ class BasicMemoryAgent(AgentInterface):
         pending_tool_calls = []
         current_assistant_message_content = []
 
+        tool_round = 0
         while True:
+            if self._hybrid and tool_round >= self._hybrid.config.tool_rounds:
+                yield "Mao đã dùng hết số bước công cụ cho lượt này."
+                return
+            tool_round += 1
             stream = self._llm.chat_completion(
                 messages, self._system_prompt(), tools=tools
             )
@@ -688,7 +737,12 @@ class BasicMemoryAgent(AgentInterface):
         current_system_prompt = self._system_prompt()
         last_tool_image_message: Optional[Dict[str, Any]] = None
 
+        tool_round = 0
         while True:
+            if self._hybrid and tool_round >= self._hybrid.config.tool_rounds:
+                yield "Mao đã dùng hết số bước công cụ cho lượt này."
+                return
+            tool_round += 1
             if self.prompt_mode_flag:
                 if self._mcp_prompt_string:
                     current_system_prompt = (
@@ -877,17 +931,47 @@ class BasicMemoryAgent(AgentInterface):
             self.reset_interrupt()
             self.prompt_mode_flag = False
 
+            if self._hybrid:
+                await self._hybrid.prepare(input_data)
+                if self._hybrid.persona_changed:
+                    self._memory.clear()
+                    self._memory_summary = ""
+                    self._pending_summary_messages.clear()
+                    if self._summary_task:
+                        self._summary_task.cancel()
+                        self._summary_task = None
             messages = self._to_messages(input_data)
+            if self._hybrid and self._hybrid.direct_reply:
+                self._add_message(self._hybrid.direct_reply, "assistant")
+                yield self._hybrid.direct_reply
+                return
             style = (
                 proactive_style(input_data) if PERSONA_MARKER in self._system else None
             )
             if style:
+                word_budget = (
+                    self._hybrid.learning_profile["proactive_max_words"]
+                    if self._hybrid
+                    else 60
+                )
+                if self._hybrid and self._hybrid.config.exploration_enabled:
+                    # The existing host grants a turn; no independent background loop.
+                    try:
+                        await self._hybrid.explore()
+                    except Exception as error:
+                        logger.warning(
+                            f"Bounded exploration stopped: {type(error).__name__}"
+                        )
                 # Unsolicited small talk needs no tool schemas or tool loop.
                 # Apply the same speech bounds even when MCP is enabled.
                 token_stream = self._llm.chat_completion(
-                    messages, self._system_prompt()
+                    messages,
+                    self._system_prompt()
+                    + f"\nThis proactive turn: use one or two complete sentences, at most {word_budget} spoken words.",
                 )
-                response = await collect_proactive_reply(token_stream, style)
+                response = await collect_proactive_reply(
+                    token_stream, style, word_budget
+                )
                 if not response:
                     logger.warning(
                         "Empty proactive reply; retrying once with recent context"
@@ -898,7 +982,7 @@ class BasicMemoryAgent(AgentInterface):
                             "role": "user",
                             "content": (
                                 "Lượt vừa rồi chưa có câu nào để đọc. Dựa vào chủ đề hiện tại, "
-                                "nói một nhận xét cụ thể của Mao, xưng thiếp, trong một hoặc hai câu ngắn, "
+                                f"nói một nhận xét theo persona hiện tại, trong một hoặc hai câu ngắn, dưới {word_budget} từ, "
                                 "có dấu chấm kết câu. Chỉ xuất lời thoại hoàn chỉnh; không chỉ "
                                 "xuất thẻ cảm xúc, không hỏi người xem."
                             ),
@@ -909,6 +993,7 @@ class BasicMemoryAgent(AgentInterface):
                             retry_messages, self._system_prompt()
                         ),
                         style,
+                        word_budget,
                     )
                 if response:
                     self._add_message(response, "assistant")
@@ -995,6 +1080,33 @@ class BasicMemoryAgent(AgentInterface):
         chat_func_decorated = self._chat_function_factory()
         async for output in chat_func_decorated(input_data):
             yield output
+
+    def fork_session(self, tool_manager=None, tool_executor=None, mcp_prompt_string=""):
+        """Share the stateless model client, never mutable chat/browser/approval state."""
+        return BasicMemoryAgent(
+            llm=self._llm,
+            system=getattr(self, "_base_system", self._system),
+            live2d_model=self._live2d_model,
+            tts_preprocessor_config=self._tts_preprocessor_config,
+            faster_first_response=self._faster_first_response,
+            segment_method=self._segment_method,
+            use_mcpp=self._use_mcpp,
+            interrupt_method=self.interrupt_method,
+            tool_prompts=self._tool_prompts,
+            tool_manager=tool_manager,
+            tool_executor=tool_executor,
+            mcp_prompt_string=mcp_prompt_string,
+            max_memory_messages=self._max_memory_messages,
+            summarize_memory=self._summarize_memory,
+            hybrid_config=self._hybrid.config.model_dump() if self._hybrid else None,
+        )
+
+    async def close(self):
+        if self._summary_task and not self._summary_task.done():
+            self._summary_task.cancel()
+            await asyncio.gather(self._summary_task, return_exceptions=True)
+        if self._hybrid:
+            await self._hybrid.close()
 
     def reset_interrupt(self) -> None:
         """Reset interrupt flag."""

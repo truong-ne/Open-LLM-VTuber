@@ -181,7 +181,8 @@ class CreatorWelcomeTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.reader._dispatch_once())
         text = json.loads(self.reader._websocket.send.call_args.args[0])["text"]
         data = json.loads(text.splitlines()[-1])
-        self.assertIn("Wow!", text)
+        self.assertNotIn("Wow!", text)
+        self.assertIn("theo persona đang bật", text)
         self.assertEqual(data["verified_creator_visits"][0]["channel_id"], CHANNEL)
         self.assertNotIn(
             "joined_viewers",

@@ -19,7 +19,7 @@ RESULT_REACTIONS = {
     "correct": (
         "Hay quá! Chúc mừng {nickname}, đoán đúng sớm nhất với một trăm điểm!",
         "Giỏi quá nè! {nickname} đoán đúng đầu tiên, nhận trọn một trăm điểm!",
-        "Thiếp vỗ tay cho {nickname}! Bạn đoán đúng sớm nhất, được một trăm điểm!",
+        "Chúc mừng {nickname}! Bạn đoán đúng sớm nhất, được một trăm điểm!",
         "Bắt được từ khóa rồi! Chúc mừng {nickname}, đúng nhanh nhất với một trăm điểm!",
     ),
     "missed": (
@@ -31,7 +31,7 @@ RESULT_REACTIONS = {
     "empty": (
         "Tiếc quá, chưa có bạn nào gửi đáp án!",
         "Ui, tiếc ghê! Vòng này cả nhà chưa kịp gửi câu trả lời rồi!",
-        "Tiếc quá nè, thiếp đợi mà chưa thấy ai thử đoán!",
+        "Tiếc quá, chưa có lượt đoán nào!",
         "Tiếc ghê, từ này còn chưa được ai đoán thử!",
     ),
 }
