@@ -45,6 +45,14 @@ class Backend:
     def save_profile(self, document):
         return {**document, "revision": document["revision"] + 1}
 
+    def memories(self, **options):
+        self.memory_options = options
+        return {"items": [], "total": 0, "page": 1, "pages": 1,
+                "summary": {"total": 0, "active": 0, "expired": 0}}
+
+    def memory(self, memory_id):
+        return {"id": "42", "content": "literal <script>"} if memory_id == "42" else None
+
 
 class PlayroomServerTests(unittest.TestCase):
     def setUp(self):
@@ -92,6 +100,31 @@ class PlayroomServerTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["revision"], 2)
+
+    def test_memories_require_operator_token_and_local_origin(self):
+        token = {"X-Mao-Token": "test-token"}
+        for path in ("/api/memories", "/api/memories/42"):
+            self.assertEqual(self.client.get(path).status_code, 403)
+            self.assertEqual(self.client.get(path, headers={**token, "Origin": "https://attacker.example"}).status_code, 403)
+            self.assertEqual(self.client.get(path, headers={**token, "Host": "attacker.example"}).status_code, 403)
+            self.assertEqual(self.client.get(path, headers=token).status_code, 200)
+        self.assertNotIn("Access-Control-Allow-Origin", self.client.get("/api/memories", headers=token).headers)
+
+    def test_memory_filters_are_bounded_and_detail_not_found_is_explicit(self):
+        token = {"X-Mao-Token": "test-token"}
+        result = self.client.get("/api/memories", params={"q": "trà", "kind": "social", "state": "all", "page": 2}, headers=token)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(self.backend.memory_options, {"query": "trà", "kind": "social", "state": "all", "page": 2})
+        for query in ("scope=other", "page=0", "kind=invalid", "q=one&q=two"):
+            self.assertEqual(self.client.get("/api/memories?" + query, headers=token).status_code, 400)
+        self.assertEqual(self.client.get("/api/memories/43", headers=token).status_code, 404)
+        self.assertEqual(self.client.get("/api/memories/42?scope=other", headers=token).status_code, 400)
+        self.assertEqual(self.client.get("/api/memories/42", headers=token).json()["content"], "literal <script>")
+
+    def test_memory_database_failure_is_not_reported_as_empty_data(self):
+        from unittest.mock import patch
+        with patch.object(self.backend, "memories", side_effect=RuntimeError("offline")):
+            self.assertEqual(self.client.get("/api/memories", headers={"X-Mao-Token": "test-token"}).status_code, 503)
 
     def test_foreign_origin_and_dns_rebinding_host_cannot_control_capture(self):
         response = self.client.post(

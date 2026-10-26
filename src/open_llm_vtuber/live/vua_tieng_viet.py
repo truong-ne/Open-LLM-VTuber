@@ -467,6 +467,14 @@ class WordGameService:
             event_id=event_id,
             created_at=created_at,
         )
+        if (
+            status == "started"
+            and self.proxy
+            and getattr(self.proxy, "_active_input_source", None) == "mao-idle-host"
+        ):
+            # The operator/viewer chose a game: finish automatic chatter now,
+            # then let the first clue wait for the actual conversation end signal.
+            await self.proxy.forward_to_server({"type": "interrupt-signal"})
         await self.publish()
         return status
 

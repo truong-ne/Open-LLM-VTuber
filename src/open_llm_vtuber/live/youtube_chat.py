@@ -55,6 +55,17 @@ def live_video_from_page(html):
     return None
 
 
+def concurrent_viewers_from_page(html):
+    """Only the live renderer is a concurrent count; player viewCount is views."""
+    if not live_video_from_page(html):
+        return None
+    renderer = find_value(page_object(html, "ytInitialData"), "videoViewCountRenderer")
+    if not isinstance(renderer, dict) or renderer.get("isLive") is not True:
+        return None
+    count = renderer.get("originalViewCount")
+    return int(count) if isinstance(count, str) and re.fullmatch(r"[0-9]{1,9}", count) else None
+
+
 def bootstrap_chat(html):
     cfg = {}
     for match in re.finditer(r"ytcfg\.set\(\s*", html):

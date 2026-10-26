@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 import sys
 
-from mao_hybrid import config, Store
+try:
+    from .mao_hybrid import config, Store
+except ImportError:  # Direct operator CLI invocation.
+    from mao_hybrid import config, Store
 from src.open_llm_vtuber.agent.hybrid.persona import read_profile, write_profile
 
 

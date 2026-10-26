@@ -15,7 +15,7 @@ from loguru import logger
 from .buffered_chat import BufferedLiveChat
 from .comment_state import CommentState
 from .idle_host_storage import write_json
-from .youtube_chat import iter_live_chat, live_video_from_page
+from .youtube_chat import iter_live_chat, live_video_from_page, concurrent_viewers_from_page
 from .youtube_creators import YouTubeCreatorLookup, CHANNEL_ID, CREATOR_THRESHOLD
 
 STATUS_PATH = Path(__file__).resolve().parents[3] / "private/mao-youtube-status.json"
@@ -269,6 +269,26 @@ class YouTubeLivePlatform(BufferedLiveChat):
         await super().disconnect()
         self.report("stopped")
 
+    async def _audience_loop(self):
+        path = self.status_path.with_name("mao-youtube-audience.json")
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
+            "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9"
+        }) as client:
+            while self._running:
+                count, live, error = None, False, ""
+                video = self.video_id
+                try:
+                    if video:
+                        response = await client.get("https://www.youtube.com/watch?v=" + video)
+                        response.raise_for_status()
+                        live = live_video_from_page(response.text) == video
+                        count = concurrent_viewers_from_page(response.text) if live else None
+                except (httpx.HTTPError, ValueError):
+                    error = "audience_unavailable"
+                write_json(path, {"video_id": video, "live": live, "viewers": count,
+                                  "error": error, "observed_at": time.time()})
+                await asyncio.sleep(30)
+
     async def run(self):
         self._running = True
         self.report("starting")
@@ -280,6 +300,7 @@ class YouTubeLivePlatform(BufferedLiveChat):
                 asyncio.create_task(self._dispatch_loop()),
                 asyncio.create_task(self.listen_live()),
                 asyncio.create_task(self._creator_loop()),
+                asyncio.create_task(self._audience_loop()),
             ]
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for task in done:

@@ -12,7 +12,7 @@ const MaoDracoAvatar = reactExports.memo(() => {
   },[mode,modelInfo,forceIgnoreMouse,wsState,aiState]);
   reactExports.useEffect(() => {
     let mounted=true,avatar;const container=ref.current;
-    import('http://127.0.0.1:12393/web-tool/mao-5070/draco/native-avatar.mjs?v=43').then(module=>mounted?module.mountNativeAvatar(container,window.maoDraco):null).then(value=>{avatar=value;if(!mounted)value?.dispose();}).catch(error=>{
+    import('http://127.0.0.1:12393/web-tool/mao-5070/draco/native-avatar.mjs?v=48').then(module=>mounted?module.mountNativeAvatar(container,window.maoDraco):null).then(value=>{avatar=value;if(!mounted)value?.dispose();}).catch(error=>{
       if(!mounted)return;
       window.maoDraco.state.lastError=String(error.message||error);console.error('Draco avatar:',error);
       window.electron?.ipcRenderer.send('mao-draco-status',window.maoDraco.state);

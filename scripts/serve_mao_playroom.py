@@ -6,7 +6,7 @@ import json
 import secrets
 import threading
 import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from mao_hybrid import ROOT
 from mao_obs_rehearsal import Obs
@@ -31,6 +31,16 @@ class PreviewBackend:
 
         with self.lock:
             return save_profile(document)
+
+    def memories(self, **options):
+        from mao_memories import list_memories
+
+        return list_memories(**options)
+
+    def memory(self, memory_id):
+        from mao_memories import get_memory
+
+        return get_memory(memory_id)
 
     def status(self):
         try:
@@ -114,6 +124,32 @@ def handler(token, port, backend):
             if not self.valid_host():
                 return self.response(403, {"error": "Invalid host"})
             path = urlsplit(self.path).path
+            if path == "/api/memories" or path.startswith("/api/memories/"):
+                if not secrets.compare_digest(
+                    self.headers.get("X-Mao-Token", ""), token
+                ) or self.headers.get("Origin") not in {
+                    None, f"http://127.0.0.1:{port}", f"http://localhost:{port}"
+                }:
+                    return self.response(403, {"error": "Local operator required"})
+                try:
+                    if path == "/api/memories":
+                        from mao_memories import parse_query
+
+                        options = parse_query(parse_qs(
+                            urlsplit(self.path).query, keep_blank_values=True,
+                            max_num_fields=8,
+                        ))
+                        return self.response(200, backend.memories(**options))
+                    if urlsplit(self.path).query:
+                        raise ValueError("Unexpected detail query")
+                    record = backend.memory(path.removeprefix("/api/memories/"))
+                    if record is None:
+                        return self.response(404, {"error": "Memory not found"})
+                    return self.response(200, record)
+                except ValueError:
+                    return self.response(400, {"error": "Invalid memory query"})
+                except Exception:
+                    return self.response(503, {"error": "Memory database unavailable"})
             if path == "/api/persona":
                 if not secrets.compare_digest(
                     self.headers.get("X-Mao-Token", ""), token

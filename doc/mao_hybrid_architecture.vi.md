@@ -7,8 +7,9 @@ VieNeu/RVC Linh Lan Ch, tách câu, các token cảm xúc/cử chỉ và Draco 3
 dùng pipeline hiện tại. Mỗi kết nối có agent/hội thoại/browser/nonce duyệt riêng;
 stateless model client, ASR và TTS vẫn dùng chung để không tải lại model nặng.
 Ngắt kết nối, lỗi kết nối và shutdown server đóng pool/browser thuộc phiên đó.
-Hybrid là phần mở rộng có công tắc, không thay model hay
-sửa persona trong `prompts/mao_context.vi.md`.
+Hybrid là phần mở rộng có công tắc, không thay model. Persona hiện đọc từ
+PostgreSQL; xem [cơ chế hồ sơ](mao_persona_postgres.vi.md) và
+[lõi nhân vật](mao_character_core.vi.md).
 
 Luồng: đầu vào → đọc ngữ cảnh/nhớ liên quan → persona gốc + chính sách hybrid →
 Qwen → công cụ có giới hạn → lời thoại → xử lý cảm xúc/cử chỉ/TTS/avatar cũ.

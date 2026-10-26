@@ -64,7 +64,7 @@ async def process_single_conversation(
 
     hybrid = getattr(context.agent_engine, "_hybrid", None)
     learning_enabled = bool(hybrid) and hybrid.config.learning_enabled is True
-    if learning_enabled and not (metadata and metadata.get("game_speech")):
+    if learning_enabled and not (metadata and (metadata.get("game_speech") or metadata.get("narration_speech"))):
         websocket_send = measured_send
     input_text = ""
 
@@ -73,7 +73,7 @@ async def process_single_conversation(
         await send_conversation_start_signals(websocket_send)
         logger.info(f"New Conversation Chain {session_emoji} started!")
 
-        if metadata and metadata.get("game_speech"):
+        if metadata and (metadata.get("game_speech") or metadata.get("narration_speech")):
             from ..agent.output_types import DisplayText
             from ..live.game_speech import (
                 game_speech_chunks,
@@ -81,20 +81,30 @@ async def process_single_conversation(
                 prepared_game_engine,
             )
 
-            script = metadata["game_speech"]
-            for phrase in game_speech_chunks(script):
+            script = metadata.get("game_speech") or metadata["narration_speech"]
+            is_game = bool(metadata.get("game_speech"))
+            from ..live.narration_speech import (
+                narration_chunks, narration_text, NarrationPlanner,
+            )
+            planner = NarrationPlanner()
+            phrases = game_speech_chunks(script) if is_game else narration_chunks(script)
+            for phrase in phrases:
+                speech = game_speech_prosody(phrase) if is_game else planner.plan(phrase)
+                spoken = phrase if is_game else narration_text(phrase)
+                if not spoken:
+                    continue
                 await tts_manager.speak(
-                    tts_text=phrase,
+                    tts_text=spoken,
                     display_text=DisplayText(
-                        text=phrase,
+                        text=spoken,
                         name=context.character_config.character_name,
                         avatar=context.character_config.avatar,
                     ),
                     actions=None,
                     live2d_model=context.live2d_model,
-                    tts_engine=prepared_game_engine(context.tts_engine),
+                    tts_engine=prepared_game_engine(context.tts_engine) if is_game else context.tts_engine,
                     websocket_send=websocket_send,
-                    speech=game_speech_prosody(phrase),
+                    speech=speech,
                 )
                 # Send each phrase as soon as it is synthesized. Generate the
                 # next while the client plays this one, with one TTS job at a

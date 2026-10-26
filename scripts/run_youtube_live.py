@@ -5,12 +5,14 @@ import asyncio
 import json
 import sys
 from pathlib import Path
+from loguru import logger
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.open_llm_vtuber.config_manager.utils import read_yaml, validate_config
 from src.open_llm_vtuber.live.youtube_live import YouTubeLivePlatform
 from scripts.run_local_host import DesktopHost
+from scripts.mao_live_research import LiveResearch
 
 
 async def main(args):
@@ -43,12 +45,25 @@ async def main(args):
             )
         )
         return
-    host = asyncio.create_task(DesktopHost(reader._proxy_url).run())
+    presenter = DesktopHost(reader._proxy_url)
+    host = asyncio.create_task(presenter.run())
+    async def supervise_study():
+        while True:
+            research = LiveResearch(presenter, reader)
+            try:
+                await research.run()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception('Mao study worker stopped; retrying in 5 seconds')
+            await asyncio.sleep(5)
+    study = asyncio.create_task(supervise_study())
     try:
         await reader.run()
     finally:
         host.cancel()
-        await asyncio.gather(host, return_exceptions=True)
+        study.cancel()
+        await asyncio.gather(host, study, return_exceptions=True)
 
 
 if __name__ == "__main__":

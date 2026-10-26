@@ -38,6 +38,21 @@ class GameSpeechTests(unittest.TestCase):
 
 
 class GameSpeechDeliveryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_prepared_research_narration_is_read_verbatim_without_an_llm_turn(self):
+        from src.open_llm_vtuber.conversations.single_conversation import process_single_conversation
+        script='Bài viết nói về bản tóm tắt chat. Đây không phải bản tóm tắt nội dung livestream.'
+        spoken=[]
+        manager=Mock(speak=AsyncMock(side_effect=lambda **kw:spoken.append(kw['tts_text'])),wait_for_completion=AsyncMock())
+        context=Mock()
+        context.character_config.character_name='Mao'
+        context.character_config.avatar='mao.png'
+        module='src.open_llm_vtuber.conversations.single_conversation'
+        with patch(module+'.TTSTaskManager',return_value=manager),patch(module+'.finalize_conversation_turn',new_callable=AsyncMock),patch(module+'.cleanup_conversation'):
+            result=await process_single_conversation(context,AsyncMock(),'test','ignored',metadata={'narration_speech':script,'skip_history':True,'skip_memory':True})
+        self.assertEqual(result,script)
+        self.assertEqual(' '.join(spoken),script)
+        context.agent_engine.chat.assert_not_called()
+
     async def test_each_phrase_is_sent_before_synthesizing_the_next(self):
         from src.open_llm_vtuber.conversations.single_conversation import (
             process_single_conversation,

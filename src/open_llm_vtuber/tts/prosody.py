@@ -30,7 +30,7 @@ TEXT_MOODS = tuple(
     (re.compile(pattern, re.I), mood)
     for pattern, mood in (
         (
-            r"\b((?:mình|thiếp) (?:nghe|hiểu)|không sao|buồn|mệt mỏi|chia buồn|tiếc quá|tiếc ghê)\b",
+            r"\b((?:mình|thiếp|Mao) (?:nghe|hiểu)|không sao|buồn|mệt mỏi|chia buồn|tiếc quá|tiếc ghê)\b",
             ("gentle", 0.92, 180),
         ),
         (r"\b(ngại quá|ngượng|mắc cỡ)\b", ("bashful", 0.94, 170)),

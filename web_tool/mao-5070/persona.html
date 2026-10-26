@@ -1,8 +1,74 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tạo Mao mới</title><style>
-*{box-sizing:border-box}body{margin:0;background:#0b1915;color:#eee8d8;font:16px/1.5 'Segoe UI',sans-serif}main{max-width:900px;margin:42px auto;padding:0 24px 60px}h1{font:38px Georgia,serif;margin-bottom:10px}p{color:#bdc8bd}label{display:block;margin-top:24px;font-weight:600}textarea{display:block;width:100%;margin-top:8px;background:#12281e;color:#f3eddf;border:1px solid #53705a;border-radius:10px;padding:15px;font:15px/1.65 'Segoe UI',sans-serif;resize:vertical}button{background:#d6dab6;color:#132a1c;border:0;padding:12px 19px;border-radius:8px;cursor:pointer;font:600 15px 'Segoe UI',sans-serif;margin:22px 10px 0 0}button.secondary{background:#294635;color:#e2e7d4}button:disabled{opacity:.4;cursor:default}details{border-top:1px solid #385240;margin-top:26px;padding-top:16px}summary{cursor:pointer;color:#d6dab6}#status{display:inline-block;border:1px solid #597054;padding:5px 12px;border-radius:20px}#message{min-height:24px;color:#e9d6a8}small{font-weight:400;color:#b2c0b1}
-</style></head><body><main><h1>Tạo Mao mới</h1><p>Persona được lưu trong PostgreSQL. Bạn bắt đầu từ trang trắng; nội dung cũ không được nạp từ Markdown hoặc YAML.</p><div id="status">Đang kết nối…</div>
-<form id="profile-form"><label for="prompt">Mao là ai và có tính cách như thế nào?</label><textarea id="prompt" rows="15" maxlength="16000" placeholder="Bạn tự viết tên, tính cách, cách xưng hô, sở thích và cách trò chuyện ở đây."></textarea>
-<details><summary>Khi bạn muốn cho Mao tự mở chuyện hoặc khám phá</summary><p>Để trống thì các hoạt động này chưa được bật cho persona.</p><label for="proactive">Cách tự mở chuyện</label><textarea id="proactive" rows="4" maxlength="4000"></textarea><label for="autonomy">Cách tự khám phá</label><textarea id="autonomy" rows="4" maxlength="4000"></textarea><label for="topics">Chủ đề được khám phá <small>— mỗi dòng một tên bài Wikipedia tiếng Anh</small></label><textarea id="topics" rows="4"></textarea></details>
-<button type="button" id="draft" disabled>Lưu bản nháp</button><button type="submit" id="activate" disabled>Lưu và bật persona</button><button type="button" id="reload" class="secondary">Tải lại từ DB</button><p id="message" role="status"></p></form>
-<p>Persona đang bật được đọc lại mỗi lượt chat. Đổi phiên bản sẽ bỏ ngữ cảnh làm việc của lượt cũ. Model không có quyền sửa persona này.</p></main><script type="module" src="./persona.mjs"></script></body></html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Hồ sơ Mao · Character Menu</title>
+  <link rel="stylesheet" href="./persona.css?v=4">
+  <link rel="stylesheet" href="./memory.css?v=1">
+</head>
+<body>
+  <a class="skip-link" href="#main">Đến nội dung chính</a>
+          <aside class="profile-rail" aria-label="Tóm tắt hồ sơ Mao">
+            <section class="character-card"><div class="portrait"><span class="portrait-orbit" aria-hidden="true"></span><span class="portrait-star star-one" aria-hidden="true">✦</span><span class="portrait-star star-two" aria-hidden="true">✧</span><img src="./draco/assets/mao-ui-sticker-v3.png" alt="Mao với mái tóc vàng và cà vạt xanh" width="260" height="260"></div><div class="character-details"><div class="character-name"><h2>Mao</h2><span class="character-label">AI COMPANION</span></div><p class="player-subtitle">Mao · Người bạn đồng hành</p><div id="status" class="profile-status" data-state="loading">Đang tải hồ sơ…</div><dl><div><dt>Phiên bản</dt><dd id="revision">—</dd></div><div><dt>Cập nhật</dt><dd id="updated">—</dd></div></dl></div></section>
+            <section class="ownership-card"><span class="ownership-icon" aria-hidden="true">⌘</span><h3>Do anh Bi định hình</h3><p>Mao đọc tính cách từ hồ sơ này.<br>Mao không tự sửa nội dung anh Bi đã thiết lập.</p></section>
+          </aside>
+  <aside class="sidebar">
+    <a class="brand" href="./persona.html" aria-label="Mao Studio · Hồ sơ nhân vật"><span class="brand-symbol" aria-hidden="true">◇</span><span>MAO<span class="brand-studio">CHARACTER MENU</span></span></a>
+    <div class="workspace"><img src="./draco/assets/mao-ui-sticker-v3.png" alt="" width="40" height="40"><div><strong>Không gian của Mao</strong><span>Nhân vật của anh Bi</span></div><span class="workspace-spark" aria-hidden="true">✧</span></div>
+    <p class="nav-label">MAIN MENU</p>
+    <nav class="profile-nav" role="tablist" aria-label="Các phần của hồ sơ" aria-orientation="vertical">
+      <button id="tab-personality" type="button" role="tab" aria-selected="true" aria-controls="panel-personality" data-view="personality"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11.5c0 4.7-8 9-8 9s-8-4.3-8-9a4.5 4.5 0 0 1 8-2.8 4.5 4.5 0 0 1 8 2.8Z"/></svg>Tính cách</button>
+      <button id="tab-conversation" type="button" role="tab" aria-selected="false" aria-controls="panel-conversation" tabindex="-1" data-view="conversation"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-8 8 9 9 0 0 1-3.5-.7L4 20l1.2-4.5a8 8 0 1 1 14.8-4Z"/><path d="M8 11h8m-8 4h4"/></svg>Cách trò chuyện</button>
+      <button id="tab-memory" type="button" role="tab" aria-selected="false" aria-controls="panel-memory" tabindex="-1" data-view="memory"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5h14v15H5zM8 2v6m4-6v6m4-6v6M8 12h8m-8 4h5"/></svg>Ký ức</button>
+      <button id="tab-exploration" type="button" role="tab" aria-selected="false" aria-controls="panel-exploration" tabindex="-1" data-view="exploration"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/></svg>Khám phá</button>
+    </nav>
+    <div class="sidebar-note"><span aria-hidden="true">✧</span><p>Mỗi câu chuyện bắt đầu<br>từ một chút tính cách.</p></div>
+    <a class="playroom-link" href="./playroom.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 11 8-7 8 7v9H4v-9Zm5 9v-6h6v6"/></svg>Về phòng của Mao<span aria-hidden="true">↗</span></a>
+    <div class="owner"><span class="owner-avatar">B</span><div><strong>anh Bi</strong><span>Người quản lý Mao</span></div></div>
+  </aside>
+  <div class="app">
+    <header class="topbar"><div><span>Mao Studio</span><span class="crumb" aria-hidden="true">/</span><strong>Hồ sơ nhân vật</strong></div><span id="connection" class="connection" data-state="loading"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Đang kết nối…</span></span></header>
+    <main id="main">
+      <div class="page-heading"><div><span class="eyebrow">PERSONALITY / CHARACTER PROFILE</span><h1>Hồ sơ của Mao</h1><p>Thiết lập tính cách và cách Mao tương tác với thế giới.</p></div><button id="reload" type="button" class="button button-reload" title="Đọc lại hồ sơ đã lưu"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 8a7 7 0 0 1 11.6-3L20 8M4 16l2.9 3a7 7 0 0 0 11.6-3"/></svg>Tải lại hồ sơ</button></div>
+      <form id="profile-form" novalidate>
+        <div class="content-grid">
+          <div class="editor-column">
+            <section id="panel-personality" class="editor-card" role="tabpanel" aria-labelledby="tab-personality">
+              <div class="card-heading"><span class="section-icon" aria-hidden="true">◇</span><div><h2>Tính cách & cách xưng hô</h2><p>Những điều làm nên một Mao rất riêng.</p></div><span class="section-number" aria-hidden="true">01</span></div>
+              <div class="card-body"><label for="prompt">Mao là ai?</label><p id="prompt-help" class="field-help">Mô tả tính cách, giọng điệu, cách gọi khán giả và những điều Mao cần biết về mình.</p><textarea id="prompt" rows="8" maxlength="16000" aria-describedby="prompt-help" placeholder="Viết về Mao bằng lời của anh Bi…" spellcheck="false"></textarea><div class="field-bottom"><span>Viết tự nhiên, rõ ý là được.</span><span id="prompt-count">0 / 16.000</span></div></div>
+              <div class="editor-tip"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18h6m-5 3h4M8 13a6 6 0 1 1 8 0c-1 .8-1 1.6-1 2H9c0-.4 0-1.2-1-2Z"/></svg><p><strong>Một mẹo nhỏ</strong><span>Ghi rõ Mao xưng thế nào, gọi mọi người ra sao và điều gì nên thể hiện trong mỗi câu trả lời.</span></p></div>
+            </section>
+            <section id="panel-conversation" class="editor-card" role="tabpanel" aria-labelledby="tab-conversation" hidden>
+              <div class="card-heading"><span class="section-icon" aria-hidden="true">☏</span><div><h2>Cách Mao mở chuyện</h2><p>Giữ cuộc trò chuyện gần gũi, kể cả lúc chat đang yên.</p></div><span class="section-number" aria-hidden="true">02</span></div>
+              <div class="card-body"><label for="proactive">Khi rảnh, Mao nên nói chuyện như thế nào?</label><p id="proactive-help" class="field-help">Anh Bi có thể mô tả cách mở đầu, độ dài câu chuyện và cách mời khán giả cùng tham gia.</p><textarea id="proactive" rows="8" maxlength="4000" aria-describedby="proactive-help" placeholder="Ví dụ: chia sẻ một nhận xét ngắn, rồi để mọi người có thời gian trả lời…"></textarea><div class="field-bottom"><span>Để trống nếu chưa muốn Mao tự mở chuyện.</span><span id="proactive-count">0 / 4.000</span></div></div>
+              <div class="editor-tip"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5m0-9v1"/></svg><p><strong>Chỉ dẫn cho cuộc trò chuyện</strong><span>Phần này định hướng cách Mao nói. Việc tự mở chuyện còn phụ thuộc vào chế độ host đang chạy.</span></p></div>
+            </section>
+            <section id="panel-exploration" class="editor-card" role="tabpanel" aria-labelledby="tab-exploration" hidden>
+              <div class="card-heading"><span class="section-icon" aria-hidden="true">✧</span><div><h2>Thế giới Mao tò mò</h2><p>Định hướng những điều Mao có thể tự tìm hiểu.</p></div><span class="section-number" aria-hidden="true">03</span></div>
+              <div class="card-body"><label for="autonomy">Cách tự tìm hiểu</label><p id="autonomy-help" class="field-help">Mao nên quan tâm đến điều gì và ghi lại suy nghĩ theo cách nào?</p><textarea id="autonomy" rows="5" maxlength="4000" aria-describedby="autonomy-help" placeholder="Viết định hướng khám phá cho Mao…"></textarea><div class="field-bottom"><span>Để trống nếu chưa thiết lập phần khám phá.</span><span id="autonomy-count">0 / 4.000</span></div><div class="field-group"><label for="topics">Chủ đề khởi đầu</label><p id="topics-help" class="field-help">Mỗi dòng là tên một bài Wikipedia tiếng Anh, tối đa 40 chủ đề.</p><textarea id="topics" rows="4" aria-describedby="topics-help" placeholder="Cats&#10;Music&#10;Video games"></textarea><div class="field-bottom"><span>Tên bài giúp Mao tìm đúng nguồn đọc.</span><span id="topics-count">0 / 40 chủ đề</span></div></div></div>
+              <div class="editor-tip"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5m0-9v1"/></svg><p><strong>Lưu hướng dẫn chưa bật tự khám phá</strong><span>Dịch vụ tự khám phá có công tắc riêng trong phòng của Mao.</span></p></div>
+            </section>
+            <section id="panel-memory" class="editor-card memory-panel" role="tabpanel" aria-labelledby="tab-memory" hidden>
+              <div class="card-heading"><span class="section-icon" aria-hidden="true">▱</span><div><h2>Kho ký ức của Mao</h2><p>Những điều đã được lưu, cùng thời gian và nguồn ghi nhận.</p></div><span class="section-number" aria-hidden="true">04</span></div>
+              <div class="memory-stats" aria-label="Thống kê ký ức"><div><span>Tổng ký ức</span><strong id="memory-total">—</strong></div><div><span>Đang sử dụng</span><strong id="memory-active">—</strong></div><div><span>Đã hết hạn</span><strong id="memory-expired">—</strong></div></div>
+              <div class="memory-tools"><label for="memory-search">Tìm trong ký ức</label><div class="memory-search-row"><div class="memory-search-box"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="memory-search" type="search" maxlength="200" placeholder="Nội dung, tên người, chủ đề…" autocomplete="off"></div><select id="memory-state" aria-label="Thời hạn ký ức"><option value="active">Đang sử dụng</option><option value="all">Tất cả thời hạn</option><option value="expired">Đã hết hạn</option></select></div><div class="memory-kinds" role="group" aria-label="Loại ký ức"><button type="button" data-memory-kind="" aria-pressed="true">Tất cả</button><button type="button" data-memory-kind="long_term" aria-pressed="false">Dài hạn</button><button type="button" data-memory-kind="social" aria-pressed="false">Giao tiếp</button><button type="button" data-memory-kind="skill" aria-pressed="false">Kỹ năng</button></div></div>
+              <p id="memory-feedback" class="memory-feedback" role="status" aria-live="polite">Chọn Ký ức để đọc dữ liệu đã lưu.</p>
+              <div id="memory-list" class="memory-list" aria-label="Danh sách ký ức"></div>
+              <div id="memory-empty" class="memory-empty" hidden><span class="memory-empty-symbol" aria-hidden="true">◇</span><h3 id="memory-empty-title">Mao chưa lưu ký ức nào</h3><p id="memory-empty-help">Ký ức sẽ xuất hiện khi Mao ghi nhớ thông tin hoặc lưu kết quả học tập.</p><p class="memory-empty-note">Thông tin trong persona và lịch sử chat được quản lý riêng, không được tính thành ký ức ở đây.</p></div>
+              <div id="memory-pager" class="memory-pager" hidden><button id="memory-prev" type="button" class="button button-secondary">← Trước</button><span id="memory-page-label"></span><button id="memory-next" type="button" class="button button-secondary">Sau →</button></div>
+              <div class="editor-tip"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5m0-9v1"/></svg><p><strong>Ký ức không phải mọi lời Mao đã nói</strong><span>Mao chỉ truy hồi những thông tin đã được ghi vào bộ nhớ. Nhãn “Chưa kiểm chứng” nghĩa là nội dung vẫn cần được đối chiếu.</span></p></div>
+            </section>
+            <div class="apply-note"><span aria-hidden="true">↳</span><p>Thay đổi được áp dụng từ lượt chat tiếp theo.<br><span>Ngữ cảnh tạm của phiên cũ sẽ được làm mới khi lưu phiên bản mới.</span></p></div>
+          </div>
+
+        </div>
+        <div class="savebar"><div class="save-status"><span id="save-indicator" class="save-indicator" data-state="loading" aria-hidden="true"></span><div><strong id="save-label">Đang đọc hồ sơ…</strong><span id="save-help">Nội dung sẽ hiện khi kết nối hoàn tất.</span></div></div><div class="save-actions"><button type="button" id="draft" class="button button-secondary" disabled>Lưu bản nháp</button><button type="submit" id="activate" class="button button-primary" disabled><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>Lưu & áp dụng</button></div><p id="message" role="status" aria-live="polite"></p></div>
+      </form>
+    </main>
+  </div>
+  <dialog id="memory-detail" class="memory-detail" aria-labelledby="memory-detail-title"><header><div><span class="eyebrow">MEMORY / CHI TIẾT KÝ ỨC</span><h2 id="memory-detail-title">Ký ức của Mao</h2></div><button id="memory-detail-close" type="button" aria-label="Đóng chi tiết ký ức">×</button></header><p id="memory-detail-status" role="status"></p><div id="memory-detail-body" hidden><p id="memory-detail-content" class="memory-detail-content"></p><dl id="memory-detail-meta"></dl><section><h3>Nguồn & bằng chứng</h3><p id="memory-detail-provenance"></p><pre id="memory-detail-evidence"></pre></section></div></dialog>
+  <script type="module" src="./persona.mjs?v=4"></script>
+</body>
+</html>

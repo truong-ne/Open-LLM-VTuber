@@ -72,6 +72,9 @@ async def handle_conversation_trigger(
             )
         )
     elif msg_type == "text-input":
+        if data.get("source") == "mao-idle-host" and isinstance(data.get("narration_speech"), str):
+            metadata = {"narration_speech": data["narration_speech"][:1400],
+                        "skip_history": True, "skip_memory": True}
         if data.get("source") == "mao-rehearsal":
             metadata = {"rehearsal": True, "skip_history": True, "skip_memory": True}
         if data.get("source") == "vua-tieng-viet" and isinstance(

@@ -5,11 +5,37 @@ exports.loadDraco = window => {
   const fs=require('fs'),path=require('path'),{ipcMain,screen}=require('electron');
   const root=process.env.MAO_WORKSPACE;
   if(!root)throw new Error('MAO_WORKSPACE is required for Draco desktop');
+  // Keep animation and hosting heartbeat alive while OBS covers this window.
+  window.webContents.setBackgroundThrottling(false);
   const statusPath=path.join(root,'private','draco-desktop-status.json');
   const write=data=>fs.writeFileSync(statusPath,JSON.stringify({...data,updatedAt:Date.now()},null,2));
   write({model:'draco',ready:false,socket:'starting'});
+  // Reuse the existing Pet Mode when Mao studies in Chrome.
+  let researchActive=false,researchPrevious='window',currentMode='window';
+  let petViewRevision=null,petViewPending=false;
+  const researchTimer=setInterval(()=>{
+    if(window.isDestroyed()||window.webContents.isLoading())return;
+    if(currentMode==='pet'&&!petViewPending){
+      try{
+        const view=JSON.parse(fs.readFileSync(path.join(root,'private','mao-desktop-view.json'),'utf8'));
+        if(view.revision!==petViewRevision&&Number.isFinite(view.petZoom)&&view.petZoom>=.15&&view.petZoom<=4){
+          petViewPending=true;
+          window.webContents.executeJavaScript(`window.maoDraco?.renderer?.setPetZoom?.(${JSON.stringify(view.petZoom)},${view.dock==='bottom-right'})`).then(applied=>{if(applied)petViewRevision=view.revision;}).catch(()=>{}).finally(()=>{petViewPending=false;});
+        }
+      }catch{}
+    }
+    let active=false;
+    try{const data=JSON.parse(fs.readFileSync(path.join(root,'private','mao-research-display.json'),'utf8'));active=data.active===true&&Date.now()-data.updated_at*1000<10000;}catch{}
+    const changed=active!==researchActive;
+    if(!changed&&(!active||currentMode==='pet'))return;
+    if(active&&changed)researchPrevious=currentMode;
+    researchActive=active;
+    const mode=active?'pet':researchPrevious;
+    if(mode!==currentMode)window.webContents.executeJavaScript(`window.api?.setMode(${JSON.stringify(mode)})`).catch(()=>{});
+  },1000);researchTimer.unref();window.once('closed',()=>clearInterval(researchTimer));
   ipcMain.on('mao-draco-status',(event,data)=>{
     if(event.sender!==window.webContents||!data||data.model!=='draco')return;
+    if(['pet','window'].includes(data.mode))currentMode=data.mode;
     const safe={};
     for(const key of ['model','ui','ready','frames','drawCalls','socket','audioStarted','audioEnded','audioErrors','action','lastError','visible','queued','playback','mouthOpen','mouthPeak','faceMeshes','zoom','petX','petY','focus','petChatVisible','scrollToResize','forceIgnoreMouse','spaceX','spaceZ','spaceYaw','audienceYaw','facingError','completedSpins','mode','floorVisible','viewportWidth','viewportHeight','background','roomVisible','roomWidth','roomDepth','roomCamera','roomTheme','bodyHeading','bodyDirection','bodyPhase','bodyTargetX','bodyTargetZ','bodyStopped','lastBodyCommand','lastBodyAccepted','faceExpression','performanceVersion','facePresetCount','bodyAction','speechFocused','motorActive','motorRevision','motorSaved','motorFeedback','motorRejected','lastMotorAccepted']){
       const value=data[key];if(['string','number','boolean'].includes(typeof value))safe[key]=typeof value==='string'?value.slice(0,350):value;

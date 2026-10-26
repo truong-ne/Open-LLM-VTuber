@@ -368,6 +368,22 @@ class Store:
                 (self.scope, key, Jsonb(value)),
             )
 
+    def observe_affect(self, event, cue=''):
+        """Serialize expression updates from chat and the study worker per scope."""
+        from psycopg.types.json import Jsonb
+        from ...character.emotion import transition
+        with self.connect() as db:
+            db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
+                       ('affect:'+self.scope,))
+            row=db.execute("SELECT value FROM mao_hybrid.state WHERE scope=%s AND key='affect'",
+                           (self.scope,)).fetchone()
+            now=db.execute('SELECT extract(epoch from clock_timestamp())::float8 AS now').fetchone()['now']
+            state=transition(row['value'] if row else {},event,cue=cue,now=now)
+            db.execute("INSERT INTO mao_hybrid.state(scope,key,value) VALUES(%s,'affect',%s) "
+                       'ON CONFLICT(scope,key) DO UPDATE SET value=excluded.value',
+                       (self.scope,Jsonb(state)))
+        return state
+
     def event(self, kind, data):
         from psycopg.types.json import Jsonb
 

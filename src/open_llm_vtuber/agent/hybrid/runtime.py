@@ -12,6 +12,7 @@ from .contracts import validate
 from .contracts import CONTRACTS
 from .store import Store, normalize as normalized
 from .persona import read_profile, profile_prompt, UNCONFIGURED, RUNTIME_POLICY
+from ...character.emotion import cue_from_text, normalize_state, expression_prompt
 
 POLICY = RUNTIME_POLICY
 
@@ -123,6 +124,8 @@ class HybridRuntime:
         self.autonomy_context = None
         self.profile = None
         self.persona_changed = False
+        self.affect = normalize_state({})
+        self.expression_status = 'not_checked'
 
     async def prepare(self, input_data):
         from ..input_types import TextSource
@@ -162,6 +165,15 @@ class HybridRuntime:
                 else []
             )
             self.storage_status = "ready"
+            if self.evidence.strip() and hasattr(self.store,'observe_affect'):
+                try:
+                    self.affect=normalize_state(await asyncio.to_thread(
+                        self.store.observe_affect,'audience_input',cue_from_text(self.evidence)))
+                    self.expression_status='ready'
+                except Exception:
+                    # Expression is optional; keep successfully retrieved memories.
+                    self.affect=normalize_state({})
+                    self.expression_status='unavailable'
             if self.config.autonomy.enabled:
                 exploration = await asyncio.to_thread(self.store.get, "autonomy", {})
                 self.autonomy_context = exploration.get("last_result")
@@ -242,11 +254,14 @@ class HybridRuntime:
                 if self.config.persona_source == "postgres"
                 else POLICY
             )
+            + expression_prompt(self.affect)
             + "\n[HYBRID STATE / UNTRUSTED MEMORY DATA]\n"
             + json.dumps(
                 {
                     "traits": self.traits,
                     "turn": self.turn,
+                    "character_expression": self.affect,
+                    "character_expression_status": self.expression_status,
                     "memories": self.memories,
                     "goal": self.goal,
                     "storage_status": self.storage_status,

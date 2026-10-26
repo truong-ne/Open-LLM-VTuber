@@ -24,6 +24,7 @@ export function createNativeBridge(){
     },
     update(options){
       Object.assign(this.options,options);state.socket=String(options.socket||state.socket).toLowerCase();
+      if(state.socket!=='open')window.dispatchEvent(new CustomEvent('mao-reply-event',{detail:{type:'reply-disconnected'}}));
       if(options.aiState&&options.aiState!=='thinking-speaking')this.speechSession=false;
       this.renderer?.refresh();
     },
@@ -35,9 +36,9 @@ export function createNativeBridge(){
     },
     attachAudio(audio,payload){
       this.audio=audio;this.payload=payload;
-      audio.addEventListener('playing',()=>{if(this.audio===audio){state.audioStarted++;state.lastError='';this.performBody(payload?.body);}},{once:true});
+      audio.addEventListener('playing',()=>{if(this.audio===audio){state.audioStarted++;state.lastError='';this.performBody(payload?.body);window.dispatchEvent(new CustomEvent('mao-reply-playback'));}},{once:true});
       audio.addEventListener('ended',()=>{state.audioEnded++;if(this.audio===audio){this.audio=null;this.payload=null;}},{once:true});
-      audio.addEventListener('error',()=>{if(this.audio===audio&&audio.getAttribute('src')){state.audioErrors++;state.lastError='Không phát được âm thanh VieNeu.';}},{once:true});
+      audio.addEventListener('error',()=>{if(this.audio===audio&&audio.getAttribute('src')){state.audioErrors++;state.lastError='Không phát được âm thanh VieNeu.';window.dispatchEvent(new CustomEvent('mao-reply-event',{detail:{type:'interrupt-signal'}}));}},{once:true});
     }
   };
   return bridge;

@@ -12,6 +12,7 @@ export class MaoMirror{
     socket.onmessage=event=>{
       if(this.socket!==socket||typeof event.data!=='string'||event.data.length>8_000_000)return;
       let payload;try{payload=JSON.parse(event.data);}catch{return;}
+      if(['user-input-transcription','control'].includes(payload.type))globalThis.window?.dispatchEvent(new CustomEvent('mao-reply-event',{detail:payload}));
       if(payload.type==='audio'&&typeof payload.audio==='string'&&payload.audio.length<7_000_000){
         // Bound a slow observer's queue; never hold up the actual playback owner.
         if(this.queue.length>=8){this.queue.shift();this.onState('catching-up');}

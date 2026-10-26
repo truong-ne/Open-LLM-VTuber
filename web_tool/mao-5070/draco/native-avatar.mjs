@@ -7,13 +7,13 @@ import {FACE_PRESETS} from './performance-face.mjs?v=1';
 import {AdaptiveFaceRig as FaceRig} from './motor-face.mjs';
 import {selectPerformance,faceForAction} from './performance-context.mjs?v=2';
 import {SpeechAttention} from './speech-attention.mjs?v=2';
-import {attachPetPlacement} from './pet-placement.mjs?v=7';
+import {attachPetPlacement} from './pet-placement.mjs?v=8';
 import {configureAvatarCamera,availableAvatarHeight} from './room-view.mjs?v=10';
 import {DesktopSpace,FloorFeet,locomotionFrame} from './desktop-space.mjs?v=6';
 import {ROOM,createDesktopRoom,pickRoomFloor} from './desktop-room.mjs?v=12';
 import {sceneForGame} from './game-scene.mjs?v=4';
 import {headingDegrees,cardinal} from './room-orientation.mjs?v=4';
-import {mountCommentPanel} from './comment-panel.mjs?v=3';
+import {mountCommentPanel} from './comment-panel.mjs?v=6';
 import {createSceneTransition} from './scene-transition.mjs?v=2';
 import {mountSingingPlayer} from './singing-player.mjs';
 import {validateDance} from './dance-body.mjs?v=2';
@@ -187,7 +187,7 @@ export async function mountNativeAvatar(container,bridge){
   transition=createSceneTransition(container,{onCommit:applyScene,isReady:scene=>state.ready&&rooms[scene].ready});
   singing=mountSingingPlayer(container,{fetcher:bridge.singingFetcher||fetch,getMode:()=>options().mode,canPlay:()=>sceneKind==='concert'&&(options().mode==='pet'||transition.ready)});window.maoSinging=singing;
   const performing=()=>['waiting','loading','playing'].includes(singing?.state?.phase);
-  bridge.renderer={refresh,dispose,prepareSpeech,operatorFeedback,perform:command=>!performing()&&attention.command(space,command),performAction,performBody:command=>!performing()&&mode==='window'&&attention.bodyCommand(space,command)};refresh();
+  bridge.renderer={refresh,dispose,prepareSpeech,operatorFeedback,setPetZoom:(zoom,dock=false)=>{if(options().mode!=='pet')return false;if(dock)placement.dockBottomRight(zoom);else placement.zoom(zoom/placement.getState().zoom);return true;},perform:command=>!performing()&&attention.command(space,command),performAction,performBody:command=>!performing()&&mode==='window'&&attention.bodyCommand(space,command)};refresh();
   if(bridge.pendingCommand){space.perform(bridge.pendingCommand);bridge.pendingCommand=null;}
   if(bridge.pendingAction){performAction(bridge.pendingAction);bridge.pendingAction=null;}
   const tick=now=>{

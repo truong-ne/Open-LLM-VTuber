@@ -161,6 +161,7 @@ class IdleHost:
         self.awaiting_reply = False
         self.last_invitation_at = float("-inf")
         self._planned_style = None
+        self.research_socket = None
 
     def receive(self, data):
         if data.get("type") == "mao-sing-state":
@@ -281,6 +282,7 @@ class IdleHost:
                 async with websockets.connect(
                     self.proxy_url, max_size=10_000_000
                 ) as ws:
+                    self.research_socket = ws
                     self.phase = "waiting"
 
                     async def receive():
@@ -307,6 +309,7 @@ class IdleHost:
                         for task in done:
                             task.result()
                     finally:
+                        self.research_socket = None
                         for task in tasks:
                             task.cancel()
                         await asyncio.gather(*tasks, return_exceptions=True)
@@ -345,11 +348,21 @@ class IdleHost:
             return False
         autonomy = read_json(self.settings_path.with_name("mao-autonomy-status.json"))
         if (
-            autonomy.get("phase") in {"planning", "reading", "reflecting", "saving"}
+            autonomy.get("phase") in {"planning", "reading", "summarizing", "explaining", "reflecting", "saving"}
             and 0 <= time.time() - autonomy.get("updated_at", 0) < 10
         ):
             return False
         settings = read_json(self.settings_path)
+        # During the operator-selected learning stage, only research narration
+        # and actual audience replies may speak. No random hosting fallback.
+        if settings.get("learning_stage") is True:
+            return False
+        if settings.get("research_when_empty") is True:
+            audience = read_json(self.settings_path.with_name("mao-youtube-audience.json"))
+            count = audience.get("viewers")
+            if (audience.get("live") is not True or type(count) is not int or count <= 0
+                    or not 0 <= time.time() - audience.get("observed_at", 0) < 75):
+                return False
         if settings.get("enabled", True) is not True:
             return False
         silence = settings.get("silence_seconds", 10)

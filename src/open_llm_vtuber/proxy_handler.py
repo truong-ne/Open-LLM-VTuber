@@ -46,6 +46,7 @@ class ProxyHandler:
         self.connected = False
         self.server_task: Optional[asyncio.Task] = None
         self._init_config: Optional[dict] = None
+        self._active_input_source = None
         self.lock = asyncio.Lock()
 
         # Initialize message queue manager
@@ -183,6 +184,8 @@ class ProxyHandler:
                 ):
                     continue
                 # Speech scripts are produced only by the local game service.
+                if message.get('source') != 'mao-idle-host':
+                    message.pop('narration_speech',None)
                 for field in ("game_speech", "game_round_id", "game_kind"):
                     message.pop(field, None)
                 if message.get("source") == "vua-tieng-viet":
@@ -331,7 +334,7 @@ class ProxyHandler:
             and source not in ("mao-idle-host", "youtube-live", "tiktok-live")
         ):
             await self.word_game.submit(
-                str(message.get("nickname") or "Bạn trên desktop")[:40],
+                str(message.get("nickname") or "anh Bi")[:40],
                 text,
                 player_id="desktop:" + client_id,
             )
@@ -425,6 +428,7 @@ class ProxyHandler:
                                 elif data.get("text") == "conversation-chain-end":
                                     logger.info("Received conversation end signal")
                                     self.message_queue.conversation_active = False
+                                    self._active_input_source = None
 
                             # Broadcast the message to all clients
                             await self.broadcast_to_clients(data)
@@ -511,6 +515,15 @@ class ProxyHandler:
                         {"type": "conversation-state", "active": False}
                     )
                 return
+        if (
+            self.word_game is not None
+            and self.word_game.game.active
+            and message.get("source") == "mao-idle-host"
+        ):
+            # An idle turn may have been queued just before the game command.
+            if message.get("type") == "text-input":
+                self.message_queue.conversation_active = False
+            return
         # Queue-generated transcripts are local display/activity events, not
         # another backend input (which would be interpreted twice).
         if message.get("type") == "user-input-transcription":
@@ -521,4 +534,6 @@ class ProxyHandler:
                 else sender_id,
             )
             return
+        if message.get("type") == "text-input":
+            self._active_input_source = message.get("source")
         await self.forward_to_server(message, sender_id)
