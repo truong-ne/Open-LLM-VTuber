@@ -27,6 +27,66 @@ from .tts_manager import TTSTaskManager
 
 
 async def process_group_conversation(
+    client_contexts,
+    client_connections,
+    broadcast_func,
+    group_members,
+    initiator_client_uid,
+    user_input,
+    images=None,
+    session_emoji="😊",
+    metadata=None,
+):
+    from ..interaction.service import enabled
+    from ..interaction.coordinator import coordinator
+
+    context = client_contexts[initiator_client_uid]
+    if enabled(context):
+        from ..interaction.ingress import unseal, seal, verify_actor, issue_actor
+
+        if not unseal((metadata or {}).get("_host_ingress")):
+            token = getattr(context, "mao_actor_token", None)
+            if not verify_actor(token):
+                token = context.mao_actor_token = issue_actor()
+            import hashlib
+
+            room = (
+                "group:"
+                + hashlib.sha256("|".join(sorted(group_members)).encode()).hexdigest()
+            )
+            metadata = {
+                **(metadata or {}),
+                "_host_ingress": seal(
+                    verify_actor(token), initiator_client_uid, public=True, room=room
+                ),
+            }
+    args = (
+        client_contexts,
+        client_connections,
+        broadcast_func,
+        group_members,
+        initiator_client_uid,
+        user_input,
+        images,
+        session_emoji,
+        metadata,
+    )
+    if enabled(context):
+        async with coordinator(context.agent_engine._hybrid.store.scope).floor(
+            "group_" + initiator_client_uid
+        ):
+            admitted = (metadata or {}).get("_admitted_turn")
+            if admitted and admitted.persist:
+                await asyncio.to_thread(admitted.journal.start, admitted.delivery)
+            try:
+                return await _process_group_conversation(*args)
+            finally:
+                if admitted:
+                    await admitted.finish()
+    return await _process_group_conversation(*args)
+
+
+async def _process_group_conversation(
     client_contexts: Dict[str, ServiceContext],
     client_connections: Dict[str, WebSocket],
     broadcast_func: BroadcastFunc,
@@ -86,11 +146,15 @@ async def process_group_conversation(
             group_members=group_members,
             initiator_client_uid=initiator_client_uid,
         )
+        state.mao_user_input = input_text
 
         # Check if we should skip storing this input to history
         skip_history = metadata and metadata.get("skip_history", False)
 
-        if not skip_history:
+        from ..interaction.service import enabled
+
+        durable = enabled(initiator_context)
+        if not skip_history and not durable:
             for member_uid in group_members:
                 member_context = client_contexts[member_uid]
                 store_message(
@@ -105,14 +169,21 @@ async def process_group_conversation(
 
         state.conversation_history = [f"{human_name}: {input_text}"]
 
-        is_first_responder = False
+        is_first_responder = True
+        remaining = len(group_members) if durable else None
         # Main conversation loop
         while state.group_queue:
+            if remaining is not None:
+                if remaining <= 0:
+                    break
+                remaining -= 1
             try:
                 current_member_uid = state.group_queue.pop(0)
 
                 # Only pass metadata to the first responder
                 current_metadata = None
+                if durable:
+                    current_metadata = metadata
                 if is_first_responder:
                     current_metadata = metadata
                     is_first_responder = False
@@ -223,7 +294,44 @@ async def broadcast_transcription(
     )
 
 
-async def handle_group_member_turn(
+async def handle_group_member_turn(**kwargs):
+    from ..interaction.service import enabled, TurnSession
+    from ..interaction.events import current_delivery
+
+    context = kwargs["client_contexts"][kwargs["current_member_uid"]]
+    if not enabled(context):
+        return await _handle_group_member_turn(**kwargs)
+    metadata = {
+        **(kwargs.get("metadata") or {}),
+        "_group_member": kwargs["current_member_uid"],
+    }
+    turn = TurnSession(context, kwargs["current_member_uid"], metadata)
+    token = current_delivery.set(turn.delivery)
+    try:
+        if not await turn.begin(kwargs["state"].mao_user_input):
+            return
+        metadata = {
+            **(kwargs.get("metadata") or {}),
+            "_interaction": await turn.input(kwargs["state"].mao_user_input),
+        }
+        return await _handle_group_member_turn(
+            **{**kwargs, "metadata": metadata}, mao_turn=turn
+        )
+    except asyncio.CancelledError:
+        await asyncio.shield(turn.finish("interrupted"))
+        raise
+    except Exception:
+        await turn.finish("failed")
+        raise
+    finally:
+        try:
+            if turn.delivery.state == "running":
+                await turn.finish()
+        finally:
+            current_delivery.reset(token)
+
+
+async def _handle_group_member_turn(
     current_member_uid: str,
     state: GroupConversationState,
     client_contexts: Dict[str, ServiceContext],
@@ -233,6 +341,7 @@ async def handle_group_member_turn(
     images: Optional[List[Dict[str, Any]]],
     tts_manager: TTSTaskManager,
     metadata: Optional[Dict[str, Any]] = None,
+    mao_turn=None,
 ) -> None:
     """Handle a single group member's conversation turn"""
     # Update current speaker before processing
@@ -242,6 +351,11 @@ async def handle_group_member_turn(
 
     context = client_contexts[current_member_uid]
     current_ws_send = client_connections[current_member_uid].send_text
+    if mao_turn:
+        original_send = current_ws_send
+
+        async def current_ws_send(message):
+            await mao_turn.send(message, original_send)
 
     new_messages = state.conversation_history[state.memory_index[current_member_uid] :]
     new_context = "\n".join(new_messages) if new_messages else ""
@@ -255,7 +369,7 @@ async def handle_group_member_turn(
 
     logger.info(
         f"AI {context.character_config.character_name} "
-        f"(client {current_member_uid}) receiving context:\n{new_context}"
+        f"(client {current_member_uid}) receiving {len(new_context)} context characters"
     )
 
     full_response = await process_member_response(
@@ -269,7 +383,6 @@ async def handle_group_member_turn(
 
     if tts_manager.task_list:
         await asyncio.gather(*tts_manager.task_list)
-        await current_ws_send(json.dumps({"type": "backend-synth-complete"}))
 
         broadcast_ctx = BroadcastContext(
             broadcast_func=broadcast_func,
@@ -287,9 +400,11 @@ async def handle_group_member_turn(
     if full_response:
         ai_message = f"{context.character_config.character_name}: {full_response}"
         state.conversation_history.append(ai_message)
-        logger.info(f"Appended complete response: {ai_message}")
+        logger.info("Group response generated ({} characters)", len(full_response))
 
         for member_uid in group_members:
+            if mao_turn:
+                continue
             member_context = client_contexts[member_uid]
             store_message(
                 conf_uid=member_context.character_config.conf_uid,
@@ -351,7 +466,15 @@ async def process_member_response(
 
     try:
         # agent.chat now yields Union[SentenceOutput, Dict[str, Any]]
-        agent_output_stream = context.agent_engine.chat(batch_input)
+        turn = getattr(context, "mao_turn_session", None)
+        if turn and turn.delivery.state == "running":
+            from ..dialogue.engine import DialogueEngine
+
+            agent_output_stream = DialogueEngine(
+                context.agent_engine, turn.policy
+            ).chat(batch_input)
+        else:
+            agent_output_stream = context.agent_engine.chat(batch_input)
 
         async for output_item in agent_output_stream:
             if (

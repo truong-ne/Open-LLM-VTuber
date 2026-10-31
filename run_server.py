@@ -111,6 +111,11 @@ def check_frontend_submodule(lang=None):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Open-LLM-VTuber Server")
+    parser.add_argument(
+        "--profile",
+        choices=("local_dev", "test", "local_companion", "live"),
+        help="Apply a process-local runtime profile without editing conf.yaml",
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument(
         "--hf_mirror", action="store_true", help="Use Hugging Face mirror"
@@ -139,6 +144,9 @@ def run(console_log_level: str):
 
     # Load configurations from yaml file
     config: Config = validate_config(read_yaml("conf.yaml"))
+    from src.open_llm_vtuber.runtime_profile import effective_summary
+
+    logger.info("Effective runtime: {}", effective_summary(config))
     server_config = config.system_config
 
     if server_config.enable_proxy:
@@ -158,16 +166,22 @@ def run(console_log_level: str):
 
     # Run the Uvicorn server
     logger.info(f"Starting server on {server_config.host}:{server_config.port}")
-    uvicorn.run(
-        app=server.app,
-        host=server_config.host,
-        port=server_config.port,
-        log_level=console_log_level.lower(),
+    runner = uvicorn.Server(
+        uvicorn.Config(
+            app=server.app,
+            host=server_config.host,
+            port=server_config.port,
+            log_level=console_log_level.lower(),
+        )
     )
+    server.app.state.runtime_runner = runner
+    runner.run()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.profile:
+        os.environ["MAO_RUNTIME_PROFILE"] = args.profile
     console_log_level = "DEBUG" if args.verbose else "INFO"
     if args.verbose:
         logger.info("Running in verbose mode")

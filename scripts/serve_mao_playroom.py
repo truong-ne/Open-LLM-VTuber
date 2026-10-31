@@ -26,6 +26,24 @@ class PreviewBackend:
 
         return load_profile()
 
+    def runtime(self, operation="state", value=None):
+        from mao_hybrid import config
+        from src.open_llm_vtuber.agent.hybrid.store import Store
+        from src.open_llm_vtuber.operations import Operations
+
+        store = Store(config())
+        try:
+            service = Operations(store)
+            return (
+                service.state()
+                if operation == "state"
+                else service.source(value)
+                if operation == "source"
+                else service.action(value)
+            )
+        finally:
+            store.close()
+
     def save_profile(self, document):
         from mao_profile import save_profile
 
@@ -124,21 +142,46 @@ def handler(token, port, backend):
             if not self.valid_host():
                 return self.response(403, {"error": "Invalid host"})
             path = urlsplit(self.path).path
+            if path == "/api/runtime/state" or path.startswith("/api/runtime/source/"):
+                if not secrets.compare_digest(
+                    self.headers.get("X-Mao-Token", ""), token
+                ) or self.headers.get("Origin") not in {
+                    None,
+                    f"http://127.0.0.1:{port}",
+                    f"http://localhost:{port}",
+                }:
+                    return self.response(403, {"error": "Local operator required"})
+                try:
+                    return self.response(
+                        200,
+                        backend.runtime("source", path.rsplit("/", 1)[1])
+                        if "/source/" in path
+                        else backend.runtime(),
+                    )
+                except ValueError:
+                    return self.response(404, {"error": "Source unavailable"})
+                except Exception:
+                    return self.response(503, {"error": "Runtime database unavailable"})
             if path == "/api/memories" or path.startswith("/api/memories/"):
                 if not secrets.compare_digest(
                     self.headers.get("X-Mao-Token", ""), token
                 ) or self.headers.get("Origin") not in {
-                    None, f"http://127.0.0.1:{port}", f"http://localhost:{port}"
+                    None,
+                    f"http://127.0.0.1:{port}",
+                    f"http://localhost:{port}",
                 }:
                     return self.response(403, {"error": "Local operator required"})
                 try:
                     if path == "/api/memories":
                         from mao_memories import parse_query
 
-                        options = parse_query(parse_qs(
-                            urlsplit(self.path).query, keep_blank_values=True,
-                            max_num_fields=8,
-                        ))
+                        options = parse_query(
+                            parse_qs(
+                                urlsplit(self.path).query,
+                                keep_blank_values=True,
+                                max_num_fields=8,
+                            )
+                        )
                         return self.response(200, backend.memories(**options))
                     if urlsplit(self.path).query:
                         raise ValueError("Unexpected detail query")
@@ -197,6 +240,30 @@ def handler(token, port, backend):
                     pass
                 return self.response(403, {"error": "Local operator required"})
             path = urlsplit(self.path).path
+            if path == "/api/runtime/action":
+                try:
+                    size = int(self.headers.get("Content-Length", "0"))
+                    if not 0 < size <= 65536:
+                        return self.response(
+                            413, {"error": "Action exceeds size limit"}
+                        )
+                    return self.response(
+                        200,
+                        backend.runtime("action", json.loads(self.rfile.read(size))),
+                    )
+                except (ValueError, TypeError, KeyError):
+                    return self.response(
+                        409,
+                        {
+                            "error": "Action rejected: reload the source/revision or collect the required evaluation evidence."
+                        },
+                    )
+                except Exception:
+                    return self.response(503, {"error": "Runtime action unavailable"})
+            if path == "/api/runtime/stop-dashboard":
+                self.response(200, {"status": "stopping"})
+                self.server.shutdown()
+                return
             if path == "/api/persona/save":
                 try:
                     size = int(self.headers.get("Content-Length", "0"))

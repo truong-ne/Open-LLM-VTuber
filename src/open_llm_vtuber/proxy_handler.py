@@ -43,6 +43,8 @@ class ProxyHandler:
             word_game.proxy = self
         self.server_ws: Optional[aiohttp.ClientWebSocketResponse] = None
         self.clients: Dict[str, WebSocket] = {}
+        self.actor_tokens = {}
+        self.runtime_v2 = False
         self.connected = False
         self.server_task: Optional[asyncio.Task] = None
         self._init_config: Optional[dict] = None
@@ -121,6 +123,9 @@ class ProxyHandler:
         # Generate a unique client ID
         client_id = str(uuid.uuid4())
         self.clients[client_id] = websocket
+        from .interaction.ingress import issue_actor, verify_actor
+
+        self.actor_tokens[client_id] = issue_actor()
         logger.info(
             f"Client {client_id} connected to proxy. Total clients: {len(self.clients)}"
         )
@@ -155,10 +160,26 @@ class ProxyHandler:
             except Exception as e:
                 logger.error(f"Failed to request initialization: {e}")
 
+        await websocket.send_json(
+            {"type": "actor-session", "token": self.actor_tokens[client_id]}
+        )
         try:
             # Handle messages from this client
             while True:
                 message = await websocket.receive_json()
+                if message.get("type") == "resume-actor":
+                    if verify_actor(message.get("token")):
+                        self.actor_tokens[client_id] = message["token"]
+                    await websocket.send_json(
+                        {
+                            "type": "actor-session",
+                            "token": self.actor_tokens[client_id],
+                            "force": True,
+                        }
+                    )
+                    continue
+                message.pop("_host_ingress", None)
+                message.pop("recipient_actor_id", None)
                 if self.activity:
                     self.activity(message)
 
@@ -184,8 +205,8 @@ class ProxyHandler:
                 ):
                     continue
                 # Speech scripts are produced only by the local game service.
-                if message.get('source') != 'mao-idle-host':
-                    message.pop('narration_speech',None)
+                if message.get("source") != "mao-idle-host":
+                    message.pop("narration_speech", None)
                 for field in ("game_speech", "game_round_id", "game_kind"):
                     message.pop(field, None)
                 if message.get("source") == "vua-tieng-viet":
@@ -194,7 +215,14 @@ class ProxyHandler:
                 # Process text-input messages through the queue
                 if message.get("type") == "text-input":
                     # Queue the message with the sender's ID
-                    self.message_queue.queue_message(message, client_id)
+                    if self.message_queue.queue_message(message, client_id) is False:
+                        await websocket.send_json(
+                            {
+                                "type": "input-status",
+                                "status": "rejected_busy",
+                                "event_id": message.get("event_id"),
+                            }
+                        )
                 # Handle interrupt signals
                 elif message.get("type") == "interrupt-signal":
                     logger.info("Received interrupt; wait for backend to end the turn")
@@ -334,7 +362,7 @@ class ProxyHandler:
             and source not in ("mao-idle-host", "youtube-live", "tiktok-live")
         ):
             await self.word_game.submit(
-                str(message.get("nickname") or "anh Bi")[:40],
+                str(message.get("nickname") or "papa")[:40],
                 text,
                 player_id="desktop:" + client_id,
             )
@@ -349,6 +377,7 @@ class ProxyHandler:
             client_id: The ID of the disconnected client
         """
         self.clients.pop(client_id, None)
+        getattr(self, "actor_tokens", {}).pop(client_id, None)
         logger.info(
             f"Client {client_id} removed. Remaining clients: {len(self.clients)}"
         )
@@ -398,6 +427,31 @@ class ProxyHandler:
             await self.connect_to_server()
 
         if self.server_ws and not self.server_ws.closed:
+            if message.get("type") in {"text-input", "mic-audio-end"} and sender_id:
+                from .interaction.ingress import (
+                    verify_actor,
+                    seal,
+                    verify_host_proposal,
+                )
+
+                actor = verify_actor(getattr(self, "actor_tokens", {}).get(sender_id))
+                if actor:
+                    source_key = message.get("event_id")
+                    if not isinstance(source_key, str) or len(source_key) > 150:
+                        source_key = None
+                    message = {
+                        **message,
+                        "_host_ingress": seal(
+                            actor,
+                            sender_id,
+                            source_key,
+                            message.get("source") in {"youtube-live", "tiktok-live"}
+                            or verify_host_proposal(message),
+                            provider="host"
+                            if verify_host_proposal(message)
+                            else "proxy",
+                        ),
+                    }
             await self.server_ws.send_json(message)
 
     async def forward_server_messages(self):
@@ -416,6 +470,10 @@ class ProxyHandler:
                             data = json.loads(msg.data)
                             if not data:  # Check if parsed data is empty
                                 continue
+                            if data.get("type") == "actor-session":
+                                self.runtime_v2 = True
+                                # Upstream proxy transport identity is never a downstream user's identity.
+                                continue
 
                             if data.get("type") == "set-model-and-conf":
                                 self._init_config = {
@@ -429,6 +487,18 @@ class ProxyHandler:
                                     logger.info("Received conversation end signal")
                                     self.message_queue.conversation_active = False
                                     self._active_input_source = None
+                            if data.get("type") == "input-status" and data.get(
+                                "status"
+                            ) in {
+                                "duplicate",
+                                "rejected_busy",
+                                "expired",
+                                "superseded",
+                                "failed",
+                                "interrupted",
+                                "declined_policy",
+                            }:
+                                self.message_queue.conversation_active = False
 
                             # Broadcast the message to all clients
                             await self.broadcast_to_clients(data)
@@ -478,9 +548,20 @@ class ProxyHandler:
         if "volumes" in log_msg and len(log_msg.get("volumes") or []) > 10:
             log_msg["volumes"] = f"[{len(message.get('volumes', []))} volume values]"
 
-        logger.debug(f"Broadcasting to clients (excluding {exclude_client}): {log_msg}")
+        logger.debug(
+            "Broadcasting message type={} (content omitted)", message.get("type")
+        )
 
         for client_id, websocket in self.clients.items():
+            recipient = message.get("recipient_actor_id")
+            if recipient:
+                from .interaction.ingress import verify_actor
+
+                if (
+                    verify_actor(getattr(self, "actor_tokens", {}).get(client_id))
+                    != recipient
+                ):
+                    continue
             # Skip the excluded client
             if exclude_client and client_id == exclude_client:
                 continue
@@ -527,6 +608,16 @@ class ProxyHandler:
         # Queue-generated transcripts are local display/activity events, not
         # another backend input (which would be interpreted twice).
         if message.get("type") == "user-input-transcription":
+            if getattr(self, "runtime_v2", False):
+                from .interaction.ingress import verify_actor, verify_host_proposal
+
+                public = message.get("source") in {
+                    "youtube-live",
+                    "tiktok-live",
+                } or verify_host_proposal({**message, "type": "text-input"})
+                actor = verify_actor(self.actor_tokens.get(sender_id))
+                if actor and not public:
+                    message = {**message, "recipient_actor_id": actor}
             await self.broadcast_to_clients(
                 message,
                 exclude_client=None

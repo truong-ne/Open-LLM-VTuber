@@ -192,6 +192,7 @@ class BasicMemoryAgent(AgentInterface):
         """Set the system prompt."""
         if self._hybrid and self._hybrid.config.persona_source == "postgres":
             from ..hybrid.persona import RUNTIME_POLICY
+
             system = RUNTIME_POLICY
         logger.debug(f"Memory Agent: Setting system prompt: '''{system}'''")
         self._base_system = system
@@ -268,6 +269,7 @@ class BasicMemoryAgent(AgentInterface):
 
     async def _summarize_pending_memory(self) -> None:
         """Fold pending dropped messages into the running memory summary."""
+        generation = getattr(self, "_memory_generation", 0)
         while self._pending_summary_messages:
             batch = []
             size = 0
@@ -290,6 +292,8 @@ class BasicMemoryAgent(AgentInterface):
                     f"Memory summarization failed, dropped messages are forgotten: {e}"
                 )
                 continue
+            if generation != getattr(self, "_memory_generation", 0):
+                return
             if summary:
                 self._memory_summary = summary[:MEMORY_SUMMARY_MAX_CHARS]
                 logger.info(
@@ -332,6 +336,7 @@ class BasicMemoryAgent(AgentInterface):
 
     def _reset_memory_summary(self) -> None:
         """Forget the running summary, e.g. when another chat history is loaded."""
+        self._memory_generation = getattr(self, "_memory_generation", 0) + 1
         if self._summary_task and not self._summary_task.done():
             self._summary_task.cancel()
         self._summary_task = None
@@ -408,6 +413,9 @@ class BasicMemoryAgent(AgentInterface):
             text_content = str(message)
 
         if role == "assistant":
+            from ..spoken_output import spoken_text
+
+            text_content = spoken_text(text_content)
             text_content, _ = extract_body_tag(text_content)
             text_content, _ = extract_pose_tag(text_content)
         if not text_content and role == "assistant":
@@ -916,7 +924,16 @@ class BasicMemoryAgent(AgentInterface):
     ) -> Callable[[BatchInput], AsyncIterator[Union[SentenceOutput, Dict[str, Any]]]]:
         """Create the chat pipeline function."""
 
-        @tts_filter(self._tts_preprocessor_config)
+        @tts_filter(
+            self._tts_preprocessor_config,
+            affect_provider=lambda: self._hybrid.affect
+            if self._hybrid and self._hybrid.config.emotion_enabled
+            else None,
+            expression_model=self._live2d_model,
+            policy_provider=lambda: (
+                (getattr(self._hybrid, "interaction", None) or {}).get("policy") or {}
+            ).get("settings", {}),
+        )
         @display_processor()
         @actions_extractor(self._live2d_model)
         @sentence_divider(
@@ -933,27 +950,52 @@ class BasicMemoryAgent(AgentInterface):
 
             if self._hybrid:
                 await self._hybrid.prepare(input_data)
-                if self._hybrid.persona_changed:
+                if self._hybrid.persona_changed or getattr(
+                    self._hybrid, "interaction", None
+                ):
                     self._memory.clear()
-                    self._memory_summary = ""
-                    self._pending_summary_messages.clear()
-                    if self._summary_task:
-                        self._summary_task.cancel()
-                        self._summary_task = None
+                    self._reset_memory_summary()
             messages = self._to_messages(input_data)
             if self._hybrid and self._hybrid.direct_reply:
                 self._add_message(self._hybrid.direct_reply, "assistant")
                 yield self._hybrid.direct_reply
                 return
-            style = (
-                proactive_style(input_data) if PERSONA_MARKER in self._system else None
-            )
+            if (input_data.metadata or {}).get("_speech_recovery"):
+                # A host-controlled recovery pass cannot call tools, even when
+                # hybrid has enabled its local tool loop for normal replies.
+                response = ""
+                async for event in self._llm.chat_completion(
+                    messages,
+                    self._system_prompt()
+                    + "\n[Speech recovery] Lượt vừa rồi chưa có lời thoại để đọc. "
+                    "Trả lời yêu cầu hiện tại bằng ít nhất một câu hoàn chỉnh có chữ, "
+                    "không chỉ thẻ biểu cảm hoặc emoji. Chỉ xuất lời thoại; không gọi "
+                    "hoặc lặp lại công cụ. Không tuyên bố đã thực hiện việc chưa được xác nhận.",
+                ):
+                    chunk = (
+                        event
+                        if isinstance(event, str)
+                        else (
+                            event.get("text", "")
+                            if isinstance(event, dict)
+                            and event.get("type") == "text_delta"
+                            else ""
+                        )
+                    )
+                    if chunk:
+                        response += chunk
+                        yield chunk
+                if response:
+                    self._add_message(response, "assistant")
+                return
+            style = proactive_style(input_data)
             if style:
                 word_budget = (
                     self._hybrid.learning_profile["proactive_max_words"]
                     if self._hybrid
-                    else 60
+                    else 45
                 )
+                word_budget = min(45, word_budget)
                 if self._hybrid and self._hybrid.config.exploration_enabled:
                     # The existing host grants a turn; no independent background loop.
                     try:
@@ -1071,6 +1113,16 @@ class BasicMemoryAgent(AgentInterface):
                     self._add_message(complete_response, "assistant")
 
         return chat_with_memory
+
+    def recover_silent_reply(self, input_data):
+        """Fresh speech-only stream; never replay the native/MCP tool loop."""
+        from dataclasses import replace
+
+        recovery = replace(
+            input_data,
+            metadata={**(input_data.metadata or {}), "_speech_recovery": True},
+        )
+        return self._chat_function_factory()(recovery)
 
     async def chat(
         self,

@@ -1,1 +1,3 @@
 static/libs/* linguist-vendored
+# Canonical packaged renderer; authored Mao blocks are maintained separately.
+scripts/desktop/mao-runtime.js linguist-vendored

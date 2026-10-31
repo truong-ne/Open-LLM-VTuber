@@ -11,6 +11,7 @@ from ..tts.prosody import TurnSpeechPlanner, hide_native_cues
 from .body_context import extract_body_tag, read_body_state
 from .motor_intent import extract_pose_tag, PoseStreamGuard
 from uuid import uuid4
+from .spoken_output import SpokenOutputGuard
 
 
 def sentence_divider(
@@ -45,16 +46,31 @@ def sentence_divider(
             )
             stream_from_func = func(*args, **kwargs)
             pose_guard = PoseStreamGuard()
+            speech_guard = SpokenOutputGuard()
 
             async def guarded_stream():
                 async for event in stream_from_func:
-                    if isinstance(event, str):
-                        safe = pose_guard.feed(event)
+                    if isinstance(event, str) or (
+                        isinstance(event, dict) and event.get("type") == "text_delta"
+                    ):
+                        text = (
+                            event if isinstance(event, str) else event.get("text", "")
+                        )
+                        from ..interaction.events import current_delivery
+                        import time
+
+                        trace = current_delivery.get()
+                        if trace and text.strip():
+                            trace.metrics.setdefault(
+                                "first_token_ms",
+                                (time.monotonic() - trace.started) * 1000,
+                            )
+                        safe = pose_guard.feed(speech_guard.feed(text))
                         if safe:
                             yield safe
                     else:
                         yield event
-                tail = pose_guard.feed("", final=True)
+                tail = pose_guard.feed(speech_guard.feed("", final=True), final=True)
                 if tail:
                     yield tail
 
@@ -216,6 +232,9 @@ def display_processor():
 
 def tts_filter(
     tts_preprocessor_config: TTSPreprocessorConfig = None,
+    affect_provider=None,
+    expression_model=None,
+    policy_provider=None,
 ):
     """
     Decorator that filters text for TTS, passing through dicts.
@@ -254,6 +273,27 @@ def tts_filter(
                         speech = speech_planner.plan(
                             sentence.speech_text or display.text
                         )
+                        if affect_provider is not None:
+                            state = affect_provider()
+                            if state is not None:
+                                from ..character.expression import regulate_expression
+
+                                speech, actions = regulate_expression(
+                                    speech,
+                                    actions,
+                                    state,
+                                    expression_model,
+                                    explicit_neutral="[neutral]"
+                                    in (
+                                        sentence.speech_text or display.text
+                                    ).casefold(),
+                                )
+                        if policy_provider is not None:
+                            from ..character.expression import regulate_communication
+
+                            speech, actions = regulate_communication(
+                                speech, actions, policy_provider(), expression_model
+                            )
                         display.text = hide_native_cues(display.text)
                         tts = filter_text(
                             text=display.text,
@@ -265,8 +305,11 @@ def tts_filter(
                             vietnamese_math=getattr(config, "vietnamese_math", False),
                         )
 
-                    logger.debug(f"[{display.name}] display: {display.text}")
-                    logger.debug(f"[{display.name}] tts: {tts}")
+                    logger.debug(
+                        "Speech segment: display={} characters, tts={} characters",
+                        len(display.text),
+                        len(tts),
+                    )
 
                     yield SentenceOutput(
                         display_text=display,

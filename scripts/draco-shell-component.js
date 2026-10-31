@@ -1,4 +1,4 @@
-// Injected beside the original Live2D component. All existing UI/providers stay.
+// Native Mao avatar using the shared speech, VAD and IPC providers.
 const MaoDracoAvatar = reactExports.memo(() => {
   const {mode} = useMode();
   const {modelInfo} = useLive2DConfig();
@@ -21,15 +21,3 @@ const MaoDracoAvatar = reactExports.memo(() => {
   },[]);
   return jsxRuntimeExports.jsx('div',{ref,id:'mao-original-avatar',style:{position:'relative',width:'100%',height:'100%',overflow:'visible'}});
 });
-const MaoDesktopAvatar = props => {
-  const {modelInfo}=useLive2DConfig();
-  const useDraco=window.maoDraco&&(!modelInfo?.url||/\/mao_pro\//i.test(modelInfo.url));
-  return jsxRuntimeExports.jsx(useDraco?MaoDracoAvatar:Live2D,props);
-};
-const MaoDesktopBackground = props => {
-  const {modelInfo}=useLive2DConfig();
-  const useDraco=window.maoDraco&&(!modelInfo?.url||/\/mao_pro\//i.test(modelInfo.url));
-  const {stopBackgroundCamera}=useCamera();
-  reactExports.useEffect(()=>{if(useDraco){stopBackgroundCamera();window.maoDraco.state.background='none';}},[useDraco,stopBackgroundCamera]);
-  return useDraco?jsxRuntimeExports.jsx(Box,{...canvasStyles.background.container,'data-mao-background':'none',children:props.children}):jsxRuntimeExports.jsx(Background,props);
-};

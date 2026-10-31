@@ -5,6 +5,7 @@ import json
 import math
 import re
 import uuid
+from ...dialogue.policy import communication_prompt
 
 from .computer import BrowserComputer
 from .config import HybridConfig
@@ -12,7 +13,15 @@ from .contracts import validate
 from .contracts import CONTRACTS
 from .store import Store, normalize as normalized
 from .persona import read_profile, profile_prompt, UNCONFIGURED, RUNTIME_POLICY
-from ...character.emotion import cue_from_text, normalize_state, expression_prompt
+from ...character.appraisal import appraise_text, outcome_appraisal
+from ...character.contextual_appraisal import appraise_conversation
+from ...character.emotion import (
+    normalize_state,
+    expression_prompt,
+    response_policy,
+    affect_summary,
+    transition,
+)
 
 POLICY = RUNTIME_POLICY
 
@@ -125,7 +134,13 @@ class HybridRuntime:
         self.profile = None
         self.persona_changed = False
         self.affect = normalize_state({})
-        self.expression_status = 'not_checked'
+        self.expression_status = (
+            "not_checked" if self.config.emotion_enabled else "disabled"
+        )
+        self.interaction = None
+        self.experience_context = ""
+        self.experience_revision = None
+        self.affect_identity = {}
 
     async def prepare(self, input_data):
         from ..input_types import TextSource
@@ -133,9 +148,31 @@ class HybridRuntime:
         # Clipboard/page content cannot select behavior or be stored automatically.
         texts = [t for t in input_data.texts if t.source == TextSource.INPUT]
         self.evidence = user_evidence(texts)
+        self.interaction = (
+            (input_data.metadata or {}).get("_interaction")
+            if self.config.interaction_enabled and self.config.enabled
+            else None
+        )
+        if self.interaction:
+            self.evidence = self.interaction["source_text"]
+        self.affect_identity = (
+            {
+                "room": self.interaction["room_id"],
+                "actor": self.interaction["actor_id"],
+                "visibility": self.interaction["visibility"],
+            }
+            if self.interaction
+            else {}
+        )
+        appraisal_history = []
+        self.experience_context = ""
         self._feedback_applied = False
         self.direct_reply = None
         self.persona_changed = False
+        self.affect = normalize_state({})
+        self.expression_status = (
+            "not_checked" if self.config.emotion_enabled else "disabled"
+        )
         if self.config.persona_source == "postgres":
             try:
                 previous = self.profile
@@ -157,27 +194,122 @@ class HybridRuntime:
         try:
             self.traits = await asyncio.to_thread(self.store.get, "traits", self.traits)
             self.goal = await asyncio.to_thread(self.store.get, "goal")
-            self.memories = (
-                await asyncio.to_thread(
-                    self.store.recall, self.evidence[:1000], "shared"
+            if self.interaction:
+                from ...experience.repository import Experiences
+                from ...experience.activities import Activities
+                from ...dialogue.context import context_block
+
+                view = await asyncio.to_thread(
+                    Experiences(self.store).context,
+                    self.interaction["room_id"],
+                    self.interaction["actor_id"],
+                    self.interaction["visibility"],
+                    self.evidence[:1000],
                 )
-                if self.evidence.strip()
-                else []
-            )
+                activities = await asyncio.to_thread(
+                    Activities(self.store).context,
+                    self.interaction["room_id"],
+                    self.interaction["actor_id"],
+                    self.interaction["visibility"],
+                )
+                self.memories = view["items"]
+                from ...dialogue.focus import Focus
+
+                view["focus"] = await asyncio.to_thread(
+                    Focus(self.store).current,
+                    self.interaction["room_id"],
+                    self.interaction["actor_id"],
+                    self.interaction["visibility"],
+                )
+                appraisal_history = view.get("delivered_turns", [])
+                # Invalidate raw working context and in-flight summaries after edits/deletions.
+                self.persona_changed = self.persona_changed or (
+                    self.experience_revision is not None
+                    and self.experience_revision != view["revision"]
+                )
+                self.experience_revision = view["revision"]
+                self.experience_context = context_block(
+                    view, activities, self.interaction["policy"]
+                )
+            else:
+                self.memories = (
+                    await asyncio.to_thread(
+                        self.store.recall, self.evidence[:1000], "shared"
+                    )
+                    if self.evidence.strip()
+                    else []
+                )
             self.storage_status = "ready"
-            if self.evidence.strip() and hasattr(self.store,'observe_affect'):
+            if self.config.emotion_enabled and hasattr(self.store, "observe_affect"):
                 try:
-                    self.affect=normalize_state(await asyncio.to_thread(
-                        self.store.observe_affect,'audience_input',cue_from_text(self.evidence)))
-                    self.expression_status='ready'
+                    synthetic = bool(
+                        input_data.metadata
+                        and any(
+                            input_data.metadata.get(key)
+                            for key in (
+                                "rehearsal",
+                                "skip_memory",
+                                "proactive_speak",
+                                "game_speech",
+                                "narration_speech",
+                            )
+                        )
+                    )
+                    synthetic = synthetic or bool(
+                        self.interaction and self.interaction.get("synthetic")
+                    )
+                    if self.evidence.strip() and not synthetic:
+                        observation = appraise_conversation(
+                            self.evidence, appraisal_history
+                        )
+                        context_source = (
+                            appraisal_history[0].get("event_id")
+                            if appraisal_history
+                            and observation != appraise_conversation(self.evidence)
+                            else None
+                        )
+                        self.affect = normalize_state(
+                            await asyncio.to_thread(
+                                self.store.observe_affect,
+                                "audience_input",
+                                observation.cue,
+                                appraisal=observation.model_dump(),
+                                event_id=self.interaction["event_id"]
+                                if self.interaction
+                                else uuid.uuid4().hex,
+                                **self.affect_identity,
+                                **(
+                                    {"context_event": context_source}
+                                    if context_source
+                                    else {}
+                                ),
+                            )
+                        )
+                    else:
+                        self.affect = normalize_state(
+                            await asyncio.to_thread(
+                                self.store.read_affect, **self.affect_identity
+                            )
+                        )
+                    if any(
+                        t.content.startswith("[Thông báo nhận diện giọng nói:")
+                        for t in texts
+                    ):
+                        # Host uncertainty affects this response, never becomes a remembered user mood.
+                        self.affect = transition(
+                            {},
+                            "audience_input",
+                            appraisal=appraise_text("nghe không rõ"),
+                        )
+                    self.expression_status = "ready"
                 except Exception:
                     # Expression is optional; keep successfully retrieved memories.
-                    self.affect=normalize_state({})
-                    self.expression_status='unavailable'
+                    self.affect = normalize_state({})
+                    self.expression_status = "unavailable"
             if self.config.autonomy.enabled:
                 exploration = await asyncio.to_thread(self.store.get, "autonomy", {})
                 self.autonomy_context = exploration.get("last_result")
-            if self.config.learning_enabled:
+            if self.config.learning_enabled and not self.interaction:
                 from .learning import DailyLearning
 
                 self.learning_profile = await asyncio.to_thread(
@@ -254,13 +386,30 @@ class HybridRuntime:
                 if self.config.persona_source == "postgres"
                 else POLICY
             )
-            + expression_prompt(self.affect)
+            + (expression_prompt(self.affect) if self.config.emotion_enabled else "")
+            + self.experience_context
+            + (
+                "\nCurrent communication settings (not identity or permissions): "
+                + json.dumps(self.interaction["policy"]["settings"])
+                + "\n"
+                + communication_prompt(
+                    self.interaction["policy"]["settings"],
+                    trial=self.interaction["policy"].get("trial", False),
+                )
+                if self.interaction
+                else ""
+            )
             + "\n[HYBRID STATE / UNTRUSTED MEMORY DATA]\n"
             + json.dumps(
                 {
                     "traits": self.traits,
                     "turn": self.turn,
-                    "character_expression": self.affect,
+                    "character_expression": affect_summary(self.affect)
+                    if self.config.emotion_enabled
+                    else None,
+                    "emotion_policy": response_policy(self.affect)
+                    if self.config.emotion_enabled
+                    else None,
                     "character_expression_status": self.expression_status,
                     "memories": self.memories,
                     "goal": self.goal,
@@ -342,9 +491,22 @@ class HybridRuntime:
             if claim["status"] != "claimed":
                 return claim
             goal = claim["goal"]
+            step_limit = (
+                min(
+                    self.config.exploration_steps,
+                    response_policy(self.affect)["exploration_step_limit"],
+                )
+                if self.config.emotion_enabled
+                else self.config.exploration_steps
+            )
+            initial_cursor = goal["cursor"]
 
             async def run_steps():
                 for index in range(goal["cursor"], len(goal["steps"])):
+                    if index - initial_cursor >= step_limit:
+                        goal["status"] = "needs_revision"
+                        goal["pause_reason"] = "affect_reassessment"
+                        break
                     if not await asyncio.to_thread(self.store.goal_is_current, goal):
                         raise PermissionError(
                             "Goal was cancelled or lease ownership changed"
@@ -384,6 +546,24 @@ class HybridRuntime:
                         raise PermissionError(
                             "Goal ownership changed during evaluation"
                         )
+                    if self.config.emotion_enabled and hasattr(
+                        self.store, "observe_affect"
+                    ):
+                        try:
+                            self.affect = normalize_state(
+                                await asyncio.to_thread(
+                                    self.store.observe_affect,
+                                    "task_result",
+                                    appraisal=outcome_appraisal(ok).model_dump(),
+                                    event_id="goal:"
+                                    + str(goal["id"])
+                                    + ":"
+                                    + str(index),
+                                    **self.affect_identity,
+                                )
+                            )
+                        except Exception:
+                            self.expression_status = "unavailable"
                     if not ok:
                         goal["status"] = (
                             "needs_operator"
@@ -447,6 +627,43 @@ class HybridRuntime:
         return await asyncio.to_thread(self._dispatch, operation, data)
 
     def _dispatch(self, operation, data):
+        if self.interaction and operation in {"remember", "recall", "forget"}:
+            from ...experience.repository import Experiences
+
+            repository = Experiences(self.store)
+            room, actor, visibility = (
+                self.interaction[key] for key in ("room_id", "actor_id", "visibility")
+            )
+            if operation == "recall":
+                return {
+                    "memories": repository.context(
+                        room, actor, visibility, data.get("query", "")
+                    )["items"]
+                }
+            if operation == "remember":
+                from ...experience.claims import classify_claim
+
+                if (
+                    data.get("kind") == "skill"
+                    or str(data["content"]) not in self.evidence
+                ):
+                    raise PermissionError(
+                        "Only current user excerpts can become claims"
+                    )
+                identifier = repository.add_item(
+                    self.interaction["event_id"],
+                    str(data["content"]),
+                    **classify_claim(
+                        str(data["content"]), self.interaction["session_id"]
+                    ),
+                )
+                return {"status": "stored_as_unverified_claim", "id": identifier}
+            from ...experience.claims import forget_requested
+
+            if not forget_requested(self.evidence):
+                raise PermissionError("Forgetting requires an explicit current request")
+            repository.forget_item(data["id"], room, actor, visibility)
+            return {"status": "forgotten"}
         if operation == "recall":
             return {
                 "memories": self.store.recall(

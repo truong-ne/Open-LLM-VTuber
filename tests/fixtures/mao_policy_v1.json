@@ -1,0 +1,376 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "cases": [
+    {
+      "id": "short-01",
+      "kind": "short",
+      "split": "held_out",
+      "input": "Hôm nay có gì mới?"
+    },
+    {
+      "id": "detail-01",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Hôm nay có gì mới?"
+    },
+    {
+      "id": "delivery-01",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Hôm nay có gì mới?"
+    },
+    {
+      "id": "fiction-01",
+      "kind": "fiction",
+      "split": "held_out",
+      "input": "Hôm nay có gì mới?"
+    },
+    {
+      "id": "identity-01",
+      "kind": "identity",
+      "split": "development",
+      "input": "Hôm nay có gì mới?"
+    },
+    {
+      "id": "affect-01",
+      "kind": "affect",
+      "split": "development",
+      "input": "Mình buồn, đừng đùa.",
+      "expected": "boundary"
+    },
+    {
+      "id": "short-02",
+      "kind": "short",
+      "split": "development",
+      "input": "Mao kể một điều thú vị nhé."
+    },
+    {
+      "id": "detail-02",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Mao kể một điều thú vị nhé."
+    },
+    {
+      "id": "delivery-02",
+      "kind": "delivery",
+      "split": "held_out",
+      "input": "Mao kể một điều thú vị nhé."
+    },
+    {
+      "id": "fiction-02",
+      "kind": "fiction",
+      "split": "development",
+      "input": "Mao kể một điều thú vị nhé."
+    },
+    {
+      "id": "identity-02",
+      "kind": "identity",
+      "split": "development",
+      "input": "Mao kể một điều thú vị nhé."
+    },
+    {
+      "id": "affect-02",
+      "kind": "affect",
+      "split": "held_out",
+      "input": "Mình không buồn.",
+      "expected": "conversation"
+    },
+    {
+      "id": "short-03",
+      "kind": "short",
+      "split": "development",
+      "input": "Bạn chọn phương án nào?"
+    },
+    {
+      "id": "detail-03",
+      "kind": "detail",
+      "split": "held_out",
+      "input": "Hãy giải thích chi tiết: Bạn chọn phương án nào?"
+    },
+    {
+      "id": "delivery-03",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Bạn chọn phương án nào?"
+    },
+    {
+      "id": "fiction-03",
+      "kind": "fiction",
+      "split": "development",
+      "input": "Bạn chọn phương án nào?"
+    },
+    {
+      "id": "identity-03",
+      "kind": "identity",
+      "split": "held_out",
+      "input": "Bạn chọn phương án nào?"
+    },
+    {
+      "id": "affect-03",
+      "kind": "affect",
+      "split": "development",
+      "input": "Dịch câu “tôi buồn”.",
+      "expected": "conversation"
+    },
+    {
+      "id": "short-04",
+      "kind": "short",
+      "split": "held_out",
+      "input": "Nói về buổi sáng nào."
+    },
+    {
+      "id": "detail-04",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Nói về buổi sáng nào."
+    },
+    {
+      "id": "delivery-04",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Nói về buổi sáng nào."
+    },
+    {
+      "id": "fiction-04",
+      "kind": "fiction",
+      "split": "held_out",
+      "input": "Nói về buổi sáng nào."
+    },
+    {
+      "id": "identity-04",
+      "kind": "identity",
+      "split": "development",
+      "input": "Nói về buổi sáng nào."
+    },
+    {
+      "id": "affect-04",
+      "kind": "affect",
+      "split": "development",
+      "input": "Mao tính sai rồi.",
+      "expected": "correction"
+    },
+    {
+      "id": "short-05",
+      "kind": "short",
+      "split": "development",
+      "input": "Mình muốn nghe ý kiến của Mao."
+    },
+    {
+      "id": "detail-05",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Mình muốn nghe ý kiến của Mao."
+    },
+    {
+      "id": "delivery-05",
+      "kind": "delivery",
+      "split": "held_out",
+      "input": "Mình muốn nghe ý kiến của Mao."
+    },
+    {
+      "id": "fiction-05",
+      "kind": "fiction",
+      "split": "development",
+      "input": "Mình muốn nghe ý kiến của Mao."
+    },
+    {
+      "id": "identity-05",
+      "kind": "identity",
+      "split": "development",
+      "input": "Mình muốn nghe ý kiến của Mao."
+    },
+    {
+      "id": "affect-05",
+      "kind": "affect",
+      "split": "held_out",
+      "input": "Mình vui quá!",
+      "expected": "celebration"
+    },
+    {
+      "id": "short-06",
+      "kind": "short",
+      "split": "development",
+      "input": "Mao nghĩ sao?"
+    },
+    {
+      "id": "detail-06",
+      "kind": "detail",
+      "split": "held_out",
+      "input": "Hãy giải thích chi tiết: Mao nghĩ sao?"
+    },
+    {
+      "id": "delivery-06",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Mao nghĩ sao?"
+    },
+    {
+      "id": "fiction-06",
+      "kind": "fiction",
+      "split": "development",
+      "input": "Mao nghĩ sao?"
+    },
+    {
+      "id": "identity-06",
+      "kind": "identity",
+      "split": "held_out",
+      "input": "Mao nghĩ sao?"
+    },
+    {
+      "id": "affect-06",
+      "kind": "affect",
+      "split": "development",
+      "input": "Mình nghe không rõ.",
+      "expected": "uncertain"
+    },
+    {
+      "id": "short-07",
+      "kind": "short",
+      "split": "held_out",
+      "input": "Kể một chuyện nhỏ nhé."
+    },
+    {
+      "id": "detail-07",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Kể một chuyện nhỏ nhé."
+    },
+    {
+      "id": "delivery-07",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Kể một chuyện nhỏ nhé."
+    },
+    {
+      "id": "fiction-07",
+      "kind": "fiction",
+      "split": "held_out",
+      "input": "Kể một chuyện nhỏ nhé."
+    },
+    {
+      "id": "identity-07",
+      "kind": "identity",
+      "split": "development",
+      "input": "Kể một chuyện nhỏ nhé."
+    },
+    {
+      "id": "affect-07",
+      "kind": "affect",
+      "split": "development",
+      "input": "Trong truyện nhân vật buồn.",
+      "expected": "conversation"
+    },
+    {
+      "id": "short-08",
+      "kind": "short",
+      "split": "development",
+      "input": "Có gì đáng nhớ không?"
+    },
+    {
+      "id": "detail-08",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Có gì đáng nhớ không?"
+    },
+    {
+      "id": "delivery-08",
+      "kind": "delivery",
+      "split": "held_out",
+      "input": "Có gì đáng nhớ không?"
+    },
+    {
+      "id": "fiction-08",
+      "kind": "fiction",
+      "split": "development",
+      "input": "Có gì đáng nhớ không?"
+    },
+    {
+      "id": "identity-08",
+      "kind": "identity",
+      "split": "development",
+      "input": "Có gì đáng nhớ không?"
+    },
+    {
+      "id": "affect-08",
+      "kind": "affect",
+      "split": "held_out",
+      "input": "Mình chỉ muốn kể thôi.",
+      "expected": "boundary"
+    },
+    {
+      "id": "short-09",
+      "kind": "short",
+      "split": "development",
+      "input": "Chào Mao."
+    },
+    {
+      "id": "detail-09",
+      "kind": "detail",
+      "split": "held_out",
+      "input": "Hãy giải thích chi tiết: Chào Mao."
+    },
+    {
+      "id": "delivery-09",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Chào Mao."
+    },
+    {
+      "id": "fiction-09",
+      "kind": "fiction",
+      "split": "development",
+      "input": "Chào Mao."
+    },
+    {
+      "id": "identity-09",
+      "kind": "identity",
+      "split": "held_out",
+      "input": "Chào Mao."
+    },
+    {
+      "id": "affect-09",
+      "kind": "affect",
+      "split": "development",
+      "input": "Vui quá, lại hỏng nữa rồi.",
+      "expected": "support"
+    },
+    {
+      "id": "short-10",
+      "kind": "short",
+      "split": "held_out",
+      "input": "Chia sẻ một ý tưởng đi."
+    },
+    {
+      "id": "detail-10",
+      "kind": "detail",
+      "split": "development",
+      "input": "Hãy giải thích chi tiết: Chia sẻ một ý tưởng đi."
+    },
+    {
+      "id": "delivery-10",
+      "kind": "delivery",
+      "split": "development",
+      "input": "Chia sẻ một ý tưởng đi."
+    },
+    {
+      "id": "fiction-10",
+      "kind": "fiction",
+      "split": "held_out",
+      "input": "Chia sẻ một ý tưởng đi."
+    },
+    {
+      "id": "identity-10",
+      "kind": "identity",
+      "split": "development",
+      "input": "Chia sẻ một ý tưởng đi."
+    },
+    {
+      "id": "affect-10",
+      "kind": "affect",
+      "split": "development",
+      "input": "Xin chào Mao.",
+      "expected": "greeting"
+    }
+  ]
+}

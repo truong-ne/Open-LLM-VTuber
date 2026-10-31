@@ -52,7 +52,9 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
             {"last_comment_at": last, "pending_count": pending, "updated_at": updated},
         )
 
-    def test_fresh_curiosity_suppresses_automatic_chatter_but_stale_status_does_not(self):
+    def test_fresh_curiosity_suppresses_automatic_chatter_but_stale_status_does_not(
+        self,
+    ):
         self.activity_at(900)
         status = self.settings.with_name("mao-autonomy-status.json")
         write_json(status, {"phase": "reading", "updated_at": 1000})
@@ -96,6 +98,45 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await self.host.dispatch_once(ws))
         ws.send.assert_awaited_once()
         self.assertEqual(self.host.sent, 1)
+
+    async def test_declined_proposal_releases_host_and_preserves_cooldown(self):
+        self.activity_at(900)
+        await self.host.dispatch_once(AsyncMock())
+        identifier = self.host._submitted_event_id
+        self.host.receive(
+            {"type": "input-status", "status": "accepted", "event_id": identifier}
+        )
+        self.assertTrue(self.host.busy)
+        self.host.receive(
+            {
+                "type": "input-status",
+                "status": "declined_policy",
+                "event_id": "another-turn",
+            }
+        )
+        self.assertTrue(self.host.busy)
+        self.host.receive(
+            {
+                "type": "input-status",
+                "status": "declined_policy",
+                "event_id": identifier,
+            }
+        )
+        self.assertFalse(self.host.busy)
+        self.assertEqual(self.host.silent, 1)
+        self.assertFalse(self.host.ready(1001))
+        self.assertTrue(self.host.ready(1030))
+
+    async def test_legacy_uncorrelated_decline_releases_only_an_unplayed_proposal(self):
+        self.activity_at(900)
+        await self.host.dispatch_once(AsyncMock())
+        self.host.receive({"type": "input-status", "status": "declined_policy"})
+        self.assertFalse(self.host.busy)
+        self.clock_mock.return_value = 1030
+        await self.host.dispatch_once(AsyncMock())
+        self.host.receive({"type": "audio", "audio": "fixture"})
+        self.host.receive({"type": "input-status", "status": "declined_policy"})
+        self.assertTrue(self.host.busy)
 
     async def test_new_comment_during_joke_download_cancels_proactive_turn(self):
         self.host.styles = ["story"]
@@ -304,6 +345,28 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         write_json(self.settings, {"min_interval_seconds": 60})
         self.assertFalse(self.host.ready(1045))
         self.assertTrue(self.host.ready(1060))
+
+    def test_quieter_settings_wait_for_both_submission_and_actual_playback(self):
+        write_json(
+            self.settings,
+            {
+                "silence_seconds": 30,
+                "min_interval_seconds": 75,
+                "speech_pause_seconds": 20,
+                "question_wait_seconds": 35,
+                "invitation_interval_seconds": 180,
+            },
+        )
+        self.activity_at(900)
+        self.host.last_sent = 950
+        self.host.last_end = 990
+        self.assertFalse(self.host.ready(1024.9))
+        self.assertTrue(self.host.ready(1025))
+        self.host.last_end = 1020
+        self.assertFalse(self.host.ready(1039.9))
+        self.assertTrue(self.host.ready(1040))
+        self.assertEqual(self.host.question_wait(), 35)
+        self.assertEqual(self.host.invitation_interval(), 180)
 
     def test_settings_can_disable_without_restart(self):
         write_json(self.settings, {"enabled": False})

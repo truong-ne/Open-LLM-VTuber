@@ -47,7 +47,7 @@ export function mergeCommentFeed(previous,payload){
   const map=new Map((previous.session===payload.session?previous.comments:[]).map(item=>[item.id,item]));
   for(const item of payload.comments){
     if(!item||!Number.isInteger(item.id)||item.id<1||item.id>payload.revision||typeof item.text!=='string'||!item.text.trim())continue;
-    const nickname=item.platform==='desktop'&&item.nickname==='Bạn trên desktop'?'anh Bi':item.nickname;
+    const nickname=item.platform==='desktop'&&item.nickname==='Bạn trên desktop'?'papa':item.nickname;
     map.set(item.id,{id:item.id,text:item.text.slice(0,300),nickname:String(nickname||'Bạn').slice(0,40),platform:['youtube','tiktok','desktop'].includes(item.platform)?item.platform:'desktop'});
   }
   return {session:payload.session,revision:payload.revision,comments:[...map.values()].sort((a,b)=>b.id-a.id).slice(0,20)};

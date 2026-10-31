@@ -2,41 +2,47 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const writeIfChanged=(file,source)=>{if(!fs.existsSync(file)||fs.readFileSync(file,'utf8')!==source)fs.writeFileSync(file,source);};
+export const obsoleteDesktopFiles=['out/renderer/assets/index-CW5qlpM1.js','out/renderer/draco-shell.html','out/renderer/libs/live2dcubismcore.js','out/renderer/libs/live2d.min.js','out/renderer/libs/live2dcubismcore.min.js','out/renderer/assets/index-DBAmt0B7.css','out/main/index.js.before-draco'];
+export function keepDesktopEntry(relative){
+  if(obsoleteDesktopFiles.includes(relative))return false;
+  if(!relative.startsWith('node_modules/'))return true;
+  return relative==='node_modules/@electron-toolkit'||['node_modules/@electron-toolkit/utils','node_modules/@electron-toolkit/preload'].some(prefix=>relative===prefix||relative.startsWith(prefix+'/'));
+}
 export function buildDracoShell(root){
   const renderer=path.join(root,'private/tools/vtuber-desktop-unpacked/out/renderer');
-  const html=fs.readFileSync(path.join(renderer,'index.html'),'utf8');
-  const bundle=html.match(/src="\.\/assets\/([^"/]+\.js)"/)[1];
-  let source=fs.readFileSync(path.join(renderer,'assets',bundle),'utf8').replace(/\r\n/g,'\n');
-  const replace=(before,after)=>{
-    if(source.split(before).length!==2)throw Error(`Desktop integration anchor missing or ambiguous: ${before.slice(0,100)}`);
-    source=source.replace(before,after);
-  };
-  replace('const Live2D = reactExports.memo(',fs.readFileSync(path.join(root,'scripts/draco-shell-component.js'),'utf8')+'\nconst Live2D = reactExports.memo(');
-  replace('children: /* @__PURE__ */ jsxRuntimeExports.jsx(Live2D, {})','children: /* @__PURE__ */ jsxRuntimeExports.jsx(MaoDesktopAvatar, {})');
-  replace('jsxRuntimeExports.jsx(Background, {})','jsxRuntimeExports.jsx(MaoDesktopBackground, {})');
-  replace('const [showSidebar, setShowSidebar] = reactExports.useState(true);','const [showSidebar, setShowSidebar] = reactExports.useState(() => !window.maoDraco);');
-  replace('children: /* @__PURE__ */ jsxRuntimeExports.jsx(Subtitle, {})','id: "mao-window-subtitle",\n              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Subtitle, {})');
-  replace('children: /* @__PURE__ */ jsxRuntimeExports.jsx(WebSocketStatus, {})','id: "mao-legacy-status", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WebSocketStatus, {})');
-  source=source.replaceAll('children: "Open LLM VTuber"','children: "Mao VTuber"');
-  replace('...layoutStyles.footer,\n              zIndex: 10,','...layoutStyles.footer,\n              id: "mao-window-footer",\n              zIndex: 10,');
-  replace('const live2dManager = window.getLive2DManager?.();','const live2dManager = window.maoDraco?.renderer ? {getModel:()=>window.maoDraco.audioModel} : window.getLive2DManager?.();');
-  replace('const audio = new Audio(audioDataUrl);','const audio = new Audio(audioDataUrl);\n        if(window.maoDraco?.renderer)window.maoDraco.attachAudio(audio,options2);');
-  replace('expressions: message.actions?.expressions || null,','expressions: message.actions?.expressions || null,\n            body: window.maoDraco?.renderer ? message.actions?.body : null,\n            motions: window.maoDraco?.renderer ? message.actions?.motions : null,\n            pose: window.maoDraco?.renderer ? message.actions?.pose : null,');
-  replace('audio.addEventListener("canplaythrough", () => {\n          if (stateRef.current.aiState', 'audio.addEventListener("canplaythrough", async () => {\n          if (stateRef.current.aiState');
-  replace('          console.log("Starting audio playback with lip sync");', '          if(window.maoDraco?.renderer){\n            const facingReady=await window.maoDraco.prepareAudio(audio);\n            if(!facingReady||stateRef.current.aiState==="interrupted"||!audioManager.hasCurrentAudio()){cleanup();return;}\n          }\n          console.log("Starting audio playback with lip sync");');
-  replace('sendMessage(message) {\n    if (this.ws?.readyState === WebSocket.OPEN)', 'sendMessage(message) {\n    if(message.type==="interrupt-signal")window.dispatchEvent(new CustomEvent("mao-reply-event",{detail:message}));\n    if(message.type==="text-input"){const handled=window.maoDraco?.operatorFeedback?.(message.text);if(handled&&message.text.trim().startsWith("/co-the"))return;window.maoDraco?.command(message.text);}\n    if (this.ws?.readyState === WebSocket.OPEN)');
-  replace('case "user-input-transcription":','case "mao-sing-command-result":\n        window.dispatchEvent(new CustomEvent("mao-sing-command-result",{detail:message}));\n        break;\n      case "user-input-transcription":\n        window.dispatchEvent(new CustomEvent("mao-reply-event",{detail:message}));\n        window.maoDraco?.command(message.text);');
-  replace('case "control":','case "control":\n        window.dispatchEvent(new CustomEvent("mao-reply-event",{detail:message}));');
-  replace('ref: elementRef,\n      ...inputSubtitleStyles.container,','ref: elementRef,\n      id: "mao-native-input-subtitle",\n      ...inputSubtitleStyles.container,');
-  replace('const [isVisible, setIsVisible] = reactExports.useState(true);','const [isVisible, setIsVisible] = reactExports.useState(() => localStorage.getItem("mao.draco.pet-chat.v1") === "true");\n  reactExports.useEffect(()=>{localStorage.setItem("mao.draco.pet-chat.v1",String(isVisible));if(window.maoDraco)window.maoDraco.subtitleDragging=isDragging;},[isVisible,isDragging]);');
-  const generated='mao-draco-shell.js';
-  const output=path.join(renderer,'assets',generated);writeIfChanged(output,source);
-  const init=`<script type="importmap">{"imports":{"three":"http://127.0.0.1:12393/web-tool/mao-5070/3d/vendor/three.module.js"}}</script>\n<script type="module">\nimport {createNativeBridge} from 'http://127.0.0.1:12393/web-tool/mao-5070/draco/native-bridge.mjs?v=7';\nwindow.maoDraco=createNativeBridge();\nawait import('./assets/${generated}');\n</script>`;
-  const gameInit=`<script type="module">import {createWordGameOverlay} from 'http://127.0.0.1:12393/web-tool/mao-5070/draco/word-game-overlay.mjs?v=10';window.maoWordGame=createWordGameOverlay();</script>`;
-  const shell=html.replace(/<script type="module" crossorigin src="\.\/assets\/[^"/]+\.js"><\/script>/,init+gameInit).replace('<title>Open-LLM-Vtuber</title>','<title>Mao VTuber</title>');
-  writeIfChanged(path.join(renderer,'draco-shell.html'),shell);
-  return ['out/renderer/draco-shell.html',`out/renderer/assets/${generated}`];
+  const runtime=path.join(renderer,'assets/mao-draco-shell.js');
+  let source=fs.readFileSync(path.join(root,'scripts/desktop/mao-runtime.js'),'utf8');
+  // Observe packets once at the socket boundary, before audio is queued. A
+  // generic `case "audio"` anchor can accidentally patch React's DOM switch.
+  source=source.replaceAll('        window.maoDelivery?.receive(message);','');
+  const incoming='          const message = JSON.parse(event.data);';
+  if(source.split(incoming).length!==2)throw Error('Ambiguous desktop socket receive anchor');
+  source=source.replace(incoming,incoming+'\n        window.maoDelivery?.receive(message);');
+  source=source.replace('delivery: {segment_id:message.segment_id},','delivery: {turn_id:message.turn_id,generation_epoch:message.generation_epoch,segment_id:message.segment_id},');
+  for(const [key,relative] of [['delivery','web_tool/mao-5070/delivery.mjs'],['avatar','scripts/draco-shell-component.js'],['subtitle','scripts/mao-studio-component.js'],['app','scripts/mao-app-component.js']]){
+    const start=`/* MAO:${key}:START */`,end=`/* MAO:${key}:END */`;
+    const a=source.indexOf(start),b=source.indexOf(end,a);
+    if(a<0||b<0)throw Error(`Missing canonical Mao component: ${key}`);
+    const content=fs.readFileSync(path.join(root,relative),'utf8').replace('export class DeliveryClient','class DeliveryClient');
+    source=source.slice(0,a)+start+'\n'+content+'\n'+end+source.slice(b+end.length);
+  }
+  for(const obsolete of ['function SettingUI(','function Footer(','function General(','const SidebarContent','function BgUrlProvider(','const Live2D = reactExports.memo(','live2dcubismcore.js']){
+    if(source.includes(obsolete))throw Error(`Obsolete desktop UI returned: ${obsolete}`);
+  }
+  writeIfChanged(runtime,source);
+  const html=`<!doctype html><html><head><meta charset="UTF-8"><title>Mao VTuber</title>
+<script src="./pet-context.js"></script>
+<script type="importmap">{"imports":{"three":"http://127.0.0.1:12393/web-tool/mao-5070/3d/vendor/three.module.js"}}</script>
+<script type="module">
+import {createNativeBridge} from 'http://127.0.0.1:12393/web-tool/mao-5070/draco/native-bridge.mjs?v=7';
+window.maoDraco=createNativeBridge();
+await import('./assets/mao-draco-shell.js');
+</script>
+<script type="module">import {createWordGameOverlay} from 'http://127.0.0.1:12393/web-tool/mao-5070/draco/word-game-overlay.mjs?v=10';window.maoWordGame=createWordGameOverlay();</script>
+<link rel="stylesheet" href="./assets/mao-studio.css">
+</head><body><div id="root"></div></body></html>`;
+  writeIfChanged(path.join(renderer,'index.html'),html);
+  writeIfChanged(path.join(renderer,'assets/mao-studio.css'),fs.readFileSync(path.join(root,'web_tool/mao-5070/draco/desktop-theme.css'),'utf8'));
+  return ['out/renderer/index.html','out/renderer/assets/mao-draco-shell.js','out/renderer/assets/mao-studio.css'];
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  console.log(buildDracoShell(path.resolve(import.meta.dirname,'..')).join('\n'));
-}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))console.log(buildDracoShell(path.resolve(import.meta.dirname,'..')).join('\n'));

@@ -4,6 +4,7 @@ import json
 import re
 
 from .input_types import TextSource
+from .spoken_output import spoken_text
 
 HOST_PREFIX = "[Mao chủ động mở chuyện khi chat yên; đây không phải bình luận khán giả]"
 SHORT_STYLES = frozenset(
@@ -25,8 +26,9 @@ def proactive_style(input_data):
     return None
 
 
-def limit_proactive_reply(text, style, max_words=60):
-    max_words = max(40, min(60, int(max_words)))
+def limit_proactive_reply(text, style, max_words=45):
+    text = spoken_text(text)
+    max_words = max(20, min(45, int(max_words)))
     # Keep decimal points and punctuation inside pose/body tags intact.
     tags = []
 
@@ -62,13 +64,13 @@ def limit_proactive_reply(text, style, max_words=60):
         accepted.append(sentence.strip())
         last_kept = True
         words += count
-        if len(accepted) >= 3 or is_question:
+        if len(accepted) >= 2 or is_question:
             closed = True
     result = " ".join(accepted)
     return re.sub(r"\ue000(\d+)\ue001", lambda m: tags[int(m[1])], result)
 
 
-async def collect_proactive_reply(stream, style, max_words=60):
+async def collect_proactive_reply(stream, style, max_words=45):
     """Buffer these short turns so rejected sentences cannot start speaking first."""
     text = ""
     try:

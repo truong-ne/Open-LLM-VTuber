@@ -42,7 +42,7 @@ class CommentFeed:
         self.comments.append(
             {
                 "id": self.revision,
-                "nickname": clean(message.get("nickname") or "anh Bi", 40),
+                "nickname": clean(message.get("nickname") or "papa", 40),
                 "text": clean(text, 300),
                 "platform": platform,
                 "received_at": self.clock(),

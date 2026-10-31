@@ -24,6 +24,39 @@ from ..agent.output_types import SentenceOutput, AudioOutput
 
 
 async def process_single_conversation(
+    context,
+    websocket_send,
+    client_uid,
+    user_input,
+    images=None,
+    session_emoji="😊",
+    metadata=None,
+):
+    from ..interaction.service import enabled, run_single
+
+    if enabled(context):
+
+        async def invoke(send, turn):
+            return await _process_single_conversation(
+                context,
+                send,
+                client_uid,
+                user_input,
+                images,
+                session_emoji,
+                metadata,
+                mao_turn=turn,
+            )
+
+        return await run_single(
+            context, websocket_send, client_uid, user_input, invoke, metadata
+        )
+    return await _process_single_conversation(
+        context, websocket_send, client_uid, user_input, images, session_emoji, metadata
+    )
+
+
+async def _process_single_conversation(
     context: ServiceContext,
     websocket_send: WebSocketSend,
     client_uid: str,
@@ -31,6 +64,7 @@ async def process_single_conversation(
     images: Optional[List[Dict[str, Any]]] = None,
     session_emoji: str = np.random.choice(EMOJI_LIST),
     metadata: Optional[Dict[str, Any]] = None,
+    mao_turn=None,
 ) -> str:
     """Process a single-user conversation turn
 
@@ -63,8 +97,12 @@ async def process_single_conversation(
         await original_send(message)
 
     hybrid = getattr(context.agent_engine, "_hybrid", None)
-    learning_enabled = bool(hybrid) and hybrid.config.learning_enabled is True
-    if learning_enabled and not (metadata and (metadata.get("game_speech") or metadata.get("narration_speech"))):
+    learning_enabled = (
+        bool(hybrid) and hybrid.config.learning_enabled is True and not mao_turn
+    )
+    if learning_enabled and not (
+        metadata and (metadata.get("game_speech") or metadata.get("narration_speech"))
+    ):
         websocket_send = measured_send
     input_text = ""
 
@@ -73,7 +111,9 @@ async def process_single_conversation(
         await send_conversation_start_signals(websocket_send)
         logger.info(f"New Conversation Chain {session_emoji} started!")
 
-        if metadata and (metadata.get("game_speech") or metadata.get("narration_speech")):
+        if metadata and (
+            metadata.get("game_speech") or metadata.get("narration_speech")
+        ):
             from ..agent.output_types import DisplayText
             from ..live.game_speech import (
                 game_speech_chunks,
@@ -84,12 +124,19 @@ async def process_single_conversation(
             script = metadata.get("game_speech") or metadata["narration_speech"]
             is_game = bool(metadata.get("game_speech"))
             from ..live.narration_speech import (
-                narration_chunks, narration_text, NarrationPlanner,
+                narration_chunks,
+                narration_text,
+                NarrationPlanner,
             )
+
             planner = NarrationPlanner()
-            phrases = game_speech_chunks(script) if is_game else narration_chunks(script)
+            phrases = (
+                game_speech_chunks(script) if is_game else narration_chunks(script)
+            )
             for phrase in phrases:
-                speech = game_speech_prosody(phrase) if is_game else planner.plan(phrase)
+                speech = (
+                    game_speech_prosody(phrase) if is_game else planner.plan(phrase)
+                )
                 spoken = phrase if is_game else narration_text(phrase)
                 if not spoken:
                     continue
@@ -102,7 +149,9 @@ async def process_single_conversation(
                     ),
                     actions=None,
                     live2d_model=context.live2d_model,
-                    tts_engine=prepared_game_engine(context.tts_engine) if is_game else context.tts_engine,
+                    tts_engine=prepared_game_engine(context.tts_engine)
+                    if is_game
+                    else context.tts_engine,
                     websocket_send=websocket_send,
                     speech=speech,
                 )
@@ -127,6 +176,16 @@ async def process_single_conversation(
             return ""
 
         # Create batch input
+        if mao_turn:
+            mao_turn.delivery.metrics["asr_ms"] = (
+                (time.monotonic() - started) * 1000
+                if not isinstance(user_input, str)
+                else 0
+            )
+            metadata = {
+                **(metadata or {}),
+                "_interaction": await mao_turn.input(input_text),
+            }
         batch_input = create_batch_input(
             input_text=input_text,
             images=images,
@@ -136,7 +195,7 @@ async def process_single_conversation(
 
         # Store user message (check if we should skip storing to history)
         skip_history = metadata and metadata.get("skip_history", False)
-        if context.history_uid and not skip_history:
+        if context.history_uid and not skip_history and not mao_turn:
             store_message(
                 conf_uid=context.character_config.conf_uid,
                 history_uid=context.history_uid,
@@ -148,13 +207,20 @@ async def process_single_conversation(
         if skip_history:
             logger.debug("Skipping storing user input to history (proactive speak)")
 
-        logger.info(f"User input: {input_text}")
+        logger.info("User input received ({} characters)", len(input_text))
         if images:
             logger.info(f"With {len(images)} images")
 
         try:
             # agent.chat yields Union[SentenceOutput, Dict[str, Any]]
-            agent_output_stream = context.agent_engine.chat(batch_input)
+            if mao_turn:
+                from ..dialogue.engine import DialogueEngine
+
+                agent_output_stream = DialogueEngine(
+                    context.agent_engine, mao_turn.policy
+                ).chat(batch_input)
+            else:
+                agent_output_stream = context.agent_engine.chat(batch_input)
 
             async for output_item in agent_output_stream:
                 if isinstance(output_item, dict) and output_item.get("type") in (
@@ -210,7 +276,7 @@ async def process_single_conversation(
             client_uid=client_uid,
         )
 
-        if context.history_uid and full_response:  # Check full_response before storing
+        if context.history_uid and full_response and not mao_turn:
             store_message(
                 conf_uid=context.character_config.conf_uid,
                 history_uid=context.history_uid,
@@ -219,7 +285,7 @@ async def process_single_conversation(
                 name=context.character_config.character_name,
                 avatar=context.character_config.avatar,
             )
-            logger.info(f"AI response: {full_response}")
+            logger.info("AI response stored ({} characters)", len(full_response))
 
         return full_response  # Return accumulated full_response
 

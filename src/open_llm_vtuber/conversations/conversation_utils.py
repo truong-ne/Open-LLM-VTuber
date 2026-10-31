@@ -92,12 +92,12 @@ async def handle_sentence_output(
     """Handle sentence output type with optional translation support"""
     full_response = ""
     async for display_text, tts_text, actions in output:
-        logger.debug(f"🏃 Processing output: '''{tts_text}'''...")
+        logger.debug("Processing speech output ({} characters)", len(tts_text))
 
         if translate_engine:
             if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)):
                 tts_text = translate_engine.translate(tts_text)
-            logger.info(f"🏃 Text after translation: '''{tts_text}'''...")
+            logger.info("Translated speech output ({} characters)", len(tts_text))
         else:
             logger.debug("🚫 No translation engine available. Skipping translation.")
 
@@ -188,6 +188,9 @@ async def finalize_conversation_turn(
     """Finalize a conversation turn"""
     if tts_manager.task_list:
         await tts_manager.wait_for_completion()
+        from ..interaction.events import current_delivery
+
+        delivery = current_delivery.get()
         # Register before notifying the frontend: a fast/empty audio turn can
         # acknowledge immediately, before a later waiter would be installed.
         completion = asyncio.create_task(
@@ -195,14 +198,35 @@ async def finalize_conversation_turn(
                 client_uid, "frontend-playback-complete", timeout=60
             )
         )
+        correlated = (
+            asyncio.create_task(
+                message_handler.wait_for_response(
+                    client_uid,
+                    "frontend-playback-complete",
+                    request_id=delivery.turn_id,
+                    timeout=60,
+                )
+            )
+            if delivery
+            else None
+        )
         await asyncio.sleep(0)
         try:
             await websocket_send(json.dumps({"type": "backend-synth-complete"}))
-            response = await completion
+            if correlated:
+                done, _ = await asyncio.wait(
+                    {completion, correlated}, return_when=asyncio.FIRST_COMPLETED
+                )
+                response = next(iter(done)).result()
+            else:
+                response = await completion
         finally:
             if not completion.done():
                 completion.cancel()
                 await asyncio.gather(completion, return_exceptions=True)
+            if correlated and not correlated.done():
+                correlated.cancel()
+                await asyncio.gather(correlated, return_exceptions=True)
         if not response:
             logger.warning(f"No playback completion response from {client_uid}")
             # Always release the conversation queue, including a disconnected

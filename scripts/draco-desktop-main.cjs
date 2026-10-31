@@ -1,9 +1,8 @@
 'use strict';
 // Loaded by the existing Electron app only for the local Draco launch profile.
 exports.loadDraco = window => {
-  if (process.env.MAO_DESKTOP_MODEL !== 'draco') return false;
   const fs=require('fs'),path=require('path'),{ipcMain,screen}=require('electron');
-  const root=process.env.MAO_WORKSPACE;
+  const root=process.env.MAO_WORKSPACE||__MAO_WORKSPACE__;
   if(!root)throw new Error('MAO_WORKSPACE is required for Draco desktop');
   // Keep animation and hosting heartbeat alive while OBS covers this window.
   window.webContents.setBackgroundThrottling(false);
@@ -62,6 +61,6 @@ exports.loadDraco = window => {
   window.webContents.on('console-message',(_event,level,message)=>{
     if(level>=2)fs.appendFileSync(path.join(root,'logs','draco-desktop.log'),`${new Date().toISOString()} ${message.slice(0,1000)}\n`);
   });
-  window.loadFile(path.join(__dirname,'../renderer/draco-shell.html'),{query:{'mao-mode':process.env.MAO_DESKTOP_START_MODE==='window'?'window':'pet'}});
+  window.loadFile(path.join(__dirname,'../renderer/index.html'),{query:{'mao-mode':process.env.MAO_DESKTOP_START_MODE==='window'?'window':'pet'}});
   return true;
 };

@@ -46,6 +46,7 @@ class TTSEngine(TTSInterface):
         speed: float = 1.0,
         expressive: bool = True,
         rvc: dict | None = None,
+        trained_voice: dict | None = None,
     ):
         """Initializes the VieNeu-TTS engine using the Python API.
 
@@ -60,7 +61,8 @@ class TTSEngine(TTSInterface):
             temperature: Sampling temperature (v3turbo).
             speed: Speech tempo multiplier, preserving pitch (requires ffmpeg).
         """
-        if not VIENEU_AVAILABLE:
+        trained = bool(trained_voice and trained_voice.get("enabled"))
+        if not VIENEU_AVAILABLE and not trained:
             raise ImportError("vieneu is required. Install with: uv pip install vieneu")
 
         self.mode = mode
@@ -72,6 +74,10 @@ class TTSEngine(TTSInterface):
         self.speed = speed
         self.expressive = expressive
         self.rvc = None
+        self.trained_voice = trained
+        self.trained_emotions = bool(
+            trained_voice and trained_voice.get("emotion_control")
+        )
         self.ffmpeg = shutil.which("ffmpeg")
         if speed != 1.0 and not self.ffmpeg:
             raise FileNotFoundError("ffmpeg is required to adjust VieNeu speech speed")
@@ -82,6 +88,16 @@ class TTSEngine(TTSInterface):
             )
 
         try:
+            if trained:
+                if mode != "v3turbo" or self.ref_audio or (rvc and rvc.get("enabled")):
+                    raise ValueError(
+                        "Trained voice cannot be combined with RVC or reference audio"
+                    )
+                from .trained_voice import TrainedVoice
+
+                self.tts = TrainedVoice(trained_voice)
+                logger.info("Trained Mao voice configured; model loads on first speech")
+                return
             logger.info(
                 f"Loading VieNeu-TTS ({mode}, backend={backend}, device={device})"
             )
@@ -127,6 +143,19 @@ class TTSEngine(TTSInterface):
             kwargs["voice"] = self.voice
         if self.mode == "v3turbo":
             kwargs["temperature"] = self.temperature
+        if getattr(self, "trained_voice", False):
+            # Neutral is the user-approved preview. Learned expressive labels
+            # remain opt-in; normal prosody tempo and pauses still apply below.
+            kwargs["emotion"] = (
+                {
+                    "bright": "happy",
+                    "warm": "happy",
+                    "playful": "happy",
+                    "solemn": "sad",
+                }.get(prosody.mood, "neutral")
+                if self.trained_emotions and self.expressive and prosody
+                else "neutral"
+            )
 
         try:
             text = normalize_vietnamese_math(text)
@@ -190,6 +219,10 @@ class TTSEngine(TTSInterface):
         return await asyncio.to_thread(
             self.generate_audio, text, file_name_no_ext, prosody
         )
+
+    def close(self):
+        if getattr(self, "trained_voice", False):
+            self.tts.close()
 
     def _adjust_speed(
         self, audio: np.ndarray, speed=None, sample_rate=None

@@ -1,0 +1,19 @@
+name: mao-test
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17
+    env_file: private/mao-test.env
+    environment:
+      POSTGRES_USER: mao_owner
+      POSTGRES_DB: mao_test
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - mao_test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mao_owner -d mao_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  mao_test_pgdata:

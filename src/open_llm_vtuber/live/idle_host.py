@@ -129,6 +129,7 @@ class IdleHost:
         self.silent = 0
         self.last_audio_at = 0
         self._submitted = False
+        self._submitted_event_id = None
         self._turn_had_audio = False
         self._pending_invitation = False
         self.status_path = settings_path.with_name("mao-host-status.json")
@@ -164,6 +165,35 @@ class IdleHost:
         self.research_socket = None
 
     def receive(self, data):
+        if (
+            data.get("type") == "input-status"
+            and data.get("status")
+            in {
+                "duplicate",
+                "rejected_busy",
+                "expired",
+                "superseded",
+                "failed",
+                "interrupted",
+                "declined_policy",
+            }
+            and self._submitted
+            and not self._turn_had_audio
+            and (
+                not data.get("event_id") or data["event_id"] == self._submitted_event_id
+            )
+        ):
+            # Rejected proposals have no conversation-chain-end to release us.
+            # Keep the normal cooldown rather than retrying immediately.
+            self._submitted = False
+            self._submitted_event_id = None
+            self._pending_invitation = False
+            self.awaiting_reply = False
+            self.busy = False
+            self.silent += 1
+            self.last_end = time.monotonic()
+            self.phase = "waiting"
+            return
         if data.get("type") == "mao-sing-state":
             self.singing_active = data.get("phase") in ("waiting", "loading", "playing")
         if data.get("type") == "vua-tieng-viet-state":
@@ -212,6 +242,7 @@ class IdleHost:
                     self.silent += 1
                     self.awaiting_reply = False
                 self._submitted = False
+                self._submitted_event_id = None
                 self._pending_invitation = False
                 self.busy = False
                 self.last_end = time.monotonic()
@@ -250,14 +281,15 @@ class IdleHost:
         if turn is None:
             return False
         text, label = turn
-        await ws.send(
-            json.dumps(
-                {"type": "text-input", "text": text, "source": "mao-idle-host"},
-                ensure_ascii=False,
-            )
+        from ..interaction.ingress import sign_host_proposal
+
+        proposal = sign_host_proposal(
+            {"type": "text-input", "text": text, "source": "mao-idle-host"}
         )
+        await ws.send(json.dumps(proposal, ensure_ascii=False))
         self.busy = True
         self._submitted = True
+        self._submitted_event_id = proposal["event_id"]
         self._turn_had_audio = False
         self._pending_invitation = self._planned_style in ("question", "initiative")
         self.last_sent = time.monotonic()
@@ -348,7 +380,15 @@ class IdleHost:
             return False
         autonomy = read_json(self.settings_path.with_name("mao-autonomy-status.json"))
         if (
-            autonomy.get("phase") in {"planning", "reading", "summarizing", "explaining", "reflecting", "saving"}
+            autonomy.get("phase")
+            in {
+                "planning",
+                "reading",
+                "summarizing",
+                "explaining",
+                "reflecting",
+                "saving",
+            }
             and 0 <= time.time() - autonomy.get("updated_at", 0) < 10
         ):
             return False
@@ -358,10 +398,16 @@ class IdleHost:
         if settings.get("learning_stage") is True:
             return False
         if settings.get("research_when_empty") is True:
-            audience = read_json(self.settings_path.with_name("mao-youtube-audience.json"))
+            audience = read_json(
+                self.settings_path.with_name("mao-youtube-audience.json")
+            )
             count = audience.get("viewers")
-            if (audience.get("live") is not True or type(count) is not int or count <= 0
-                    or not 0 <= time.time() - audience.get("observed_at", 0) < 75):
+            if (
+                audience.get("live") is not True
+                or type(count) is not int
+                or count <= 0
+                or not 0 <= time.time() - audience.get("observed_at", 0) < 75
+            ):
                 return False
         if settings.get("enabled", True) is not True:
             return False
@@ -418,7 +464,7 @@ class IdleHost:
                 "activity",
                 "initiative",
                 "question",
-                "question",
+                "chat",
             ]
             # Legacy joke segments are opt-in; silence alone never requests a story.
             if read_json(self.settings_path).get("proactive_stories") is True:
@@ -523,6 +569,8 @@ class IdleHost:
             "[Mao chủ động mở chuyện khi chat yên; đây không phải bình luận khán giả]\n"
             + rules
             + "\n"
+            + "Chỉ nói một đến hai câu hoàn chỉnh, tối đa 45 tiếng tách bằng khoảng trắng. "
+            + "Không chào lại, không tự giới thiệu lại; không nhắc việc chat im lặng. "
             + "Không có bình luận mới; không bịa người xem, trải nghiệm hoặc kết quả hành động. "
             + "Không tự trả lời thay khán giả. Chỉ dùng persona đang bật, không tự đặt tính cách hoặc cách xưng hô. "
         )

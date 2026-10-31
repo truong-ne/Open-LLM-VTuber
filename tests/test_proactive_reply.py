@@ -48,6 +48,17 @@ class ProactiveReplyTests(unittest.IsolatedAsyncioTestCase):
         agent._add_message.assert_called_once_with(result[0], "assistant")
         self.assertEqual(proactive_style(host_input("support")), "support")
 
+    async def test_current_database_persona_cannot_bypass_host_speech_limits(self):
+        async def stream(*args):
+            yield "[thought]Internal planning.</thought> Một. Hai. Ba. Bạn nghĩ sao?"
+
+        agent = self.agent(stream)
+        agent._system = "Hồ sơ Mao đang hoạt động từ PostgreSQL."
+        raw_chat = inspect.unwrap(agent._chat_function_factory())
+        result = [part async for part in raw_chat(host_input("chat"))]
+        self.assertEqual(result, ["Một. Hai."])
+        agent._add_message.assert_called_once_with("Một. Hai.", "assistant")
+
     async def test_empty_reply_retries_once_with_recent_context(self):
         calls = []
 
@@ -111,7 +122,7 @@ class ProactiveReplyTests(unittest.IsolatedAsyncioTestCase):
 
     def test_bounds_stop_on_complete_sentences_without_cutting_mid_clause(self):
         self.assertEqual(
-            limit_proactive_reply("Một. Hai. Ba. Bốn.", "chat"), "Một. Hai. Ba."
+            limit_proactive_reply("Một. Hai. Ba. Bốn.", "chat"), "Một. Hai."
         )
         self.assertEqual(
             limit_proactive_reply("Một. Phần sau chưa nói hết", "chat"), "Một."

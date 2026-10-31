@@ -20,7 +20,7 @@ class DecisionTests(unittest.TestCase):
 
     def test_replay_complete_sentences_tags_and_budget(self):
         text = "[joy] " + "xin " * 24 + "chào. " + "Mao " * 24 + "đây."
-        self.assertIn("đây.", limit_proactive_reply(text, "chat", 60))
+        self.assertNotIn("đây.", limit_proactive_reply(text, "chat", 60))
         shorter = limit_proactive_reply(text, "chat", 45)
         self.assertNotIn("đây.", shorter)
         self.assertTrue(shorter.endswith("chào."))

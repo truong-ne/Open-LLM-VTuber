@@ -24,6 +24,11 @@ class AutonomyConfig(BaseModel):
 
 class HybridConfig(BaseModel):
     enabled: bool = False
+    emotion_enabled: bool = True
+    interaction_enabled: bool = True
+    coordinator_enabled: bool = True
+    coordinator_shadow: bool = False
+    auto_policy_promotion: bool = False
     persona_source: Literal["config", "postgres"] = "config"
     database_url_env: str = "MAO_DATABASE_URL"
     database_env_file: str = "private/mao-hybrid.env"

@@ -48,7 +48,7 @@ def read_yaml(config_path: str) -> Dict[str, Any]:
     try:
         return yaml.safe_load(content)
     except yaml.YAMLError as e:
-        logger.critical(f"Error parsing YAML file: {e}")
+        logger.critical("Error parsing YAML file: {}", type(e).__name__)
         raise e
 
 
@@ -66,11 +66,18 @@ def validate_config(config_data: dict) -> Config:
         ValidationError: If the configuration fails validation.
     """
     try:
-        return Config(**config_data)
+        from ..runtime_profile import apply_profile
+
+        return Config(**apply_profile(config_data))
     except ValidationError as e:
-        logger.critical(f"Error validating configuration: {e}")
-        logger.error("Configuration data:")
-        logger.error(config_data)
+        # Validation errors may include the raw rejected value (API keys/prompts).
+        logger.critical(
+            "Configuration validation failed: {}",
+            [
+                {"loc": error["loc"], "type": error["type"]}
+                for error in e.errors(include_input=False)
+            ],
+        )
         raise e
 
 

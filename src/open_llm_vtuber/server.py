@@ -9,6 +9,7 @@ It uses FastAPI for the server and Starlette for static file serving.
 import os
 import asyncio
 import shutil
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -31,6 +32,20 @@ class CORSStaticFiles(StarletteStaticFiles):
     """
 
     async def get_response(self, path: str, scope):
+        if self.html and self.directory and path.lstrip("/") in {"", ".", "index.html"}:
+            index = Path(self.directory) / "index.html"
+            if index.is_file():
+                html = index.read_text(encoding="utf-8")
+                bridge = '<script type="module" src="/web-tool/mao-5070/delivery-bridge.mjs"></script>'
+                html = html.replace("<head>", "<head>" + bridge, 1)
+                return Response(
+                    html,
+                    media_type="text/html",
+                    headers={
+                        "Cache-Control": "no-store",
+                        "Access-Control-Allow-Origin": "*",
+                    },
+                )
         response = await super().get_response(path, scope)
 
         # Add CORS headers to all responses
@@ -83,14 +98,27 @@ class WebSocketServer:
         self.proxy_handler = None
 
         @asynccontextmanager
-        async def lifespan(app):
+        async def managed_services_lifespan(app):
             self.word_game.configure_speech(self.default_context_cache.tts_engine)
             await self.word_game.start()
             await self.singing.start()
             learning_task = None
             autonomy_task = None
+            experience_task = None
             hybrid = getattr(self.default_context_cache.agent_engine, "_hybrid", None)
-            if hybrid and hybrid.config.learning_enabled:
+            if hybrid and hybrid.config.interaction_enabled:
+                from .experience.worker import ExperienceWorker
+                from .interaction.repository import Journal
+
+                await asyncio.to_thread(Journal(hybrid.store).recover, True)
+
+                self.experience_worker = ExperienceWorker(hybrid.store)
+                experience_task = asyncio.create_task(self.experience_worker.run())
+            if (
+                hybrid
+                and hybrid.config.learning_enabled
+                and not hybrid.config.interaction_enabled
+            ):
                 from .agent.hybrid.learning import DailyLearning
 
                 learning_task = asyncio.create_task(DailyLearning(hybrid.store).run())
@@ -103,6 +131,9 @@ class WebSocketServer:
             try:
                 yield
             finally:
+                if experience_task:
+                    experience_task.cancel()
+                    await asyncio.gather(experience_task, return_exceptions=True)
                 if autonomy_task:
                     autonomy_task.cancel()
                     await asyncio.gather(autonomy_task, return_exceptions=True)
@@ -119,7 +150,27 @@ class WebSocketServer:
                     finally:
                         await self.default_context_cache.close()
 
+        @asynccontextmanager
+        async def lifespan(app):
+            hybrid = getattr(self.default_context_cache.agent_engine, "_hybrid", None)
+            lease = None
+            if hybrid and hybrid.config.interaction_enabled:
+                from .interaction.repository import Journal
+
+                lease = await asyncio.to_thread(Journal(hybrid.store).acquire_lease)
+            try:
+                async with managed_services_lifespan(app):
+                    yield
+            finally:
+                if lease:
+                    await asyncio.to_thread(lease.close)
+
         self.app = FastAPI(title="Open-LLM-VTuber Server", lifespan=lifespan)
+        from .interaction.control import install_local_control
+
+        install_local_control(
+            self.app, os.environ.get("MAO_RUNTIME_PROFILE", "local_companion")
+        )
 
         @self.app.get("/api/vuatiengviet/state")
         async def word_game_state():

@@ -2,6 +2,11 @@
 # scripts/mao_hybrid.py enable does this for conf.yaml and characters/mao_live.yaml.
 hybrid:
   enabled: true
+  emotion_enabled: true # bounded state + response/speech policy; never grants tool access
+  interaction_enabled: true
+  coordinator_enabled: true
+  coordinator_shadow: false
+  auto_policy_promotion: false # operator controls trials and promotion by default
   persona_source: postgres
   database_url_env: MAO_DATABASE_URL
   database_env_file: private/mao-hybrid.env

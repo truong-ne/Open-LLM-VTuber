@@ -52,9 +52,11 @@ class ProxyMessageQueue:
                 if item["message"].get("source") != "mao-idle-host"
             )
         # Store the message along with its sender ID
+        if len(self.message_queue) >= 20:
+            return False
         queue_item = {"message": message, "sender_id": sender_id}
         logger.info(
-            f"Queuing message: {message.get('text', '')} (active conversation: {self._conversation_active})"
+            f"Queuing input ({len(message.get('text', ''))} characters; active: {self._conversation_active})"
         )
         if priority:
             self.message_queue.appendleft(queue_item)
@@ -63,6 +65,7 @@ class ProxyMessageQueue:
 
         # Start consumer if needed
         self._ensure_consumer_running()
+        return True
 
     @property
     def conversation_active(self) -> bool:
@@ -125,7 +128,7 @@ class ProxyMessageQueue:
                         sender_id = queue_item["sender_id"]
 
                         logger.info(
-                            f"Consumer processing message: {message.get('text', '')}"
+                            f"Consumer processing input ({len(message.get('text', ''))} characters)"
                         )
 
                         # Set active before forwarding to prevent race conditions

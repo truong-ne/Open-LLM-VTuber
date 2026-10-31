@@ -4,6 +4,8 @@ import {DesktopSpace,desktopCommand} from '../web_tool/mao-5070/draco/desktop-sp
 import {ROOM} from '../web_tool/mao-5070/draco/desktop-room.mjs';
 import {createNativeBridge} from '../web_tool/mao-5070/draco/native-bridge.mjs';
 
+globalThis.window=new EventTarget();
+
 for(const [yaw,degrees,label] of [[0,180,'S'],[Math.PI,0,'N'],[Math.PI/2,90,'E'],[-Math.PI/2,270,'W'],[Math.PI*3,0,'N']]){
   assert.ok(Math.abs(headingDegrees(yaw)-degrees)<1e-8);assert.equal(cardinal(yaw),label);
 }

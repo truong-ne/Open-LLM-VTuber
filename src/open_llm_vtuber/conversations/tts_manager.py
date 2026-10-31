@@ -169,6 +169,7 @@ class TTSTaskManager:
                 display_text=display_text,
                 actions=actions,
             )
+            payload["synthesis_error"] = True
             await self._payload_queue.put((payload, sequence_number))
 
         finally:
@@ -183,7 +184,7 @@ class TTSTaskManager:
         speech: Optional[SpeechProsody] = None,
     ) -> str:
         """Generate audio file from text"""
-        logger.debug(f"🏃Generating audio for '''{text}'''...")
+        logger.debug("Generating audio ({} characters)", len(text))
         kwargs = {}
         if speech and getattr(tts_engine, "supports_prosody", False) is True:
             kwargs["prosody"] = speech

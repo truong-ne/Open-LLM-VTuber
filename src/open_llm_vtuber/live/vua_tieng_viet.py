@@ -502,15 +502,19 @@ class WordGameService:
                 if self.proxy:
                     while self.game.announcements:
                         announcement = self.game.announcements.popleft()
+                        from ..interaction.ingress import sign_host_proposal
+
                         self.proxy.message_queue.queue_message(
-                            {
-                                "type": "text-input",
-                                "text": announcement["text"],
-                                "source": "vua-tieng-viet",
-                                "game_speech": announcement["text"],
-                                "game_round_id": announcement["round_id"],
-                                "game_kind": announcement["kind"],
-                            },
+                            sign_host_proposal(
+                                {
+                                    "type": "text-input",
+                                    "text": announcement["text"],
+                                    "source": "vua-tieng-viet",
+                                    "game_speech": announcement["text"],
+                                    "game_round_id": announcement["round_id"],
+                                    "game_kind": announcement["kind"],
+                                }
+                            ),
                             priority=True,
                         )
                     # Publish and queue due speech BEFORE reserving TTS for a

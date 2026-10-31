@@ -49,6 +49,9 @@ def resolve_dsn(config):
                 dsn = value.strip().strip('"').strip("'")
     if not dsn:
         raise RuntimeError("PostgreSQL is not configured; run Mao hybrid setup")
+    from ...testing import guard_integration_dsn
+
+    guard_integration_dsn(dsn, config)
     return dsn
 
 
@@ -368,20 +371,141 @@ class Store:
                 (self.scope, key, Jsonb(value)),
             )
 
-    def observe_affect(self, event, cue=''):
+    def read_affect(self, *, room=None, actor=None, visibility=None):
+        from ...character.emotion import normalize_state
+        from ...character.affect_scope import affect_key
+
+        key = affect_key(room=room, actor=actor, visibility=visibility)
+        if not self.config.emotion_enabled:
+            return normalize_state({})
+        # A new conversation never inherits the legacy/global mood.
+        return normalize_state(self.get(key, {}))
+
+    def clear_affect(self, *, room=None, actor=None, visibility=None):
+        """Operator reset; use the same lock as writers, without making a backup."""
+        from ...character.affect_scope import affect_key
+
+        key = affect_key(room=room, actor=actor, visibility=visibility)
+        with self.connect() as db:
+            db.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                ("affect:" + self.scope,),
+            )
+            if key == "affect":
+                db.execute(
+                    "DELETE FROM mao_hybrid.state WHERE scope=%s AND (key='affect' OR key LIKE 'affect:context:%%')",
+                    (self.scope,),
+                )
+            else:
+                db.execute(
+                    "DELETE FROM mao_hybrid.state WHERE scope=%s AND key=%s",
+                    (self.scope, key),
+                )
+
+    def observe_affect(
+        self,
+        event,
+        cue="",
+        *,
+        appraisal=None,
+        event_id=None,
+        room=None,
+        actor=None,
+        visibility=None,
+        context_event=None,
+    ):
         """Serialize expression updates from chat and the study worker per scope."""
         from psycopg.types.json import Jsonb
         from ...character.emotion import transition
+        from ...character.affect_scope import affect_key
+
+        key = affect_key(room=room, actor=actor, visibility=visibility)
+
+        if not self.config.emotion_enabled:
+            from ...character.emotion import normalize_state
+
+            return normalize_state({})
         with self.connect() as db:
-            db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
-                       ('affect:'+self.scope,))
-            row=db.execute("SELECT value FROM mao_hybrid.state WHERE scope=%s AND key='affect'",
-                           (self.scope,)).fetchone()
-            now=db.execute('SELECT extract(epoch from clock_timestamp())::float8 AS now').fetchone()['now']
-            state=transition(row['value'] if row else {},event,cue=cue,now=now)
-            db.execute("INSERT INTO mao_hybrid.state(scope,key,value) VALUES(%s,'affect',%s) "
-                       'ON CONFLICT(scope,key) DO UPDATE SET value=excluded.value',
-                       (self.scope,Jsonb(state)))
+            if key != "affect":
+                # Same lock/order as source deletion: forget cannot race a late write.
+                db.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                    ("experience:" + self.scope + ":" + room,),
+                )
+                if event == "audience_input":
+                    import uuid
+
+                    source_ids = [event_id] + (
+                        [context_event] if context_event is not None else []
+                    )
+                    for source_id in source_ids:
+                        source = db.execute(
+                            "SELECT 1 FROM mao_hybrid.interaction_events WHERE scope=%s AND id=%s "
+                            "AND room_id=%s AND actor_id=%s AND visibility=%s "
+                            "AND NOT deleted AND NOT synthetic AND NOT raw_expired AND kind='input'",
+                            (
+                                self.scope,
+                                uuid.UUID(str(source_id)),
+                                room,
+                                actor,
+                                visibility,
+                            ),
+                        ).fetchone()
+                        if not source:
+                            raise ValueError(
+                                "Affect source was deleted or is unavailable"
+                            )
+            db.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                ("affect:" + self.scope,),
+            )
+            row = db.execute(
+                "SELECT value FROM mao_hybrid.state WHERE scope=%s AND key=%s",
+                (self.scope, key),
+            ).fetchone()
+            now = db.execute(
+                "SELECT extract(epoch from clock_timestamp())::float8 AS now"
+            ).fetchone()["now"]
+            state = transition(
+                row["value"] if row else {},
+                event,
+                cue=cue,
+                appraisal=appraisal,
+                event_id=event_id,
+                now=now,
+            )
+            db.execute(
+                "INSERT INTO mao_hybrid.state(scope,key,value) VALUES(%s,%s,%s) "
+                "ON CONFLICT(scope,key) DO UPDATE SET value=excluded.value",
+                (self.scope, key, Jsonb(state)),
+            )
+            if key != "affect" and event == "audience_input":
+                # Share attention only: never the person's cue, channels or task history.
+                from ...character.appraisal import Appraisal
+
+                shared = db.execute(
+                    "SELECT value FROM mao_hybrid.state WHERE scope=%s AND key='affect'",
+                    (self.scope,),
+                ).fetchone()
+                attention = transition(
+                    shared["value"] if shared else {},
+                    "audience_input",
+                    appraisal=Appraisal(confidence=0, relevance=0),
+                    event_id=event_id,
+                    now=now,
+                )
+                db.execute(
+                    "INSERT INTO mao_hybrid.state(scope,key,value) VALUES(%s,'affect',%s) "
+                    "ON CONFLICT(scope,key) DO UPDATE SET value=excluded.value",
+                    (self.scope, Jsonb(attention)),
+                )
+            # Expire inactive conversation states, without touching global host state.
+            db.execute(
+                "DELETE FROM mao_hybrid.state WHERE scope=%s AND key LIKE 'affect:context:%%' "
+                "AND (CASE WHEN jsonb_typeof(value->'updated_at')='number' "
+                "THEN value->>'updated_at' END)::numeric < %s",
+                (self.scope, now - 30 * 86400),
+            )
         return state
 
     def event(self, kind, data):

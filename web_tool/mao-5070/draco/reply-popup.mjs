@@ -10,7 +10,7 @@ export function replyComments(message){
       id:index+1,text:row.comment.slice(0,300),nickname:(Array.isArray(row.nicknames)?row.nicknames.filter(name=>typeof name==='string').slice(0,2).join(', '):'')||'Khán giả',platform:message.source==='youtube-live'?'youtube':'tiktok',
     }));
   }
-  if(!message.source||message.source==='desktop')return message.text.trim()?[{id:1,text:message.text.slice(0,300),nickname:'anh Bi',platform:'desktop'}]:[];
+  if(!message.source||message.source==='desktop')return message.text.trim()?[{id:1,text:message.text.slice(0,300),nickname:'papa',platform:'desktop'}]:[];
   return [];
 }
 

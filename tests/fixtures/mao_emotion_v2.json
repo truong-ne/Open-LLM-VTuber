@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "cases": [
+    {"id": "listen_then_recover", "steps": [
+      {"at": 100, "text": "Mình buồn, đừng đùa nhé.", "strategy": "support", "humor": false},
+      {"at": 102, "text": "Mình ổn rồi, cứ đùa đi.", "strategy": "respond", "humor": true}
+    ]},
+    {"id": "correction_is_not_truth", "steps": [
+      {"at": 100, "text": "Mao tính sai, kiểm tra lại nhé.", "strategy": "repair"},
+      {"at": 101, "text": "Hãy giải thích phép tính.", "strategy": "respond"}
+    ]},
+    {"id": "outcomes_change_action_budget", "steps": [
+      {"at": 100, "outcome": false, "step_limit": 6},
+      {"at": 101, "outcome": false, "step_limit": 6},
+      {"at": 102, "outcome": false, "step_limit": 1},
+      {"at": 103, "outcome": true, "step_limit": 6}
+    ]},
+    {"id": "no_abandonment_from_silence", "steps": [
+      {"at": 100, "text": "Xin chào Mao.", "strategy": "share"},
+      {"at": 2000, "tick": true, "mode": "calm", "step_limit": 6}
+    ]},
+    {"id": "quotes_and_negation", "steps": [
+      {"at": 100, "text": "Dịch câu “tôi buồn”.", "strategy": "respond"},
+      {"at": 101, "text": "Mình không buồn.", "strategy": "respond"},
+      {"at": 102, "text": "Vui quá, lại hỏng nữa rồi.", "strategy": "support"}
+    ]}
+  ]
+}

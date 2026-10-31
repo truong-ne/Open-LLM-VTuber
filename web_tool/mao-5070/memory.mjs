@@ -38,7 +38,7 @@ export function createMemoryBrowser({getToken}){
     try{
       const token=await getToken();if(controller.signal.aborted)return;
       const response=await fetch('/api/memories/'+encodeURIComponent(id),{headers:{'X-Mao-Token':token},cache:'no-store',signal:controller.signal});
-      if(!response.ok)throw Error(response.status===404?'Ký ức không còn tồn tại. Anh Bi làm mới danh sách nhé.':'Chưa đọc được chi tiết ký ức. Anh Bi thử lại nhé.');
+      if(!response.ok)throw Error(response.status===404?'Ký ức không còn tồn tại. papa làm mới danh sách nhé.':'Chưa đọc được chi tiết ký ức. papa thử lại nhé.');
       const record=await response.json();if(controller!==detailRequest||!dialog.open)return;
       $('memory-detail-content').textContent=record.content;
       const meta=$('memory-detail-meta');meta.replaceChildren();
@@ -64,9 +64,9 @@ export function createMemoryBrowser({getToken}){
     try{
       const token=await getToken();if(controller.signal.aborted)return;
       const response=await fetch('/api/memories?'+params,{headers:{'X-Mao-Token':token},cache:'no-store',signal:controller.signal});
-      if(!response.ok)throw Error('Chưa đọc được kho ký ức. Anh Bi bấm Làm mới ký ức để thử lại.');
+      if(!response.ok)throw Error('Chưa đọc được kho ký ức. papa bấm Làm mới ký ức để thử lại.');
       const data=await response.json();if(controller!==request)return;
-      if(!Array.isArray(data.items)||!data.summary)throw Error('Dữ liệu ký ức chưa hợp lệ. Anh Bi thử làm mới nhé.');
+      if(!Array.isArray(data.items)||!data.summary)throw Error('Dữ liệu ký ức chưa hợp lệ. papa thử làm mới nhé.');
       for(const key of ['total','active','expired'])$('memory-'+key).textContent=Number(data.summary[key]).toLocaleString('vi-VN');
       page=data.page;pages=data.pages;loaded=true;
       $('memory-list').replaceChildren(...data.items.map(card));

@@ -72,16 +72,38 @@ async def handle_conversation_trigger(
             )
         )
     elif msg_type == "text-input":
-        if data.get("source") == "mao-idle-host" and isinstance(data.get("narration_speech"), str):
-            metadata = {"narration_speech": data["narration_speech"][:1400],
-                        "skip_history": True, "skip_memory": True}
+        from ..interaction.ingress import verify_host_proposal
+        from ..interaction.service import enabled
+
+        host_authorized = not enabled(context) or verify_host_proposal(data)
+        if host_authorized and data.get("source") == "mao-idle-host":
+            metadata = {
+                "proactive_speak": True,
+                "skip_memory": True,
+                "skip_history": True,
+                "_host_proposal": True,
+            }
+        if (
+            host_authorized
+            and data.get("source") == "mao-idle-host"
+            and isinstance(data.get("narration_speech"), str)
+        ):
+            metadata = {
+                "narration_speech": data["narration_speech"][:1400],
+                "skip_history": True,
+                "skip_memory": True,
+                "_host_proposal": True,
+            }
         if data.get("source") == "mao-rehearsal":
             metadata = {"rehearsal": True, "skip_history": True, "skip_memory": True}
-        if data.get("source") == "vua-tieng-viet" and isinstance(
-            data.get("game_speech"), str
+        if (
+            host_authorized
+            and data.get("source") == "vua-tieng-viet"
+            and isinstance(data.get("game_speech"), str)
         ):
             metadata = {
                 "game_speech": data["game_speech"][:500],
+                "_host_proposal": True,
                 "skip_history": True,
                 "skip_memory": True,
             }
@@ -91,9 +113,149 @@ async def handle_conversation_trigger(
         received_data_buffers[client_uid] = np.array([])
 
     images = data.get("images")
+    if data.get("source") == "mao-rehearsal":
+        metadata = {"rehearsal": True, "skip_history": True, "skip_memory": True}
+    from ..interaction.ingress import unseal
+
+    if unseal(data.get("_host_ingress")):
+        metadata = {**(metadata or {}), "_host_ingress": data["_host_ingress"]}
     session_emoji = np.random.choice(EMOJI_LIST)
 
     group = chat_group_manager.get_client_group(client_uid)
+    from ..interaction.service import enabled
+
+    if enabled(context) and context.agent_engine._hybrid.config.coordinator_shadow:
+        from ..interaction.coordinator import coordinator
+
+        coordinator(context.agent_engine._hybrid.store.scope).shadow_inputs += 1
+    if enabled(context):
+        from ..interaction.coordinator import coordinator, Proposal
+        from ..interaction.service import TurnSession
+        from ..interaction.ingress import issue_actor, verify_actor, seal
+
+        if not (metadata or {}).get("_host_ingress"):
+            token = getattr(context, "mao_actor_token", None)
+            if not verify_actor(token):
+                token = context.mao_actor_token = issue_actor()
+            source_key = data.get("event_id")
+            if not isinstance(source_key, str) or not 0 < len(source_key) <= 150:
+                source_key = None
+            metadata = {
+                **(metadata or {}),
+                "_host_ingress": seal(
+                    verify_actor(token),
+                    client_uid,
+                    source_key,
+                    bool((metadata or {}).get("_host_proposal")),
+                    provider="host"
+                    if (metadata or {}).get("_host_proposal")
+                    else "local",
+                ),
+            }
+        if group and len(group.members) > 1:
+            identity = unseal(metadata["_host_ingress"])
+            metadata["_host_ingress"] = seal(
+                identity["actor"],
+                identity["session"],
+                identity.get("source_key"),
+                True,
+                room="group:" + group.group_id,
+                provider=identity.get("provider", "local"),
+            )
+        metadata = {
+            **(metadata or {}),
+            "_modality": "voice" if msg_type == "mic-audio-end" else "text",
+        }
+        admitted = TurnSession(context, client_uid, metadata)
+        if not await admitted.admit(
+            user_input if isinstance(user_input, str) else None
+        ):
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "input-status",
+                        "status": "duplicate",
+                        "event_id": data.get("event_id"),
+                    }
+                )
+            )
+            return
+        metadata = {**(metadata or {}), "_admitted_turn": admitted}
+
+    if (
+        enabled(context)
+        and context.agent_engine._hybrid.config.coordinator_enabled
+        and not context.agent_engine._hybrid.config.coordinator_shadow
+    ):
+        key = group.group_id if group and len(group.members) > 1 else client_uid
+
+        async def notify(status):
+            if status in {
+                "rejected_busy",
+                "expired",
+                "superseded",
+                "failed",
+                "interrupted",
+            }:
+                await admitted.finish(
+                    "rejected"
+                    if status in {"rejected_busy", "expired", "superseded"}
+                    else "interrupted"
+                    if status == "interrupted"
+                    else "failed"
+                )
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "input-status",
+                        "status": status,
+                        "event_id": data.get("event_id"),
+                    }
+                )
+            )
+
+        async def run():
+            if group and len(group.members) > 1:
+                await process_group_conversation(
+                    client_contexts,
+                    client_connections,
+                    broadcast_to_group,
+                    list(group.members),
+                    client_uid,
+                    user_input,
+                    images,
+                    session_emoji,
+                    metadata,
+                )
+            else:
+                await process_single_conversation(
+                    context,
+                    websocket.send_text,
+                    client_uid,
+                    user_input,
+                    images,
+                    session_emoji,
+                    metadata,
+                )
+
+        source = data.get("source", "")
+        kind = (
+            "proactive"
+            if msg_type == "ai-speak-signal" or source == "mao-idle-host"
+            else "activity"
+            if metadata and metadata.get("game_speech")
+            else "direct"
+        )
+        await coordinator(context.agent_engine._hybrid.store.scope).submit(
+            Proposal(
+                kind,
+                run,
+                notify,
+                owner=key,
+                deadline=__import__("time").monotonic() + 300,
+            )
+        )
+        return
     if group and len(group.members) > 1:
         # Use group_id as task key for group conversations
         task_key = group.group_id
@@ -116,12 +278,27 @@ async def handle_conversation_trigger(
                     metadata=metadata,
                 )
             )
+        else:
+            receipt = (metadata or {}).get("_admitted_turn")
+            if receipt:
+                await receipt.finish("rejected")
+            await websocket.send_text(
+                json.dumps({"type": "input-status", "status": "rejected_busy"})
+            )
     else:
         # Microphone turns also reach this handler directly, outside the proxy's
         # text queue. One worker owns agent memory and playback for this client.
         queue = getattr(context, "_individual_turn_queue", None)
         if queue is None:
-            queue = context._individual_turn_queue = deque(maxlen=20)
+            queue = context._individual_turn_queue = deque()
+        if len(queue) >= 20:
+            receipt = (metadata or {}).get("_admitted_turn")
+            if receipt:
+                await receipt.finish("rejected")
+            await websocket.send_text(
+                json.dumps({"type": "input-status", "status": "rejected_busy"})
+            )
+            return
         queue.append(
             dict(
                 context=context,
@@ -151,6 +328,10 @@ async def handle_conversation_trigger(
                             )
                         )
             finally:
+                for pending in queue:
+                    receipt = (pending.get("metadata") or {}).get("_admitted_turn")
+                    if receipt:
+                        await asyncio.shield(receipt.finish("interrupted"))
                 queue.clear()
 
         current_conversation_tasks[client_uid] = asyncio.create_task(drain())
@@ -162,6 +343,27 @@ async def handle_individual_interrupt(
     context: ServiceContext,
     heard_response: str,
 ):
+    from ..interaction.service import enabled
+
+    if enabled(context) and context.agent_engine._hybrid.config.coordinator_enabled:
+        from ..interaction.coordinator import coordinator
+
+        delivery = getattr(context, "mao_delivery", None)
+        heard_response = (
+            " ".join(
+                s["content"]
+                for s in delivery.segments.values()
+                if s["status"] == "completed"
+            )
+            if delivery
+            else ""
+        )
+        if not context.agent_engine._hybrid.config.coordinator_shadow:
+            await coordinator(context.agent_engine._hybrid.store.scope).interrupt(
+                client_uid
+            )
+            context.agent_engine.handle_interrupt(heard_response)
+            return
     if client_uid in current_conversation_tasks:
         task = current_conversation_tasks[client_uid]
         if task and not task.done():
@@ -203,6 +405,41 @@ async def handle_group_interrupt(
     broadcast_to_group: Callable,
 ) -> None:
     """Handles interruption for a group conversation"""
+    from ..interaction.service import enabled
+    from ..interaction.coordinator import coordinator
+
+    group = chat_group_manager.get_group_by_id(group_id)
+    contexts = (
+        [client_contexts[uid] for uid in group.members if uid in client_contexts]
+        if group
+        else []
+    )
+    host = next((ctx for ctx in contexts if enabled(ctx)), None)
+    if (
+        host
+        and host.agent_engine._hybrid.config.coordinator_enabled
+        and not host.agent_engine._hybrid.config.coordinator_shadow
+    ):
+        state = GroupConversationState.get_state(group_id)
+        speaker = client_contexts.get(state.current_speaker_uid) if state else host
+        delivery = getattr(speaker, "mao_delivery", None)
+        heard = (
+            " ".join(
+                s["content"]
+                for s in delivery.segments.values()
+                if s["status"] == "completed"
+            )
+            if delivery
+            else ""
+        )
+        await coordinator(host.agent_engine._hybrid.store.scope).interrupt(group_id)
+        for member in contexts:
+            member.agent_engine.handle_interrupt(heard)
+        await broadcast_to_group(
+            list(group.members),
+            {"type": "interrupt-signal", "text": "conversation-interrupted"},
+        )
+        return
     task = current_conversation_tasks.get(group_id)
     if not task or task.done():
         return
@@ -238,6 +475,8 @@ async def handle_group_interrupt(
                 try:
                     member_ctx = client_contexts[member_uid]
                     member_ctx.agent_engine.handle_interrupt(heard_response)
+                    if enabled(member_ctx):
+                        continue
                     store_message(
                         conf_uid=member_ctx.character_config.conf_uid,
                         history_uid=member_ctx.history_uid,

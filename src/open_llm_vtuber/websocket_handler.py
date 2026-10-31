@@ -162,6 +162,24 @@ class WebSocketHandler:
         session_service_context: ServiceContext,
     ):
         """Send initial connection messages to the client"""
+        from .interaction.service import enabled
+
+        if enabled(session_service_context):
+            from .interaction.ingress import issue_actor
+
+            session_service_context.mao_actor_token = issue_actor()
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "actor-session",
+                        "token": session_service_context.mao_actor_token,
+                        "runtime_profile": __import__("os").environ.get(
+                            "MAO_RUNTIME_PROFILE", "local_companion"
+                        ),
+                        "scope": session_service_context.agent_engine._hybrid.store.scope,
+                    }
+                )
+            )
         await websocket.send_text(
             json.dumps({"type": "full-text", "text": "Connection established"})
         )
@@ -224,6 +242,39 @@ class WebSocketHandler:
             while True:
                 try:
                     data = await websocket.receive_json()
+                    context = getattr(self, "client_contexts", {}).get(client_uid)
+                    if data.get("type") == "resume-actor" and context:
+                        from .interaction.ingress import verify_actor
+
+                        if verify_actor(data.get("token")):
+                            context.mao_actor_token = data["token"]
+                        await websocket.send_text(
+                            json.dumps(
+                                {
+                                    "type": "actor-session",
+                                    "token": context.mao_actor_token,
+                                    "force": True,
+                                }
+                            )
+                        )
+                        continue
+                    delivery = (
+                        getattr(context, "mao_delivery", None) if context else None
+                    )
+                    if data.get("type") == "playback-segment":
+                        if delivery:
+                            delivery.ack(data)
+                        continue
+                    if data.get("type") == "frontend-playback-complete" and data.get(
+                        "turn_id"
+                    ):
+                        if (
+                            not delivery
+                            or data.get("turn_id") != delivery.turn_id
+                            or data.get("generation_epoch") != delivery.epoch
+                        ):
+                            continue
+                        data["request_id"] = delivery.turn_id
                     autonomy = getattr(self.default_context_cache, "autonomy", None)
                     if autonomy:
                         autonomy.observe_input(data)
@@ -291,6 +342,15 @@ class WebSocketHandler:
 
     async def handle_disconnect(self, client_uid: str) -> None:
         """Handle client disconnection"""
+        from .interaction.service import enabled
+
+        context = self.client_contexts.get(client_uid)
+        if context and enabled(context):
+            from .interaction.coordinator import coordinator
+
+            await coordinator(context.agent_engine._hybrid.store.scope).interrupt(
+                client_uid
+            )
         group = self.chat_group_manager.get_client_group(client_uid)
         if group:
             await handle_group_interrupt(

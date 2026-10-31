@@ -29,4 +29,4 @@ if ($Restart -or -not $taskDraco) {
     $taskDesktop.Id | Set-Content -LiteralPath (Join-Path $taskRoot 'private/draco-desktop.pid')
 }
 & (Join-Path $taskRoot 'scripts/start_mao_live.ps1')
-Write-Output 'Mao Draco desktop started. Voice: Linh Lan Ch (RVC). Configured live chat reader enabled.'
+Write-Output 'Mao Studio desktop started with the configured TTS voice and live chat reader.'

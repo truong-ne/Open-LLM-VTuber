@@ -1,4 +1,5 @@
 import {mountNativeAvatar} from './draco/native-avatar.mjs';
+import {DeliveryClient} from './delivery.mjs';
 const caption=document.getElementById('caption'),status=document.getElementById('state');
 const empty=async()=>({ok:true,json:async()=>({phase:'idle',session:'rehearsal',revision:0,comments:[]})});
 const bridge={state:{frames:0,socket:'closed'},options:{mode:'window',scale:1,pointerInteractive:false,forceIgnoreMouse:false,scrollToResize:false},singingFetcher:empty,commentFeedFetcher:empty};
@@ -14,7 +15,8 @@ const prompts=[
   'Mao hãy nói một câu ngắn về điều mình muốn học tốt hơn, không khẳng định đã học được khi chưa có bằng chứng.'
 ];
 let index=0,queue=[],playing=false,synthDone=false;
-const send=message=>socket.readyState===WebSocket.OPEN&&socket.send(JSON.stringify(message));
+const delivery=new DeliveryClient({storage:localStorage,send:message=>send(message)});
+const send=message=>socket.readyState===WebSocket.OPEN&&socket.send(JSON.stringify(delivery.decorate(message)));
 function nextTurn(){
   if(index>=prompts.length){window.rehearsal.finished=true;status.textContent='Đã xong bốn lượt thử · chưa phát công khai';return;}
   status.textContent=`Lượt thử ${index+1}/${prompts.length} · Qwen → TTS → RVC → avatar`;
@@ -27,6 +29,7 @@ async function play(){
   const payload=queue.shift();
   try{
     const audio=new Audio(`data:audio/wav;base64,${payload.audio}`);
+    delivery.attach(audio,payload);
     bridge.audio=audio;bridge.speechSession=true;
     bridge.payload={displayText:payload.display_text,expressions:payload.actions?.expressions,motions:payload.actions?.motions,pose:payload.actions?.pose,volumes:payload.volumes,sliceLength:payload.slice_length};
     caption.textContent=payload.display_text?.text||'';
@@ -39,9 +42,10 @@ async function play(){
   finally{playing=false;play();}
 }
 const wait=Math.max(3000,Math.min(30000,Number(new URLSearchParams(location.search).get('wait'))||3000));
-socket.onopen=()=>{bridge.state.socket='open';setTimeout(nextTurn,wait);};
+socket.onopen=()=>{bridge.state.socket='open';const resume=delivery.resume();if(resume)send(resume);setTimeout(nextTurn,wait);};
 socket.onmessage=event=>{
   const message=JSON.parse(event.data);
+  delivery.receive(message);
   if(message.type==='audio'&&message.audio){queue.push(message);play();}
   if(message.type==='backend-synth-complete'){synthDone=true;play();}
   if(message.type==='control'&&message.text==='conversation-chain-end'){window.rehearsal.turns++;setTimeout(nextTurn,2000);}

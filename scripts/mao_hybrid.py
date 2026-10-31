@@ -14,10 +14,14 @@ from src.open_llm_vtuber.agent.hybrid.config import HybridConfig  # noqa: E402
 from src.open_llm_vtuber.agent.hybrid.store import Store  # noqa: E402
 
 
-def config():
+def config(*, use_profile=True):
     import yaml
 
     file = yaml.safe_load((ROOT / "conf.yaml").read_text(encoding="utf-8"))
+    from src.open_llm_vtuber.runtime_profile import apply_profile
+
+    if use_profile:
+        file = apply_profile(file)
     return HybridConfig(
         **file["character_config"]["agent_config"]["agent_settings"][
             "basic_memory_agent"
@@ -113,6 +117,14 @@ def main():
                             )
                         )
                     db.execute("GRANT USAGE ON SCHEMA mao_hybrid TO mao_app")
+                    db.execute("""GRANT SELECT,INSERT,UPDATE,DELETE ON
+                        mao_hybrid.rooms,mao_hybrid.actors,mao_hybrid.interaction_events,mao_hybrid.turns,
+                        mao_hybrid.delivery_segments,mao_hybrid.interaction_outbox,mao_hybrid.episodes,
+                        mao_hybrid.episode_events,mao_hybrid.knowledge_items,mao_hybrid.memory_evidence,
+                        mao_hybrid.open_threads,mao_hybrid.dialogue_focus,mao_hybrid.activities,mao_hybrid.activity_actions,
+                        mao_hybrid.activity_evidence,mao_hybrid.character_preferences,mao_hybrid.preference_evidence,
+                        mao_hybrid.lessons,mao_hybrid.policy_versions,mao_hybrid.evaluation_runs,
+                        mao_hybrid.observation_receipts,mao_hybrid.real_feedback TO mao_app""")
                     db.execute(
                         "GRANT SELECT,INSERT,UPDATE,DELETE ON mao_hybrid.memories,mao_hybrid.state,mao_hybrid.events,mao_hybrid.learning_turns,mao_hybrid.learning_days,mao_hybrid.learning_profiles TO mao_app"
                     )

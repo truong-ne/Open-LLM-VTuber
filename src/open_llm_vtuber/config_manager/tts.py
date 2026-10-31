@@ -602,6 +602,19 @@ class RVCConfig(I18nMixin):
     startup_timeout: float = Field(180, gt=0, le=600)
 
 
+class TrainedVoiceConfig(I18nMixin):
+    """Pinned local checkpoint, served by the environment used for its preview."""
+
+    enabled: bool = False
+    python_path: str = ""
+    model_path: str = ""
+    codec_path: str = ""
+    device: Literal["cpu", "cuda"] = "cuda"
+    emotion_control: bool = False
+    timeout: float = Field(120, ge=1, le=600)
+    startup_timeout: float = Field(180, ge=1, le=600)
+
+
 class VieNeuTTSConfig(I18nMixin):
     """Configuration for VieNeu TTS (Vietnamese)."""
 
@@ -616,8 +629,24 @@ class VieNeuTTSConfig(I18nMixin):
     speed: float = Field(1.0, ge=0.75, le=1.5, alias="speed")
     expressive: bool = Field(True, alias="expressive")
     rvc: RVCConfig = Field(default_factory=RVCConfig)
+    trained_voice: TrainedVoiceConfig = Field(default_factory=TrainedVoiceConfig)
+
+    @model_validator(mode="after")
+    def validate_trained_voice(self):
+        if self.trained_voice.enabled:
+            if self.mode != "v3turbo" or self.rvc.enabled or self.ref_audio:
+                raise ValueError(
+                    "Trained voice requires v3turbo, no RVC and no reference-audio override"
+                )
+            if not self.trained_voice.python_path or not self.trained_voice.model_path:
+                raise ValueError("Trained voice requires Python and checkpoint paths")
+        return self
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "trained_voice": Description(
+            en="Local trained checkpoint in an isolated Python worker",
+            zh="独立 Python 进程中的本地训练音色",
+        ),
         "rvc": Description(
             en="Optional RVC voice conversion after VieNeu synthesis",
             zh="在 VieNeu 合成之后执行可选的 RVC 音色转换",
