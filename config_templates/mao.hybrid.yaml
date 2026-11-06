@@ -2,6 +2,16 @@
 # scripts/mao_hybrid.py enable does this for conf.yaml and characters/mao_live.yaml.
 hybrid:
   enabled: true
+  creator_mic: true # voice from the local microphone is the person who created Mao (host decides, not the words)
+  creator_name: papa # how Mao addresses the creator unless asked otherwise
+  input_gate: # screens microphone speech before the language model sees it
+    enabled: true
+    min_seconds: 0.3 # shorter sounds are clicks/breaths
+    min_rms: 0.003 # loudness of the loudest half of frames; quieter = far-away TV/other room. 0 = off
+    drop_hallucinations: true # known Whisper artefacts and runaway repetition
+    require_wake_word: false # true: answer only when "Mao" is said or within follow_up_seconds of an accepted turn
+    wake_words: [mao]
+    follow_up_seconds: 30
   wesnoth_enabled: false # optional local training add-on; setup via scripts/mao_wesnoth.py
   emotion_enabled: true # bounded state + response/speech policy; never grants tool access
   interaction_enabled: true

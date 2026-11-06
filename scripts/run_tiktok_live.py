@@ -63,6 +63,8 @@ async def main(
                 response_timeout=tiktok_config.response_timeout,
                 include_nickname=tiktok_config.include_nickname,
                 blocked_words=tiktok_config.blocked_words,
+                creator_unique_ids=tiktok_config.creator_unique_ids,
+                creator_name=tiktok_config.creator_name,
                 proxy_url=f"ws://127.0.0.1:{port}/proxy-ws",
             )
             platform._listen_started_at=max(listen_started_at,time.time()-120)

@@ -145,11 +145,23 @@ async def handle_conversation_trigger(
     if enabled(context):
         from ..interaction.coordinator import coordinator, Proposal
         from ..interaction.service import TurnSession
-        from ..interaction.ingress import issue_actor, verify_actor, seal
+        from ..interaction.ingress import (
+            creator_actor,
+            issue_actor,
+            verify_actor,
+            seal,
+        )
 
         if not (metadata or {}).get("_host_ingress"):
+            # Transport decides identity: voice from the local mic is the creator.
+            # Typed text, host proposals and unsealed proxy traffic stay guests.
+            creator_voice = (
+                msg_type == "mic-audio-end"
+                and context.agent_engine._hybrid.config.creator_mic
+                and not (metadata or {}).get("_host_proposal")
+            )
             token = getattr(context, "mao_actor_token", None)
-            if not verify_actor(token):
+            if not creator_voice and not verify_actor(token):
                 token = context.mao_actor_token = issue_actor()
             source_key = data.get("event_id")
             if not isinstance(source_key, str) or not 0 < len(source_key) <= 150:
@@ -157,7 +169,7 @@ async def handle_conversation_trigger(
             metadata = {
                 **(metadata or {}),
                 "_host_ingress": seal(
-                    verify_actor(token),
+                    creator_actor() if creator_voice else verify_actor(token),
                     client_uid,
                     source_key,
                     bool((metadata or {}).get("_host_proposal")),

@@ -532,3 +532,5 @@ live_config:
     response_timeout: 90.0 # Warn without progress; never interrupts unfinished speech
     include_nickname: true # Prefix each comment with the viewer's nickname
     blocked_words: [] # Comments containing any of these words are ignored
+    creator_unique_ids: [] # TikTok accounts (unique_id, e.g. '@name') of Mao's creator; matched by account, never by nickname
+    creator_name: 'papa' # How Mao addresses the creator

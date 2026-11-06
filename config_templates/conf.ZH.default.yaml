@@ -527,3 +527,5 @@ live_config:
     response_timeout: 90.0 # 无进展时发出警告；不会中断正在播放的回复
     include_nickname: true # 在每条评论前加上观众昵称
     blocked_words: [] # 包含这些词的评论将被忽略
+    creator_unique_ids: [] # Mao创作者的TikTok账号（unique_id，如 '@name'）；按账号识别，绝不按昵称
+    creator_name: 'papa' # Mao对创作者的称呼

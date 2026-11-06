@@ -277,6 +277,7 @@ class TikTokLivePlatform(BufferedLiveChat):
                 author_id=getattr(user, "id", None)
                 or getattr(user, "unique_id", None)
                 or nickname,
+                account=getattr(user, "unique_id", None) or "",
             )
 
         async def on_join(event: JoinEvent) -> None:

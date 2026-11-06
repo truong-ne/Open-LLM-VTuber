@@ -123,10 +123,11 @@ class BasicMemoryAgent(AgentInterface):
 
         self._hybrid = None
         if hybrid_config and hybrid_config.get("enabled", False):
-            from ..hybrid.runtime import HybridRuntime, TOOL
+            from ..hybrid.runtime import HybridRuntime, lean_tool
             from ..hybrid.executor import HybridExecutor
 
             self._hybrid = HybridRuntime(hybrid_config)
+            TOOL = lean_tool(self._hybrid.config)
             self._tool_manager = self._tool_manager or ToolManager()
             self._tool_executor = HybridExecutor(
                 self._hybrid, tool_executor, self._tool_manager

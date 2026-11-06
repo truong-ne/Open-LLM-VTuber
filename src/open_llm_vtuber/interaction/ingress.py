@@ -33,6 +33,24 @@ def issue_actor():
     return body + "." + hmac.new(key(), body.encode(), hashlib.sha256).hexdigest()
 
 
+def creator_actor():
+    """Stable actor for the local microphone: the person who created Mao.
+
+    Derived from the host key, so it survives restarts (unlike issue_actor) and
+    cannot be named by any client. Same shape as a guest actor so it passes the
+    existing identity checks; only this host can produce it.
+    """
+    digest = hmac.new(key(), b"creator-actor:v1", hashlib.sha256).hexdigest()
+    return "guest:" + digest[:32]
+
+
+def is_creator(actor):
+    # Encode first: compare_digest rejects non-ASCII str, and actors can be arbitrary text.
+    return isinstance(actor, str) and hmac.compare_digest(
+        actor.encode(), creator_actor().encode()
+    )
+
+
 def verify_actor(token):
     if not isinstance(token, str) or len(token) > 512:
         return None

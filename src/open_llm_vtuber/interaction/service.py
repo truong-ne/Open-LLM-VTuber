@@ -11,7 +11,7 @@ from ..experience.activities import Activities
 from ..experience.repository import Experiences
 from .coordinator import coordinator
 from .events import DeliveryTracker, InteractionEvent, current_delivery
-from .ingress import issue_actor, verify_actor, unseal
+from .ingress import is_creator, issue_actor, verify_actor, unseal
 from .repository import Journal
 
 
@@ -239,6 +239,9 @@ class TurnSession:
             "visibility": self.event.visibility,
             "session_id": self.event.session_id,
             "synthetic": self.event.synthetic,
+            "speaker_role": "creator"
+            if self.event.kind == "input" and is_creator(self.actor)
+            else "guest",
             "policy": self.policy,
             "source_text": text[:16000] if self.event.kind == "input" else "",
         }

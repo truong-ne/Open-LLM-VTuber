@@ -163,8 +163,10 @@ async def _process_single_conversation(
             return script
 
         # Process user input
+        from ..dialogue.input_gate import gate_for
+
         input_text = await process_user_input(
-            user_input, context.asr_engine, websocket_send
+            user_input, context.asr_engine, websocket_send, gate=gate_for(context)
         )
         if not input_text.strip():
             # Silence is not a conversational turn for the language model.

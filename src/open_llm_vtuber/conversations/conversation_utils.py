@@ -148,9 +148,19 @@ async def process_user_input(
     user_input: Union[str, np.ndarray],
     asr_engine: ASRInterface,
     websocket_send: WebSocketSend,
+    gate=None,
 ) -> str:
-    """Process user input, converting audio to text if needed"""
+    """Process user input, converting audio to text if needed.
+
+    With a ``gate`` (dialogue.input_gate.InputGate), speech that is clearly not
+    an utterance addressed to Mao returns "" so the caller treats it as silence.
+    """
     if isinstance(user_input, np.ndarray):
+        if gate:
+            verdict = gate.screen_audio(user_input)
+            if not verdict.accepted:
+                logger.info("Input gate dropped audio before ASR: {}", verdict.reason)
+                return ""
         logger.info("Transcribing audio input...")
         detailed = getattr(asr_engine, "async_transcribe_with_details", None)
         uncertain = False
@@ -159,6 +169,15 @@ async def process_user_input(
             input_text, uncertain = result.text, result.uncertain
         else:
             input_text = await asr_engine.async_transcribe_np(user_input)
+        if gate and input_text.strip():
+            verdict = gate.screen_text(input_text)
+            if not verdict.accepted:
+                logger.info(
+                    "Input gate dropped transcript ({} characters): {}",
+                    len(input_text),
+                    verdict.reason,
+                )
+                return ""
         await websocket_send(
             json.dumps(
                 {

@@ -22,8 +22,31 @@ class AutonomyConfig(BaseModel):
     model: str = Field("mao-companion", min_length=1, max_length=100)
 
 
+class InputGateConfig(BaseModel):
+    """Screens microphone speech before it becomes a conversational turn."""
+
+    enabled: bool = True
+    # Utterances shorter than this are clicks/breaths, not sentences.
+    min_seconds: float = Field(0.3, ge=0, le=5)
+    # Level of the loudest half of the frames (0..1 float audio). Far-away TV or
+    # people in the next room are much quieter than the person at the mic.
+    # 0 disables the check. Each decision is logged so this can be tuned.
+    min_rms: float = Field(0.003, ge=0, le=0.5)
+    drop_hallucinations: bool = True
+    # When true, speech is answered only if it says one of wake_words or follows
+    # an accepted utterance within follow_up_seconds.
+    require_wake_word: bool = False
+    wake_words: list[str] = Field(default_factory=lambda: ["mao"])
+    follow_up_seconds: float = Field(30, ge=0, le=600)
+
+
 class HybridConfig(BaseModel):
     enabled: bool = False
+    # Voice from the local microphone is the person who created Mao. The host
+    # decides this (the transport), never the words spoken or a nickname.
+    creator_mic: bool = True
+    creator_name: str = Field("papa", min_length=1, max_length=40)
+    input_gate: InputGateConfig = Field(default_factory=InputGateConfig)
     wesnoth_enabled: bool = False
     emotion_enabled: bool = True
     interaction_enabled: bool = True

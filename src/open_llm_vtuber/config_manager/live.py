@@ -31,8 +31,20 @@ class TikTokLiveConfig(I18nMixin):
     response_timeout: float = Field(90.0, gt=0, alias="response_timeout")
     include_nickname: bool = Field(True, alias="include_nickname")
     blocked_words: List[str] = Field([], alias="blocked_words")
+    # Accounts (TikTok unique_id, as issued by the platform) that belong to the
+    # person who created Mao. Matched on unique_id only, never on the nickname.
+    creator_unique_ids: List[str] = Field([], alias="creator_unique_ids")
+    creator_name: str = Field("papa", min_length=1, max_length=40, alias="creator_name")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "creator_unique_ids": Description(
+            en="TikTok accounts (unique_id) of Mao's creator; recognised by account, not nickname",
+            zh="Mao创作者的TikTok账号（unique_id），按账号而非昵称识别",
+        ),
+        "creator_name": Description(
+            en="How Mao addresses the creator",
+            zh="Mao对创作者的称呼",
+        ),
         "unique_id": Description(
             en="TikTok username of the streamer (e.g. '@your_name')",
             zh="主播的TikTok用户名（例如 '@your_name'）",
