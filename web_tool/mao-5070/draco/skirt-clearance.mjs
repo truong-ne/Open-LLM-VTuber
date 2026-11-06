@@ -20,6 +20,9 @@ export function thighRayExit(y,dx,dz,a,b,radius){
   return exit;
 }
 
+const SECTORS=16;
+const sectorOf=(x,z)=>((Math.floor((Math.atan2(x,z)+Math.PI)/(2*Math.PI)*SECTORS)%SECTORS)+SECTORS)%SECTORS;
+
 // Preserve the pleats and hem while moving only fabric that enters the swept
 // thigh envelope. Corrections are a runtime morph, before skeletal skinning;
 // the source GLB and visible leg geometry remain intact.
@@ -48,21 +51,70 @@ export class SkirtClearance{
       return {mesh,delta,restY};
     });
     this.delta=this.targets[0].delta;
+    this.tuckUnderlayers();
+  }
+  // Lace layers worn under the skirt sit within a fraction of a millimetre of it at the
+  // waist (and a little outside it), which shows as speckled z-fighting across the belly.
+  // Pull every underlayer vertex that is covered by the skirt to a small margin inside it.
+  // Done once in the bind pose; the layers share the pelvis/waist skinning with the skirt.
+  tuckUnderlayers(margin=.004){
+    const {actor}=this,unit=actor.dynamics.unit,skirt=this.mesh,layers=[];
+    actor.asset.traverse(m=>{if(m.isSkinnedMesh&&/Lace/i.test(m.material?.name||''))layers.push(m);});
+    this.tucked=0;if(!layers.length)return;
+    const BINS=96,STEP=.008,p=this.p,local=new T.Vector3(),key=(x,y,z)=>`${Math.floor((Math.atan2(x,z)+Math.PI)/(2*Math.PI)*BINS)%BINS}:${Math.floor(y/STEP)}`;
+    const inner=new Map();let top=-Infinity;skirt.skeleton.update();
+    for(let i=0;i<skirt.geometry.attributes.position.count;i++){
+      skirt.getVertexPosition(i,p).applyMatrix4(skirt.matrixWorld);local.copy(p).sub(this.center).divideScalar(unit);
+      const k=key(local.x,local.y,local.z),r=Math.hypot(local.x,local.z);inner.set(k,Math.min(inner.get(k)??Infinity,r));top=Math.max(top,local.y);
+    }
+    for(const mesh of layers){
+      mesh.geometry=mesh.geometry.clone();mesh.skeleton.update();
+      const position=mesh.geometry.attributes.position,indices=mesh.geometry.attributes.skinIndex,weights=mesh.geometry.attributes.skinWeight;
+      for(let i=0;i<position.count;i++){
+        mesh.getVertexPosition(i,p).applyMatrix4(mesh.matrixWorld);local.copy(p).sub(this.center).divideScalar(unit);
+        // Waist/belly band only: a lace frill meant to peek out at the hem stays as authored.
+        if(local.y>top-STEP||local.y<-.06)continue;
+        const r=Math.hypot(local.x,local.z);let limit=Infinity;
+        for(const dy of [-STEP,0,STEP])limit=Math.min(limit,inner.get(key(local.x,local.y+dy,local.z))??Infinity);
+        if(!Number.isFinite(limit)||r<=limit-margin||r<1e-6)continue;
+        const scale=Math.max(0,limit-margin)/r;local.x*=scale;local.z*=scale;
+        this.target.copy(local).multiplyScalar(unit).add(this.center);
+        this.skin.elements.fill(0);
+        for(let j=0;j<4;j++){const w=weights.array[i*4+j];if(!w)continue;this.bone.fromArray(mesh.skeleton.boneMatrices,indices.array[i*4+j]*16);for(let k=0;k<16;k++)this.skin.elements[k]+=this.bone.elements[k]*w;}
+        this.inverse.copy(mesh.matrixWorld).multiply(mesh.bindMatrixInverse).multiply(this.skin).multiply(mesh.bindMatrix).invert();
+        this.target.applyMatrix4(this.inverse);position.setXYZ(i,this.target.x,this.target.y,this.target.z);this.tucked++;
+      }
+      position.needsUpdate=true;mesh.geometry.computeBoundingSphere();
+    }
   }
   fitThighRadii(){
     let skin;this.actor.asset.traverse(mesh=>{if(mesh.material?.name==='V16_Original_Leg_Texture_Local_Edge_Repair')skin=mesh;});
     if(!skin)return;skin.skeleton.update();
     for(const leg of this.legs){leg.hip.getWorldPosition(leg.a);leg.knee.getWorldPosition(leg.b);}
-    const axis=new T.Vector3(),closest=new T.Vector3(),unit=this.actor.dynamics.unit;
+    const axis=new T.Vector3(),closest=new T.Vector3(),unit=this.actor.dynamics.unit,margin=.012*unit;
+    // A thigh is not round and the hip above the joint is not thigh. A single radius taken
+    // from the farthest skin point (the hip/buttock above the joint, t≈0) made the capsule
+    // ~25% too fat, so the front pleats were pushed out into a bulge over the belly. Fit one
+    // radius per horizontal direction around the thigh, from skin below the hip joint only.
+    for(const leg of this.legs){leg.sectors=new Array(SECTORS).fill(0);leg.radius=0;}
     for(let i=0;i<skin.geometry.attributes.position.count;i++){
       skin.getVertexPosition(i,this.p).applyMatrix4(skin.matrixWorld);
       const y=(this.p.y-this.center.y)/unit;if(y<-.24||y>-.035)continue;
-      let nearest,distance=Infinity;
+      let nearest,distance=Infinity,along=0;
       for(const leg of this.legs){
         axis.subVectors(leg.b,leg.a);const t=T.MathUtils.clamp(closest.subVectors(this.p,leg.a).dot(axis)/axis.lengthSq(),0,1);
-        closest.copy(leg.a).addScaledVector(axis,t);const d=closest.distanceTo(this.p);if(d<distance){distance=d;nearest=leg;}
+        const point=leg.a.clone().addScaledVector(axis,t),d=point.distanceTo(this.p);if(d<distance){distance=d;nearest=leg;along=t;}
       }
-      nearest.radius=Math.max(nearest.radius,distance+.012*unit);
+      if(along<=.03)continue;
+      axis.subVectors(nearest.b,nearest.a);const t=closest.subVectors(this.p,nearest.a).dot(axis)/axis.lengthSq();
+      closest.copy(nearest.a).addScaledVector(axis,t).sub(this.p).negate();
+      const s=sectorOf(closest.x,closest.z);nearest.sectors[s]=Math.max(nearest.sectors[s],distance+margin);
+    }
+    for(const leg of this.legs){
+      const fallback=Math.max(...leg.sectors)||this.radius;
+      // Fill gaps and soften steps between neighbouring directions.
+      leg.sectors=leg.sectors.map((r,s)=>Math.max(r||fallback*.9,.92*Math.max(leg.sectors[(s+1)%SECTORS],leg.sectors[(s+SECTORS-1)%SECTORS])));
+      leg.radius=Math.max(...leg.sectors);
     }
     this.radius=Math.max(...this.legs.map(leg=>leg.radius));
   }
@@ -90,8 +142,10 @@ export class SkirtClearance{
       let required=r;
       if(r>1e-6&&blend>0){
         const dx=this.local.x/r,dz=this.local.z/r;
+        // The ray leaves a thigh on the side facing its own direction: use that side's radius.
+        const s=sectorOf(dx,dz);
         for(const leg of this.legs){
-          required=Math.max(required,thighRayExit(this.local.y,dx,dz,leg.a,leg.b,leg.radius-inset));
+          required=Math.max(required,thighRayExit(this.local.y,dx,dz,leg.a,leg.b,(leg.sectors?.[s]??leg.radius)-inset));
         }
       }
       const correction=(required-r)*blend;this.maxCorrection=Math.max(this.maxCorrection,Math.hypot(correction,vertical));

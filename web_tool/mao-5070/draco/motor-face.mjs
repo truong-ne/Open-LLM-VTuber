@@ -1,5 +1,5 @@
 import * as T from '../3d/vendor/three.module.js';
-import {PerformanceFaceRig} from './performance-face.mjs?v=1';
+import {PerformanceFaceRig} from './performance-face.mjs?v=6';
 export class AdaptiveFaceRig extends PerformanceFaceRig{
   constructor(asset){super(asset);this.motorFace={};this.motorFaceTargets={};}
   setMotor(pose,amount=0){

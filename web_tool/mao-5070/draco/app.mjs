@@ -3,15 +3,15 @@ import {OrbitControls} from '../3d/vendor/OrbitControls.js';
 import {GLTFLoader} from '../3d/vendor/loaders/GLTFLoader.js';
 import {GLTFExporter} from '../3d/vendor/GLTFExporter.js';
 import {clone} from '../3d/vendor/utils/SkeletonUtils.js';
-import {bakeBodyClips} from './motion.mjs?v=30';
+import {bakeBodyClips} from './motion.mjs?v=36';
 import {ACTIONS as BASE_ACTIONS,STORY_ACTIONS,SAMPLE_STORY} from './actions.mjs';
-import {faceForAction,planPerformanceStory as planStory} from './performance-context.mjs?v=2';
-import {PERFORMANCE_ACTIONS as ACTIONS,PERFORMANCE_META as ACTION_META} from './performance-motion.mjs?v=2';
-import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs';
-import {AdaptiveFaceRig} from './motor-face.mjs';
+import {faceForAction,planPerformanceStory as planStory} from './performance-context.mjs?v=3';
+import {PERFORMANCE_ACTIONS as ACTIONS,PERFORMANCE_META as ACTION_META} from './performance-motion.mjs?v=10';
+import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs?v=11';
+import {AdaptiveFaceRig} from './motor-face.mjs?v=6';
 import {attachMotorPreview} from './motor-preview.mjs';
-import {FACE_PRESETS} from './performance-face.mjs?v=1';
-import {validateDance} from './dance-body.mjs?v=2';
+import {FACE_PRESETS} from './performance-face.mjs?v=6';
+import {validateDance} from './dance-body.mjs?v=8';
 import whiteTopDance from './dances/white-top-dance.mjs';
 const $=id=>document.getElementById(id),canvas=$('scene');
 const DANCES=Object.fromEntries([whiteTopDance].map(raw=>{const dance=validateDance(raw);return [dance.id,dance];}));
@@ -30,7 +30,7 @@ wrapper.userData.motionVersion='story-actions-v8-hem-clearance';
 asset.userData.source=gltf.asset.extras||{};asset.userData.changes='Procedural body animation and readable joint names; source geometry and textures preserved.';
 asset.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=false;m.frustumCulled=false;}});
 let actor=new BodyActor(asset);for(let i=0;i<180;i++)actor.update(1/120);
-const face=new AdaptiveFaceRig(asset);
+const face=new AdaptiveFaceRig(asset);face.idleSource=()=>actor.idle;
 function setFace(name){face.setExpression(name);document.querySelectorAll('[data-face]').forEach(b=>b.classList.toggle('active',b.dataset.face===name));}
 for(const [name,label] of Object.entries(FACE_PRESETS)){const button=document.createElement('button');button.dataset.face=name;button.textContent=label;button.onclick=()=>{$('face-auto').checked=false;demo=false;setFace(name);if($('hold').checked)for(let i=0;i<90;i++)face.update(0,false,1/120);};$('face-actions').append(button);}
 const skeleton=new T.SkeletonHelper(asset);skeleton.visible=false;scene.add(skeleton);
@@ -42,7 +42,8 @@ let selected='hipSway',demo=true,demoIndex=0;
 const demoBeats=[['hipSway','smile'],['refuse','flat'],['chuckle','squint'],['surprise','surprised'],['shy','smile'],['greet','smile']];
 const select=action=>{selected=action;actor.clearMotor();actor.play(action);if($('face-auto').checked)setFace(faceForAction(action));$('action').textContent=labels[action];document.querySelectorAll('[data-action]').forEach(b=>b.classList.toggle('active',b.dataset.action===action));if($('hold').checked)holdPose();};
 function stopStory(){if(storyQueue.length)$('story-progress').textContent='Đã dừng diễn theo câu chuyện.';storyQueue=[];storyDue=Infinity;canvas.dataset.storyBeat='';$('story-caption').hidden=true;}
-function playStoryBeat(){const beat=storyQueue[storyIndex];select(beat.action);$('story-caption').textContent=beat.text;$('story-caption').hidden=false;$('story-progress').textContent=`Câu ${storyIndex+1}/${storyQueue.length} · ${labels[beat.action]}`;canvas.dataset.storyBeat=String(storyIndex+1);storyDue=actor.time+beat.seconds;}
+const LOOK_LABELS={left:'nhìn trái',right:'nhìn phải',behind:'ngoái ra sau',around:'nhìn quanh'};
+function playStoryBeat(){const beat=storyQueue[storyIndex];select(beat.action);if($('face-auto').checked)setFace(beat.face);actor.setMood(beat.mood||'calm',.85);if(beat.look&&beat.action!=='turn')actor.lookToward(beat.look);$('story-caption').textContent=beat.text;$('story-caption').hidden=false;$('story-progress').textContent=`Câu ${storyIndex+1}/${storyQueue.length} · ${labels[beat.action]} · tâm trạng ${beat.mood}${beat.look?' · '+LOOK_LABELS[beat.look]:''}`;canvas.dataset.storyBeat=String(storyIndex+1);storyDue=actor.time+beat.seconds;}
 $('story-play').onclick=()=>{demo=false;$('audio').pause();const beats=planStory($('story-text').value);if(!beats.length){$('story-progress').textContent='Nhập ít nhất một câu để diễn.';return;}$('auto').checked=false;$('pause').checked=false;$('hold').checked=false;storyQueue=beats;storyIndex=0;playStoryBeat();};
 attachMotorPreview({actor:()=>actor,face,start(){demo=false;stopStory();$('auto').checked=false;$('pause').checked=false;$('hold').checked=false;}});
 $('story-stop').onclick=()=>{demo=false;stopStory();$('story-progress').textContent='Đã dừng đoạn diễn.';select('idle');};
@@ -85,7 +86,22 @@ function setClipLook({background=0xe9e4f0,eye=[0,1.12,4.5],target=[0,.98,0],widt
   camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setClearColor(background,1);
   controls.target.set(...target);camera.position.set(...eye);controls.update();
 }
-window.dracoPreview={playDance,stopDance,seekDance,snapshot,startClip,stepClip,setClipLook};
+// Idle preview: deterministic stepping (like the dance clip) so captures never depend on GPU speed.
+function startIdle({intensity=1,listening=false,speaking=false,mood='calm'}={}){
+  demo=false;stopStory();$('audio').pause();$('auto').checked=false;$('pause').checked=false;$('hold').checked=false;
+  stopDance();resetBind();actor=new BodyActor(asset);for(let i=0;i<180;i++)actor.update(1/120);
+  face.idleSource=()=>actor.idle;actor.setIdleIntensity(intensity);actor.setListening(listening);
+  actor.idle.setMood(mood,1);select(speaking?'talk':'idle');actor.play(speaking?'talk':'idle');danceFrozen=true;
+}
+function stepIdle(dt,{rms=0}={}){const steps=Math.max(1,Math.round(dt*120));for(let i=0;i<steps;i++)actor.update(dt/steps,rms);face.update(rms*5,rms>0,dt);return snapshot();}
+function liveIdle(){danceFrozen=false;}
+window.dracoPreview={playDance,stopDance,seekDance,snapshot,startClip,stepClip,setClipLook,startIdle,stepIdle,liveIdle,actor:()=>actor,face:()=>face};
+$('idle-intensity').oninput=e=>{const v=Number(e.target.value);actor.setIdleIntensity(v);$('idle-intensity-value').textContent=v.toFixed(1).replace('.',',');};
+$('idle-start').onclick=()=>{startIdle({intensity:Number($('idle-intensity').value),listening:$('idle-listening').checked,speaking:$('idle-speaking').checked});liveIdle();};
+$('idle-mood').onchange=e=>actor.idle.setMood(e.target.value,1);
+document.querySelectorAll('[data-look]').forEach(button=>button.onclick=()=>actor.lookToward(button.dataset.look));
+$('idle-listening').onchange=e=>actor.setListening(e.target.checked);
+$('idle-speaking').onchange=e=>{select(e.target.checked?'talk':'idle');};
 function holdPose(){resetBind();actor=new BodyActor(asset);for(let i=0;i<180;i++)actor.update(1/120);actor.play(selected);for(let i=0;i<Math.round((ACTION_META[selected].at||2)*120);i++)actor.update(1/120);}
 document.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>{demo=false;stopStory();$('auto').checked=false;select(button.dataset.action);});
 $('face-auto').onchange=()=>{if($('face-auto').checked)setFace(faceForAction(selected));};
@@ -123,6 +139,7 @@ function tick(now){requestAnimationFrame(tick);const dt=(now-last)/1000;last=now
   canvas.dataset.action=actor.action;canvas.dataset.footDrift=actor.audit.footDrift.toFixed(8);canvas.dataset.bones=String(actor.bones.length);canvas.dataset.actionCount=String(ACTIONS.length);canvas.dataset.clothSegments=String(actor.dynamics.segments.length);canvas.dataset.clothContacts=String(actor.dynamics.audit.contacts);canvas.dataset.clothStretch=actor.dynamics.audit.maxStretch.toFixed(8);
 }
 $('status').textContent=`PREVIEW · ${ACTIONS.length} CỬ CHỈ · ${Object.keys(FACE_PRESETS).length} NÉT MẶT`;select('hipSway');requestAnimationFrame(tick);
+if(new URLSearchParams(location.search).has('idle')){startIdle();liveIdle();}
 let clipUrl,glbUrl;
 $('record').onclick=()=>{demo=false;const button=$('record'),stream=canvas.captureStream(30),chunks=[],mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));const recorder=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:5000000}:undefined);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());renderer.setClearColor(0,0);if(clipUrl)URL.revokeObjectURL(clipUrl);clipUrl=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType}));$('record-link').href=clipUrl;$('record-link').hidden=false;button.disabled=false;button.textContent='Ghi clip 30 giây';};stopStory();$('hold').checked=false;$('pause').checked=false;$('auto').checked=true;index=0;select(sequence[0]);next=actor.time+7.5;renderer.setClearColor(0xf2edf7,1);button.disabled=true;button.textContent='Đang ghi…';recorder.start();setTimeout(()=>recorder.stop(),30000);};
 $('export').onclick=async()=>{const button=$('export');button.disabled=true;const wasPaused=$('pause').checked;$('pause').checked=true;try{

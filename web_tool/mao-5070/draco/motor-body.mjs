@@ -1,5 +1,5 @@
 import * as T from '../3d/vendor/three.module.js';
-import {DanceBodyActor} from './dance-body.mjs?v=2';
+import {DanceBodyActor} from './dance-body.mjs?v=8';
 import {MotorPolicy,validateMotor} from './motor-policy.mjs';
 const smooth=n=>{n=T.MathUtils.clamp(n,0,1);return n*n*(3-2*n);};
 

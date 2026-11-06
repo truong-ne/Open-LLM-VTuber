@@ -1,11 +1,11 @@
 import * as T from '../3d/vendor/three.module.js';
 import {GLTFLoader} from '../3d/vendor/loaders/GLTFLoader.js';
-import {PERFORMANCE_ACTIONS} from './performance-motion.mjs?v=4';
-import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs?v=5';
+import {PERFORMANCE_ACTIONS} from './performance-motion.mjs?v=10';
+import {AdaptiveBodyActor as BodyActor} from './motor-body.mjs?v=11';
 import {MotorPolicy} from './motor-policy.mjs';
-import {FACE_PRESETS} from './performance-face.mjs?v=1';
-import {AdaptiveFaceRig as FaceRig} from './motor-face.mjs';
-import {selectPerformance,faceForAction} from './performance-context.mjs?v=2';
+import {FACE_PRESETS} from './performance-face.mjs?v=6';
+import {AdaptiveFaceRig as FaceRig} from './motor-face.mjs?v=6';
+import {selectPerformance,faceForAction} from './performance-context.mjs?v=3';
 import {SpeechAttention} from './speech-attention.mjs?v=2';
 import {attachPetPlacement} from './pet-placement.mjs?v=8';
 import {configureAvatarCamera,availableAvatarHeight} from './room-view.mjs?v=11';
@@ -16,7 +16,7 @@ import {headingDegrees,cardinal} from './room-orientation.mjs?v=4';
 import {mountCommentPanel} from './comment-panel.mjs?v=10';
 import {createSceneTransition} from './scene-transition.mjs?v=2';
 import {mountSingingPlayer} from './singing-player.mjs';
-import {validateDance} from './dance-body.mjs?v=2';
+import {validateDance} from './dance-body.mjs?v=8';
 
 // Each song may name a choreography (knowledge/mao_songs.vi.json "dance"). The
 // module loads once; until it is ready, or when it is missing, Mao keeps the
@@ -107,10 +107,10 @@ export async function mountNativeAvatar(container,bridge){
   wrapper.position.x-=footCenter.x;wrapper.position.z-=footCenter.z;wrapper.updateMatrixWorld(true);
   asset.traverse(mesh=>{if(mesh.isMesh)mesh.frustumCulled=false;});
   let motorStorage;try{motorStorage=window.localStorage;}catch{}
-  const motorPolicy=new MotorPolicy(motorStorage),actor=new BodyActor(asset,motorPolicy),face=new FaceRig(asset);state.faceMeshes=face.meshes.length;state.performanceVersion='adaptive-motor-v1';state.facePresetCount=Object.keys(FACE_PRESETS).length;
+  const motorPolicy=new MotorPolicy(motorStorage),actor=new BodyActor(asset,motorPolicy),face=new FaceRig(asset);face.idleSource=()=>actor.idle;state.faceMeshes=face.meshes.length;state.performanceVersion='adaptive-motor-v1';state.facePresetCount=Object.keys(FACE_PRESETS).length;
   const motorNotice=document.createElement('div');motorNotice.setAttribute('role','status');Object.assign(motorNotice.style,{position:'absolute',bottom:'90px',left:'12px',maxWidth:'360px',padding:'10px',borderRadius:'10px',background:'#241c32ee',color:'#fff',fontSize:'13px',pointerEvents:'none',zIndex:30,display:'none'});container.append(motorNotice);let noticeTimer;
   const operatorFeedback=text=>{if(!motorPolicy.feedback(text))return false;motorNotice.textContent=motorPolicy.message;motorNotice.style.display='block';clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>motorNotice.style.display='none',5500);return true;};
-  let manualActionUntil=0,audioFace='neutral',faceUntil=0;
+  let manualActionUntil=0,audioFace='neutral',faceUntil=0,speechMood=false;
   const footSets={pet:new FloorFeet(actor.feet),window:new FloorFeet(actor.feet),game:new FloorFeet(actor.feet),concert:new FloorFeet(actor.feet)};
   feet=footSets[options().mode==='pet'?'pet':'window'];
   function applyScene(next){
@@ -249,13 +249,16 @@ export async function mountNativeAvatar(container,bridge){
         if(actor.time>=manualActionUntil&&(actor.action==='idle'||actor.action==='talk'||actor.time-actor.started>=2.4)){
           if(actor.action!==performance.action)actor.play(performance.action);
           audioFace=performance.face;faceUntil=actor.time+4;
+          // The sentence also sets Mao's mood and, when she mentions a side/behind, where she looks.
+          actor.setMood(performance.mood||'calm',.85);speechMood=true;
+          if(performance.look&&performance.action!=='turn')actor.lookToward(performance.look);
           if(bridge.payload?.pose)state.lastMotorAccepted=actor.setMotor(bridge.payload.pose);
         }
       }
       const index=playing&&audio?Math.floor(audio.currentTime*1000/(bridge.payload?.sliceLength||20)):0;
       const volume=songPose.playing?songPose.volume:playing?(bridge.payload?.volumes?.[index]||0):0;
       if(playing&&actor.action==='idle'&&actor.time>=manualActionUntil)actor.play('talk');
-      if(!playing&&!bridge.speechSession)actor.clearMotor();
+      if(!playing&&!bridge.speechSession){actor.clearMotor();if(speechMood){actor.setMood('calm');speechMood=false;}}
       actor.update(dt,volume*.15);
       face.setExpression(songPose.playing?'smile':actor.action==='talk'&&playing&&actor.time<faceUntil?audioFace:faceForAction(actor.action));
       face.setMotor(actor.motorRaw?motorPolicy.apply(actor.motorRaw):null,actor.motorAmount);

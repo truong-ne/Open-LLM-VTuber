@@ -1,6 +1,6 @@
 // Pure helpers for hand-editing a choreography (dance-editor.html). They work on the
 // plain rows of a dance file, so the result can be validated and saved as-is.
-import {COLUMNS} from './dance-body.mjs?v=2';
+import {COLUMNS} from './dance-body.mjs?v=8';
 
 const SIGN={L:1,R:-1};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));

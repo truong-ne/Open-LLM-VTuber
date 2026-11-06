@@ -1,5 +1,5 @@
 import * as T from '../3d/vendor/three.module.js';
-import {PerformanceBodyActor} from './performance-motion.mjs?v=4';
+import {PerformanceBodyActor} from './performance-motion.mjs?v=10';
 
 const rad=T.MathUtils.degToRad,clamp=T.MathUtils.clamp;
 const SIDE={L:1,R:-1};

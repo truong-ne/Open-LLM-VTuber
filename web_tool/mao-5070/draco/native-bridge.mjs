@@ -2,7 +2,7 @@
 // This bridge supplies only the 3D renderer and its audio-driven animation.
 import {desktopCommand} from './desktop-space.mjs?v=7';
 import {BODY_COMMANDS} from './room-orientation.mjs';
-import {performanceCommand} from './performance-context.mjs?v=2';
+import {performanceCommand} from './performance-context.mjs?v=3';
 export function createNativeBridge(){
   const state={model:'draco',ui:'original-desktop',ready:false,frames:0,drawCalls:0,socket:'connecting',audioStarted:0,audioEnded:0,audioErrors:0,lastError:'',mouthOpen:0,mouthPeak:0};
   const seenBody=new Set();let lastManual=-Infinity;

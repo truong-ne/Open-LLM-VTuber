@@ -2,7 +2,7 @@
 // Open through scripts/start_dance_editor.ps1 (or scripts/serve_dance_editor.mjs).
 import * as T from '../3d/vendor/three.module.js';
 import {GLTFLoader} from '../3d/vendor/loaders/GLTFLoader.js';
-import {DanceBodyActor,validateDance} from './dance-body.mjs?v=2';
+import {DanceBodyActor,validateDance} from './dance-body.mjs?v=8';
 import {anglesToVector,changedFrames,danceModuleText,editArm,editValue,neighbourhood,readArm,vectorToAngles} from './dance-edit.mjs';
 
 const $=id=>document.getElementById(id);

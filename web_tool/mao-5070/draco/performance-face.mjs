@@ -1,5 +1,6 @@
 import * as T from '../3d/vendor/three.module.js';
 import {FaceRig} from './face-rig.mjs?v=2';
+import {IdleLife} from './idle-life.mjs?v=4';
 
 export const FACE_PRESETS={neutral:'Tự nhiên',smile:'Cười nhẹ',squint:'Mắt ><',flat:'Mắt --',surprised:'Ngơ ngác'};
 const FACE='V13_Face_Reference_Lashes_Paint',LASH='V13_Reference_Upper_Lash_Curved_Mask.001',DETAIL='CEL5_Material.001',IRIS='V13_Jade_Iris_Original_Detail.001';
@@ -21,7 +22,7 @@ function appendTarget(mesh,name,delta){
 
 export class PerformanceFaceRig extends FaceRig{
   constructor(asset){
-    super(asset);this.time=0;this.expression='neutral';this.weights=Object.fromEntries(Object.keys(FACE_PRESETS).map(k=>[k,0]));this.nextBlink=2.4;this.blinkStart=-10;this.eyeClose=0;this.targets=[];this.inks=[];this.smileTargets=[];this.smileUniform={value:0};
+    super(asset);this.time=0;this.expression='neutral';this.weights=Object.fromEntries(Object.keys(FACE_PRESETS).map(k=>[k,0]));this.nextBlink=2.4;this.blinkStart=-10;this.ownIdle=new IdleLife({seed:77});this.idleSource=null;this.seenShift=0;this.seenPause=0;this.eyeClose=0;this.targets=[];this.inks=[];this.smileTargets=[];this.smileUniform={value:0};
     for(const mesh of this.meshes){
       const p=mesh.geometry.attributes.position,delta=new Float32Array(p.count*3);
       for(let i=0;i<p.count;i++){
@@ -82,10 +83,42 @@ export class PerformanceFaceRig extends FaceRig{
       const mesh=this.bind(new T.TubeGeometry(path,32,style==='squint'?.0015:.0011,6,false),new T.MeshBasicMaterial({color:0x4b3934,transparent:true,opacity:0,toneMapped:false,depthWrite:false}),`preview-eye-${style}-${side}`);
       this.inks.push({style,mesh});
     }
+    this.seatLipRim();
     this.gaze=['draco_bone_0019','draco_bone_0021'].map(name=>{
       const bone=asset.getObjectByName(name),world=bone.getWorldQuaternion(new T.Quaternion());return {bone,local:bone.quaternion.clone(),world,inverse:world.clone().invert()};
     });
     this.gazeDelta=new T.Quaternion();this.gazeEuler=new T.Euler();
+  }
+  // The lip-rim overlay was authored on a flat plane at z=.089, 3–8 mm in front of the real
+  // lips. With a turning head that gap shows as a ring beside the mouth (parallax), so lay
+  // every rim vertex - and its mouth-open target - onto the face/lip surface itself.
+  mouthSurface(){
+    const tris=[];
+    for(const mesh of [this.face,...this.meshes.filter(m=>m.material.name==='CEL5')]){
+      const p=mesh.geometry.attributes.position,idx=mesh.geometry.index?.array,n=idx?idx.length:p.count;
+      for(let j=0;j<n;j+=3){
+        const v=[0,1,2].map(k=>{const i=idx?idx[j+k]:j+k;return [p.getX(i),p.getY(i),p.getZ(i)];});
+        if(v.some(([x,y,z])=>Math.abs(x)<.03&&Math.abs(y-MY)<.03&&z>.05))tris.push(v);
+      }
+    }
+    const at=(x,y)=>{let top=-Infinity;for(const [a,b,c] of tris){
+      const den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(den)<1e-14)continue;
+      const u=((b[1]-c[1])*(x-c[0])+(c[0]-b[0])*(y-c[1]))/den,w=((c[1]-a[1])*(x-c[0])+(a[0]-c[0])*(y-c[1]))/den;
+      if(u>=-1e-5&&w>=-1e-5&&u+w<=1.00001)top=Math.max(top,u*a[2]+w*b[2]+(1-u-w)*c[2]);}return top;};
+    // Inside the mouth opening there is no skin: use the nearest lip/skin above or below.
+    return (x,y)=>{for(let d=0;d<=.008;d+=.0004)for(const s of [1,-1]){const z=at(x,y+s*d);if(z>.05)return z;}return .08;};
+  }
+  seatLipRim(){
+    const rim=this.overlays.find(m=>m.name==='mao_lip_rim');if(!rim)return;
+    const surface=this.mouthSurface(),p=rim.geometry.attributes.position,open=rim.geometry.morphAttributes.position[0];
+    for(let i=0;i<p.count;i++){
+      const x=p.getX(i),y=p.getY(i),z=surface(x,y)+.0006;
+      p.setZ(i,z);open.setZ(i,surface(x+open.getX(i),y+open.getY(i))+.0006-z);
+    }
+    p.needsUpdate=true;open.needsUpdate=true;rim.geometry.computeBoundingSphere();
+    // Win depth ties against the skin it now lies on.
+    rim.material.polygonOffset=true;rim.material.polygonOffsetFactor=-2;rim.material.polygonOffsetUnits=-2;
+    this.rimSeated=true;
   }
   bind(geometry,material,name){
     const count=geometry.attributes.position.count,skin=new Uint16Array(count*4),weight=new Float32Array(count*4);
@@ -98,19 +131,28 @@ export class PerformanceFaceRig extends FaceRig{
   update(volume,playing,dt){
     dt=clamp(Number.isFinite(dt)?dt:0,0,.1);this.time+=dt;
     for(const name of Object.keys(this.weights))this.weights[name]+=((name===this.expression?1:0)-this.weights[name])*(1-Math.exp(-dt*12));
-    if(this.time>=this.nextBlink){this.blinkStart=this.time;this.nextBlink=this.time+3.0+.65*(1+Math.sin(this.time*1.7));}
+    // Eyes and blinks follow the body's idle (shared gaze); a face used alone keeps its own.
+    const shared=this.idleSource?.(),idle=shared||this.ownIdle;
+    if(!shared)idle.update(dt,{speaking:playing,energy:clamp((Number.isFinite(volume)?volume:0)*2,0,1)});
+    if(idle.shiftSerial!==this.seenShift){this.seenShift=idle.shiftSerial;if(idle.shiftBlink&&Number.isFinite(this.nextBlink)&&this.nextBlink>this.time+.2)this.nextBlink=this.time+.06;}
+    if(idle.pauseSerial!==this.seenPause){this.seenPause=idle.pauseSerial;if(idle.pauseBlink&&Number.isFinite(this.nextBlink)&&this.nextBlink>this.time+.2)this.nextBlink=this.time+.05;}
+    if(this.time>=this.nextBlink){this.blinkStart=this.time;this.nextBlink=this.time+idle.blinkInterval();}
     const blinkT=this.time-this.blinkStart,blink=blinkT<.075?T.MathUtils.smoothstep(blinkT,0,.075):1-T.MathUtils.smoothstep(blinkT,.09,.23);
     const w=this.weights,styled=clamp(w.squint+w.flat,0,1);this.eyeClose=clamp(styled+(1-styled)*blink,0,1);
     const smile=w.smile+w.squint,forced=Math.max(w.surprised*.38,smile*.22,w.flat*.09);
     const open=super.update(Math.max(Number.isFinite(volume)?volume:0,.045+.70*forced),playing||forced>.001,dt);
-    this.smileUniform.value=clamp(smile,0,1);for(const target of this.smileTargets)target.mesh.morphTargetInfluences[target.index]=this.smileUniform.value;
-    for(const target of this.targets){target.mesh.morphTargetInfluences[target.closed]=this.eyeClose;target.mesh.morphTargetInfluences[target.wide]=w.surprised*(1-this.eyeClose);target.mesh.morphTargetInfluences[target.brow]=w.surprised;}
+    // Mood layer (smile/brow/lids) from the shared idle; presets that fix the eyes override it.
+    // A non-finite morph weight collapses the whole face mesh, so never pass one through.
+    const finite=v=>Number.isFinite(v)?v:0,raw=idle.out.face,life={smile:finite(raw.smile),brow:finite(raw.brow),lid:finite(raw.lid)},free=1-styled,calmEyes=1-clamp(w.surprised,0,1);
+    this.smileUniform.value=clamp(smile+life.smile*free,-.45,1);for(const target of this.smileTargets)target.mesh.morphTargetInfluences[target.index]=this.smileUniform.value;
+    const lid=this.eyeClose+(1-this.eyeClose)*life.lid*free*calmEyes,brow=clamp(w.surprised+life.brow*free,-.9,1.2);
+    for(const target of this.targets){target.mesh.morphTargetInfluences[target.closed]=lid;target.mesh.morphTargetInfluences[target.wide]=w.surprised*(1-this.eyeClose);target.mesh.morphTargetInfluences[target.brow]=brow;}
     this.iris.visible=this.eyeClose<.88;this.lash.visible=this.eyeClose<.72;
     this.iris.morphTargetInfluences[this.irisSurprise]=w.surprised;
     for(const {style,mesh} of this.inks){const opacity=style==='blink'?(1-styled)*this.eyeClose:(w[style]*this.eyeClose);mesh.material.opacity=opacity;mesh.visible=opacity>.02;}
     for(const eye of this.gaze){
-      const yaw=(Math.sin(this.time*.68)*.024+w.surprised*Math.sin(this.time*1.8)*.045)*(1-this.eyeClose);
-      this.gazeDelta.setFromEuler(this.gazeEuler.set(w.surprised*-.025,yaw,0));eye.bone.quaternion.copy(eye.local).multiply(eye.inverse.clone().multiply(this.gazeDelta).multiply(eye.world));
+      const yaw=(idle.eye.yaw+w.surprised*Math.sin(this.time*1.8)*.045)*(1-this.eyeClose);
+      this.gazeDelta.setFromEuler(this.gazeEuler.set(w.surprised*-.025+idle.eye.pitch*(1-this.eyeClose),yaw,0));eye.bone.quaternion.copy(eye.local).multiply(eye.inverse.clone().multiply(this.gazeDelta).multiply(eye.world));
     }
     return open;
   }

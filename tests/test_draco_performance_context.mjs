@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import {selectPerformance,performanceCommand,faceForAction,planPerformanceStory} from '../web_tool/mao-5070/draco/performance-context.mjs';
+import {selectPerformance,performanceCommand,faceForAction,planPerformanceStory,lookFor} from '../web_tool/mao-5070/draco/performance-context.mjs';
 import {createNativeBridge} from '../web_tool/mao-5070/draco/native-bridge.mjs';
+const pick=({action,face})=>({action,face});
 for(const [text,action,face] of [
   ['Chào Bắp Yêu, cảm ơn bạn đã ghé!','greet','smile'],
   ['Hihi, chuyện này dễ thương thật.','chuckle','squint'],
@@ -13,12 +14,12 @@ for(const [text,action,face] of [
   ['[hipSway] Mình làm thử nhé.','hipSway','smile'],
   ['[refuse] Không đâu nhé.','refuse','flat'],
   ['Bạn bảo lắc hông mạnh quá, mình sẽ chỉnh lại.','talk','neutral']
-])assert.deepEqual(selectPerformance(text),{action,face},text);
-assert.deepEqual(selectPerformance('Một câu bình thường.',[3]),{action:'talk',face:'smile'});
+])assert.deepEqual(pick(selectPerformance(text)),{action,face},text);
+assert.deepEqual(pick(selectPerformance('Một câu bình thường.',[3])),{action:'talk',face:'smile'});
 assert.equal(selectPerformance('Mao giật mình!',[3]).face,'surprised','content must beat ambiguous legacy expression index');
 assert.equal(faceForAction('tongue'),'neutral');
 for(const [motion,action,face] of [['refuse','refuse','flat'],['squint','chuckle','squint'],['flat','shrug','flat'],['surprised','surprise','surprised']]){
-  assert.deepEqual(selectPerformance('Một đoạn kể chuyện.',[],[motion]),{action,face});
+  assert.deepEqual(pick(selectPerformance('Một đoạn kể chuyện.',[],[motion])),{action,face});
 }
 for(const text of ['Mao lắc hông đi!','Lắc hông nhẹ đi','Mao thử lắc hông nhẹ nhé.'])assert.equal(performanceCommand(text),'hipSway',text);
 assert.equal(performanceCommand('Mao làm động tác không chịu đâu đi!'),'refuse');
@@ -35,3 +36,33 @@ assert.deepEqual(seen,['refuse','left']);
 console.log('Performance: speech/emotion selection, direct commands, negation, feedback, bridge dispatch and story playback passed.');
 
 assert.equal(selectPerformance("Á, sợ quá! Kaito lại chọc Mao rồi!").action,"surprise");
+
+// Mao picks the gesture that fits what she is saying.
+for(const [text,action,extra={}] of [
+  ['Mao chỉ biết lắc hông thôi, mọi người xem nè!','hipSway',{mood:'happy'}],
+  ['Nhảy hả? Mao nhảy thử cho xem nhé!','hipSway'],
+  ['Hông chịu đâu, Mao không hát bài đó đâu!','refuse',{face:'flat',mood:'annoyed'}],
+  ['Còn lâu Mao mới làm!','refuse'],
+  ['Không đâu nha, Mao mệt rồi.','refuse'],
+  ['Không sao đâu, Mao ổn mà.','reassure'],
+  ['Mao không biết đâu nè.','shrug'],
+  ['Á! Sau lưng Mao có gì hả?','surprise',{look:'behind'}],
+  ['Bên trái hả? Đâu, Mao nhìn rồi mà.','talk',{look:'left'}],
+  ['Ơ, bên phải có ai vậy?','talk',{look:'right'}],
+  ['Tiếng gì vậy ta?','turn',{look:'around'}],
+  ['Đúng rồi, Mao cũng nghĩ thế.','nod'],
+  ['Hehe, Mao giỏi chưa!','talk',{mood:'smug'}],
+  ['Buồn ngủ quá đi mất...','talk',{mood:'sleepy'}],
+  ['Tạm biệt mọi người nha!','greet']
+]){
+  const got=selectPerformance(text);assert.equal(got.action,action,text);
+  for(const [key,value] of Object.entries(extra))assert.equal(got[key],value,`${text}: ${key}`);
+}
+// Feedback, negation and look-alike words do not trigger gestures or looks.
+for(const text of ['Bạn bảo Mao đừng lắc hông nữa, Mao nhớ rồi.','Đừng nhảy nữa nhé.','Mà thôi, kể tiếp nha.','Đã đến lúc học bài rồi.','Thời gian trôi nhanh ghê.','Ai đó vừa tặng quà cho Mao.']){
+  const got=selectPerformance(text);
+  assert.ok(!['hipSway','surprise','nod','refuse'].includes(got.action),`${text} -> ${got.action}`);assert.equal(got.look,null,text);
+}
+assert.equal(lookFor('Phía sau Mao hả?'),'behind');assert.equal(lookFor('Mao ở đây nè'),null);
+const story=planPerformanceStory('Á! Sau lưng Mao có gì hả?\nHông chịu đâu!');assert.deepEqual(story.map(b=>[b.action,b.look]),[['surprise','behind'],['refuse',null]]);
+console.log('Performance: speech-fitting gestures, refusals, dance offer, looks and moods passed.');

@@ -1,7 +1,8 @@
 import * as T from '../3d/vendor/three.module.js';
 import {GarmentDynamics} from './secondary.mjs';
 import {prepareGarmentRig,narrowSleeves,clothBoneName} from './garment-rig.mjs?v=2';
-import {SkirtClearance} from './skirt-clearance.mjs?v=3';
+import {SkirtClearance} from './skirt-clearance.mjs?v=5';
+import {IdleLife} from './idle-life.mjs?v=4';
 
 import {ACTIONS,STORY_ACTIONS} from './actions.mjs';
 export {ACTIONS} from './actions.mjs';
@@ -12,6 +13,7 @@ const track=(t,keys)=>{if(t<=keys[0][0])return keys[0][1];for(let i=1;i<keys.len
 const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return (v-Math.floor(v))*2-1;};
 const drift=(t,seed,period=3.7)=>{const n=Math.floor(t/period),f=smooth(t/period-n);return T.MathUtils.lerp(hash(n+seed*83),hash(n+1+seed*83),f);};
 const pulse=(t,start,peak,hold,end)=>track(t,[[start,0],[peak,1],[hold,1],[end,0]]);
+const MOOD_OF=[['sad','sad'],['chuckle','happy'],['laugh','happy'],['celebrate','happy'],['shy','happy'],['reassure','happy'],['think','curious'],['surprise','curious'],['shrug','worried']];
 const faceHand={offset:[.075,-.100,.12],along:[-.65,.75,0],normal:[0,0,-1]};
 const HAND_POSES={
   chuckle:{L:faceHand},
@@ -63,7 +65,15 @@ export class BodyActor{
     this.dynamics=new GarmentDynamics(this);
     this.skirtClearance=new SkirtClearance(this);
     this.delta=new T.Quaternion();this.euler=new T.Euler(0,0,0,'XYZ');this.audit={footDrift:0};
+    // Living idle: breathing, weight shifts, gaze, micro sway. `idleAmount` is the
+    // master intensity (0 = frozen as before, 1 = default, up to 2).
+    this.idle=new IdleLife({seed:20260711});this.idleAmount=1;this.listening=false;this.idleMix={body:0,look:0,breath:0,face:0};
   }
+  setIdleIntensity(value){if(Number.isFinite(value))this.idleAmount=clamp(value,0,2);}
+  setListening(on){this.listening=!!on;}
+  // Cue-driven look ('left' | 'right' | 'behind' | 'around') and standing mood (MOODS name).
+  lookToward(direction){return this.idle.lookToward(direction);}
+  setMood(name,strength=1){this.idle.setMood(name,strength);}
   play(action){if(!ACTIONS.includes(action))return false;this.from=new Map([...this.state].map(([k,s])=>[k,s.x]));this.action=action;this.started=this.time;return true;}
   setLocomotion(value){this.locomotion=value;}
   spring(key,target,dt,f=2.7,damping=.95){
@@ -128,10 +138,20 @@ export class BodyActor{
     add('elbowR',-surprise*.24-shrug*.29-sad*.15,0,-surprise*1.1-shrug*.74-celebrate*1.35);
     add('wristL',-surprise*.10-shrug*.15,0,celebrate*.09);
     add('wristR',-surprise*.11-shrug*.15,0,-celebrate*.09);
+    // Living idle layer, faded out while walking, dancing or in big gestures.
+    const idleAct=this.action==='idle'||this.action==='talk',dancing=this.danceAmount||0,amount=this.idleAmount;
+    const mixTarget={body:idleAct?(1-walking)*(1-dancing)*amount:0,look:(this.action==='idle'?1:this.action==='talk'?.85:.4)*(1-walking)*(1-dancing)*amount,breath:(idleAct?1:.6)*(1-dancing*.5)*amount,face:amount};
+    // Gestures colour the face: the strongest story emotion sets the mood, otherwise calm.
+    let mood='calm',strength=0;for(const [name,mapped] of MOOD_OF){if(emotion[name]>strength){strength=emotion[name];mood=mapped;}}
+    this.idle.gestureMood(mood,clamp(strength*1.2));
+    const mixRate=1-Math.exp(-dt*3);for(const key in mixTarget)this.idleMix[key]+=(mixTarget[key]-this.idleMix[key])*mixRate;
+    const life=this.idle.update(dt,{speaking:this.action==='talk',listening:this.listening,energy:accent,mix:this.idleMix});
+    for(const name of ['pelvis','spine','chest','neck','head','clavicleL','clavicleR','upperL','upperR','elbowL','elbowR','wristL','wristR'])add(name,...life[name]);
+    add('waist',0,0,life.waistZ);
     const joyBounce=celebrate*(Math.exp(-Math.pow((a-1.65)/.22,2))+Math.exp(-Math.pow((a-2.35)/.25,2))*.65);
     const waist=this.joints.waist;
-    waist.position.x+=s('weightX',smallWeight+weight*.020+lift*.007+(left-right)*.003+support*.014-prepare*.008,gait?.feet?1.7:1.25);
-    waist.position.y+=s('dropY',-.0035-bow*.008-Math.abs(weight)*.002+breath*.0006-laughter*.0018+joyBounce*.0018-walking*.028+walking*Math.cos((gait?.phase||0)*2)*.006-prepare*.004,gait?.feet?1.8:1.5);
+    waist.position.x+=s('weightX',smallWeight+weight*.020+lift*.007+(left-right)*.003+support*.014-prepare*.008+life.waistX,gait?.feet?1.7:1.25);
+    waist.position.y+=s('dropY',-.0035-bow*.008-Math.abs(weight)*.002+breath*.0006-laughter*.0018+joyBounce*.0018-walking*.028+walking*Math.cos((gait?.phase||0)*2)*.006-prepare*.004+life.waistY,gait?.feet?1.8:1.5);
     waist.position.z+=s('bowBalanceZ',-bow*.028,1.65);
     // A 30-degree trunk bow, led from the hips. Small spine contributions
     // keep the back from folding sharply at one joint.
@@ -164,7 +184,7 @@ export class BodyActor{
         const point=side==='R'?emphasize:0;
         const curl=s(`curl${side}${digit}_${segment}`,
           (1-open)*(.09+digit*.012)*(segment===0?.65:1)+(digit===0?.018:0)
-          +celebrate*.62+point*(digit===1?-.09:.34)+(think&&side==='R'&&digit>1?think*.70:0),3.1);
+          +celebrate*.62+point*(digit===1?-.09:.34)+(think&&side==='R'&&digit>1?think*.70:0)+this.idle.out.finger[side]*(1-open)*(digit===0?.6:1),3.1);
         this.curlFinger(b,curl*(digit===0?.55:1),segment===0&&digit>0?(digit-2.5)*open*.014*(side==='L'?1:-1):0);
       }
     }
@@ -285,8 +305,9 @@ export class BodyActor{
       const k=h.clone().addScaledVector(axis,along).addScaledVector(pole,height);
       const aim=(bone,direction,restDir)=>{const world=new T.Quaternion().setFromUnitVectors(restDir,direction.normalize()).multiply(this.rest.get(bone).world);bone.quaternion.copy(bone.parent.getWorldQuaternion(new T.Quaternion()).invert()).multiply(world);bone.updateWorldMatrix(false,true);};
       aim(thigh,k.clone().sub(h),leg.upper);aim(knee,foot.clone().sub(k),leg.lower);
-      const sole=new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),this.locomotion?.footYaw?.[side]||0)
-        .multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),this.locomotion?.footPitch?.[side]||0)).multiply(this.rest.get(ankle).world);
+      const idleFoot=this.idle.out.foot[side],stand=this.locomotion?.feet?(1-clamp((this.locomotion.speed||0)*6)):1;
+      const sole=new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),(this.locomotion?.footYaw?.[side]||0)+idleFoot.yaw*stand)
+        .multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),(this.locomotion?.footPitch?.[side]||0)+idleFoot.pitch*stand)).multiply(this.rest.get(ankle).world);
       ankle.quaternion.copy(ankle.parent.getWorldQuaternion(new T.Quaternion()).invert()).multiply(sole);ankle.updateWorldMatrix(false,true);
       drift=Math.max(drift,ankle.getWorldPosition(new T.Vector3()).distanceTo(foot));
     }
