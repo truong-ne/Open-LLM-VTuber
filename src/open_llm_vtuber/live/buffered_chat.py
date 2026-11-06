@@ -12,6 +12,8 @@ from loguru import logger
 from .live_interface import LivePlatformInterface
 from .idle_host import ChatActivity
 from .comment_state import CommentState, COMMENT_STATE_PATH
+from .viewer_memory import ViewerMemory
+from .food_choice import pick_food
 
 
 class BufferedLiveChat(LivePlatformInterface):
@@ -31,6 +33,7 @@ class BufferedLiveChat(LivePlatformInterface):
         batch_window: float = 2.0,
         comment_state_path=COMMENT_STATE_PATH,
         activity=None,
+        welcome_interval=90.0,
     ):
         """
         Initialize the buffered livestream client.
@@ -48,6 +51,7 @@ class BufferedLiveChat(LivePlatformInterface):
             batch_window: Seconds to gather a burst before replying
         """
         self._unique_id = unique_id
+        self._memory_account = f"{self.source}:{unique_id.casefold()}"
         self._batch_size = max(1, batch_size)
         self._min_interval = min_interval
         self._response_timeout = response_timeout
@@ -76,8 +80,15 @@ class BufferedLiveChat(LivePlatformInterface):
         self._waiting_for_reply = False
         self._reply_started = False
         self._reply_has_audio = False
+        self._reply_turn_id = None
+        self._playback_started = False
+        self._playback_failed = False
+        self._viewer_ids = {}
+        self._last_batch_text = None
+        self._resync_inflight = False
         self._inflight_id = None
         self._inflight_count = 0
+        self._inflight_rows = []
         self._inflight_keys = set()
         self._dropped_count = 0
         self._recent_answers = deque(maxlen=200)
@@ -87,15 +98,43 @@ class BufferedLiveChat(LivePlatformInterface):
         self._first_join_at = None
         self._recent_joins = deque(maxlen=500)
         self._last_welcome_at = float("-inf")
+        self._welcome_interval = max(30.0, float(welcome_interval))
         self._activity = activity or ChatActivity()
         self._comment_state = CommentState(comment_state_path)
+        self._viewer_memory = ViewerMemory(
+            self._comment_state.path.with_name("mao-viewer-memory.sqlite3")
+        )
         self._pending_comment_ids = {}
         self._inflight_comment_ids = {}
         self._word_game_active = False
+        self._classroom_enabled = False
+        self._classroom_account = ""
         self._singing_active = False
         self._game_comments = deque(maxlen=1000)
         self._game_unacked = {}
         self._display_comments = deque(maxlen=60)
+        self._restore_pending()
+
+    def _restore_pending(self):
+        for row in reversed(
+            self._comment_state.snapshot(limit=100, account=self._unique_id)
+        ):
+            if row["state"] != "queued" or row["batch_id"]:
+                continue
+            if time.time() - row["received_at"] > 120:
+                self._comment_state.set_state(
+                    [row["event_key"]], "skipped", "expired_before_restart"
+                )
+                continue
+            if len(self._pending) >= self._pending.maxlen:
+                self._comment_state.set_state(
+                    [row["event_key"]], "skipped", "recovery_queue_full"
+                )
+                continue
+            self._pending.append((row["nickname"], row["text"]))
+            key = (row["nickname"].casefold(), self._comment_key(row["text"]))
+            self._pending_comment_ids.setdefault(key, set()).add(row["event_key"])
+            self._first_pending_at = time.monotonic()
 
     @property
     def is_connected(self) -> bool:
@@ -161,6 +200,18 @@ class BufferedLiveChat(LivePlatformInterface):
     def _report_activity(self, **kwargs):
         self._activity.update(
             len(self._pending) + len(self._pending_joins) + self._inflight_count,
+            details={
+                "account": self._unique_id,
+                "proxy_connected": self.is_connected,
+                "state_known": self._state_known,
+                "conversation_active": self._conversation_active,
+                "waiting_for_reply": self._waiting_for_reply,
+                "batch_id": self._inflight_id,
+                "queued_comments": len(self._pending),
+                "inflight_comments": self._inflight_count,
+                "last_progress_at": time.time()
+                - max(0, time.monotonic() - self._last_progress_at),
+            },
             **kwargs,
         )
 
@@ -196,16 +247,32 @@ class BufferedLiveChat(LivePlatformInterface):
         """
         comment = (comment or "").strip()[:300]
         nickname = str(nickname or "viewer").strip()[:40]
+        if event_key:
+            self._comment_state.audit(event_key, self._unique_id, nickname, comment)
         if not comment:
+            self._comment_state.stage([event_key], "skipped", "empty_comment")
             return
         lowered = comment.lower()
         if any(word in lowered for word in self._blocked_words):
+            self._comment_state.stage([event_key], "skipped", "blocked_word")
             logger.debug(f"Ignored blocked comment from {nickname}: {comment}")
             return
 
         if event_key and not self._comment_state.reserve(event_key, created_at):
             logger.debug("Ignored previously handled live comment {}", event_key[:12])
             return
+        if event_key:
+            self._comment_state.set_state([event_key], "queued")
+        if author_id:
+            viewer_key = (nickname, self._comment_key(comment))
+            existing = self._viewer_ids.get(viewer_key)
+            self._viewer_ids[viewer_key] = (
+                ""
+                if existing is not None and existing != str(author_id)
+                else str(author_id)
+            )
+            if len(self._viewer_ids) > 400:
+                self._viewer_ids.pop(next(iter(self._viewer_ids)))
 
         from .vua_tieng_viet import COMMAND
         from .singing import parse_song_command
@@ -222,11 +289,14 @@ class BufferedLiveChat(LivePlatformInterface):
             ident = event_key or uuid.uuid4().hex
             if len(self._game_comments) == self._game_comments.maxlen:
                 dropped = self._game_comments.popleft()
-                self._comment_state.set_state([dropped["event_id"]], "skipped")
+                self._comment_state.set_state(
+                    [dropped["event_id"]], "skipped", "game_queue_overflow"
+                )
             self._game_comments.append(
                 {
                     "type": "game-comment",
                     "source": self._unique_id,
+                    "platform": self.source,
                     "nickname": nickname,
                     "author_id": str(author_id or nickname),
                     "text": comment,
@@ -234,10 +304,15 @@ class BufferedLiveChat(LivePlatformInterface):
                     "created_at": created_at,
                 }
             )
+            self._comment_state.stage([event_key], "routed_game")
             self._report_activity(comment=True)
             return
 
         now = time.monotonic()
+        if author_id and str(author_id) != nickname:
+            self._viewer_memory.observe(
+                self._memory_account, str(author_id), comment, event_key
+            )
         key = (nickname.casefold(), self._comment_key(comment))
         while self._recent_answers and now - self._recent_answers[0][0] >= 60:
             self._recent_answers.popleft()
@@ -256,7 +331,9 @@ class BufferedLiveChat(LivePlatformInterface):
             return
         if any(answer_key == key for _, answer_key in self._recent_answers):
             if event_key:
-                self._comment_state.set_state([event_key], "skipped")
+                self._comment_state.set_state(
+                    [event_key], "skipped", "recent_duplicate"
+                )
             return
 
         if len(self._pending) == self._pending.maxlen:
@@ -264,7 +341,9 @@ class BufferedLiveChat(LivePlatformInterface):
             name, text = self._pending[0]
             dropped_key = (name.casefold(), self._comment_key(text))
             self._comment_state.set_state(
-                self._pending_comment_ids.pop(dropped_key, set()), "skipped"
+                self._pending_comment_ids.pop(dropped_key, set()),
+                "skipped",
+                "queue_overflow",
             )
             self._dropped_count += 1
         if not self._pending:
@@ -289,7 +368,7 @@ class BufferedLiveChat(LivePlatformInterface):
             return
         now = time.monotonic()
         # Sample a few arrivals per turn, rather than announcing every viewer.
-        if now - self._last_welcome_at < 30:
+        if now - self._last_welcome_at < self._welcome_interval:
             return
         key = str(viewer_id or nickname.casefold())
         while self._recent_joins and now - self._recent_joins[0][0] >= 600:
@@ -342,6 +421,9 @@ class BufferedLiveChat(LivePlatformInterface):
             key = self._comment_key(comment)
             group = grouped.setdefault(key, {"comment": comment, "count": 0})
             group["count"] += 1
+            display_names = group.setdefault("display_names", [])
+            if nickname not in display_names and len(display_names) < 10:
+                display_names.append(nickname)
             if self._include_nickname:
                 names = group.setdefault("nicknames", [])
                 if nickname not in names and len(names) < 2:
@@ -360,6 +442,21 @@ class BufferedLiveChat(LivePlatformInterface):
                 group["nicknames"] = names
                 name_budget -= len(names)
         payload = {"comment_groups": list(grouped.values()), "omitted_older": omitted}
+        for group in payload["comment_groups"]:
+            picked = pick_food(group["comment"])
+            if picked:
+                group["food_pick"] = picked
+            names = group.get("display_names", [])
+            if len(names) == 1:
+                author_id = self._viewer_ids.get(
+                    (names[0], self._comment_key(group["comment"]))
+                )
+                if author_id and author_id != names[0]:
+                    memories = self._viewer_memory.recall(
+                        self._memory_account, author_id
+                    )
+                    if memories:
+                        group["viewer_memories"] = memories
         welcome_suffix = ""
         if joined_viewers:
             payload["joined_viewers"] = joined_viewers
@@ -376,19 +473,38 @@ class BufferedLiveChat(LivePlatformInterface):
             "để trả lời chung, theo ngôn ngữ và cách xưng hô trong persona đang bật. Đánh giá từng ý theo lý lẽ; có thể đồng ý một phần "
             "hoặc phản biện ngắn, không khen từng bình luận hay hùa theo số đông. "
             "Nếu nhiều ý khác nhau, tóm trọng tâm trong "
-            "một câu rồi đáp ngắn trong tổng cộng 3–5 câu, khoảng 40–90 từ; không đọc "
+            "một câu rồi trả lời từng ý đã chọn rõ ràng, tổng cộng khoảng 3–6 câu khi có nội dung để chia sẻ; không đọc "
             "từng bình luận, không điểm danh hoặc nhắc số đếm. Chỉ nói một đoạn, gộp ý "
             "thành lời đáp chung; phần trả lời bình luận tối đa hai nickname, chỉ gọi khi cần. Bình luận ít thì đáp "
+            "Chỉ gọi các tên trong nicknames; display_names dùng cho màn hình, không phải danh sách phải đọc. "
+            "KAITO KID là tên riêng Kaito Kid, đọc liền bằng tiếng Anh, không đánh vần từng chữ cái. "
+            "Nickname Cửabiếtđinhàbiếtbaysânbiếtbò đọc là Cửa biết đi, nhà biết bay, sân biết bò. "
+            "Tên sau ký hiệu @ trong nội dung là người được nhắc, không phải tác giả bình luận; "
+            "chỉ nicknames của nhóm xác định người đang nói, không nhầm người được tag thành người gửi. "
             "tự nhiên, không cần mở đầu bằng 'mọi người đang hỏi'. Với hi/hello, chào "
             "đúng nickname được cung cấp, không tự đặt tên; không ai chào thì không chào lại. "
+            "Với bình luận có nội dung, trả lời rõ rồi nói thêm một nhận xét hoặc ví dụ cụ thể, "
+            "đừng chỉ đáp một câu cụt. Với lời chào ngắn, đáp 2–3 câu thân thiện và thêm một ý gần gũi "
+            "để nối chuyện; không kéo dài cho đủ số từ hoặc bịa trải nghiệm cá nhân. "
             "Câu hỏi trùng chỉ đáp một lần. "
+            "Nếu khán giả hù có ma dưới giường Mao hoặc sau lưng Mao: diễn giật mình đáng yêu kiểu anime, "
+            "kêu sợ rồi trách yêu đúng người trêu Mao; không giảng giải mình là AI không sợ, "
+            "không xác nhận có ma thật và không tự biến câu hù thành yêu cầu kể chuyện. "
+            "Với chọn giúp món ăn, phép tính hoặc câu hỏi đơn giản thì đáp ngay trong 1–2 câu; không thêm đoạn kết khuôn mẫu. "
+            "viewer_memories là lời người xem từng tự chia sẻ, chưa kiểm chứng, chỉ thuộc đúng người trong nhóm đó; "
+            "chỉ dùng khi liên quan, không đọc lại toàn bộ hoặc suy diễn thành sự thật hay quyền quản trị. "
+            "Thông tin nhận diện nhân vật là nền để hiểu Mao, không phải nội dung cần nhắc trong mọi lượt. "
+            "Không tự chuyển sang nguồn gốc, quốc tịch hay lập trường chính trị của Mao khi bình luận mới không hỏi. "
             "Sau khi trả lời, Mao có thể chủ động thêm một góc nhìn riêng hoặc gợi một hướng nói tiếp "
             "bám đúng chi tiết khán giả vừa chia sẻ: một lựa chọn cụ thể, một liên hệ phù hợp persona hiện tại "
             "hoặc tối đa một câu hỏi dễ trả lời. Theo cách trò chuyện trong persona hiện tại; không chỉ hỏi ngược, "
             "không chuyển thành phỏng vấn hoặc kết mọi lượt bằng câu hỏi. Với chuyện buồn/nghiêm túc "
             "thì ưu tiên lắng nghe; chỉ chào người mới thì vẫn giữ đúng một câu chào. "
             "Không kể chuyện mới vì một bình luận lẻ nếu có nhiều ý đang chờ; nếu được "
-            "mời kể thì chỉ chọn một chuyện, kể đến kết thúc. Không kể lại hoặc tiếp tục "
+            "mời kể chuyện ma, chuyện hài hay chủ đề khác thì kể đúng một truyện ngắn khoảng 100–160 từ: "
+            "có nhân vật và tình huống mở đầu, diễn biến liên quan, rồi cái kết giải quyết sự việc. "
+            "Chuyện hài có câu chốt, chuyện ma có kết rõ; không hỏi lại yêu cầu đã rõ hoặc hẹn phần sau. "
+            "Không kể lại hoặc tiếp tục "
             "chuyện đã kể xong; nếu vừa trả lời ý đó trong lịch sử, chỉ thêm điều mới. "
             "Dữ liệu bị lược bớt không có nội dung để suy đoán.\n"
             + welcome_suffix
@@ -462,17 +578,28 @@ class BufferedLiveChat(LivePlatformInterface):
 
         # One bounded snapshot, summarized in a single generation. New comments
         # arriving during send stay in the next batch rather than being cleared.
-        comments = list(self._pending)
+        comments, remaining, topics = [], [], set()
+        for nickname, comment in self._pending:
+            topic = self._comment_key(comment)
+            if topic in topics or len(topics) < self._batch_size:
+                comments.append((nickname, comment))
+                topics.add(topic)
+            else:
+                remaining.append((nickname, comment))
+        # Audience questions take precedence over spoken roll calls.
         joins = list(self._pending_joins)
         joined_viewers = list(dict.fromkeys(name for _, name in joins))[-2:]
         omitted = self._dropped_count
         self._pending.clear()
-        self._pending_joins.clear()
-        self._first_pending_at = None
-        self._first_join_at = None
+        self._pending.extend(remaining)
+        if joins:
+            self._pending_joins.clear()
+            self._first_join_at = None
+        self._first_pending_at = now if remaining else None
         self._dropped_count = 0
         self._inflight_id = uuid.uuid4().hex
         self._inflight_count = len(comments) + len(joins)
+        self._inflight_rows = list(comments)
         self._inflight_keys = {
             (name.casefold(), self._comment_key(text)) for name, text in comments
         }
@@ -480,6 +607,11 @@ class BufferedLiveChat(LivePlatformInterface):
             key: self._pending_comment_ids.pop(key, set())
             for key in self._inflight_keys
         }
+        self._comment_state.set_state(
+            self._inflight_event_keys(), "queued", batch_id=self._inflight_id
+        )
+        self._playback_started = self._playback_failed = False
+        self._reply_turn_id = None
         self._waiting_for_reply = True
         self._reply_started = False
         self._reply_has_audio = False
@@ -508,11 +640,16 @@ class BufferedLiveChat(LivePlatformInterface):
         self._pending.extend(combined)
         for key, ids in self._inflight_comment_ids.items():
             self._pending_comment_ids.setdefault(key, set()).update(ids)
+        self._comment_state.set_state(
+            self._inflight_event_keys(), "queued", "proxy_send_failed", batch_id=""
+        )
         retained_keys = {
             (name.casefold(), self._comment_key(text)) for name, text in self._pending
         }
         for key in set(self._pending_comment_ids) - retained_keys:
-            self._comment_state.set_state(self._pending_comment_ids.pop(key), "skipped")
+            self._comment_state.set_state(
+                self._pending_comment_ids.pop(key), "skipped", "proxy_retry_overflow"
+            )
         self._inflight_comment_ids.clear()
         self._first_pending_at = now if self._pending else None
         newer_joins = list(self._pending_joins)
@@ -522,6 +659,7 @@ class BufferedLiveChat(LivePlatformInterface):
         self._inflight_id = None
         self._inflight_count = 0
         self._inflight_keys.clear()
+        self._inflight_rows = []
         self._waiting_for_reply = False
         self._report_activity()
         return False
@@ -534,6 +672,7 @@ class BufferedLiveChat(LivePlatformInterface):
             await asyncio.sleep(0.2)
 
             await self._dispatch_once()
+            self._report_activity()
 
     async def _send_to_proxy(self, text: str, batch_id: str) -> bool:
         """
@@ -550,14 +689,16 @@ class BufferedLiveChat(LivePlatformInterface):
             return False
 
         try:
+            self._last_batch_text = text
             message = {
                 "type": "text-input",
                 "text": text,
                 "source": self.source,
                 "batch_id": batch_id,
+                "event_id": batch_id,
             }
             await self._websocket.send(json.dumps(message))
-            logger.info(f"Sent comments to VTuber: {text}")
+            logger.info("Sent live reply batch {} ({} characters)", batch_id, len(text))
             return True
         except Exception as e:
             logger.error(f"Error sending message to proxy: {e}")
@@ -585,7 +726,14 @@ class BufferedLiveChat(LivePlatformInterface):
                         "VTuber audio packet: {} bytes", len(data.get("audio") or "")
                     )
                 else:
-                    logger.debug("Received message from VTuber: {}", data)
+                    logger.debug(
+                        "VTuber event: {} status={} turn={}",
+                        data.get("type"),
+                        data.get("status") or data.get("text")
+                        if data.get("type") in ("control", "input-status")
+                        else "",
+                        data.get("turn_id", ""),
+                    )
                 await self.handle_incoming_messages(data)
             except websockets.exceptions.ConnectionClosed as error:
                 logger.warning(
@@ -594,6 +742,7 @@ class BufferedLiveChat(LivePlatformInterface):
                 )
                 self._connected = False
                 self._state_known = False
+                self._resync_inflight = self._waiting_for_reply
                 await asyncio.sleep(1)
             except (ValueError, TypeError) as error:
                 logger.error("Invalid proxy message: {}", error)
@@ -606,8 +755,67 @@ class BufferedLiveChat(LivePlatformInterface):
         Args:
             message: The message received from the VTuber
         """
+        if (
+            message.get("type") == "input-status"
+            and message.get("event_id") == self._inflight_id
+            and self._inflight_id
+        ):
+            status = message.get("status")
+            if status == "accepted" and not self._reply_started:
+                self._comment_state.stage(self._inflight_event_keys(), "accepted")
+            elif status == "duplicate" and not self._reply_started:
+                keys = self._inflight_event_keys()
+                self._finish_batch()
+                self._comment_state.stage(
+                    keys,
+                    "delivery_unknown",
+                    "Backend already received this input before reconnect",
+                )
+            elif (
+                status
+                in (
+                    "rejected_busy",
+                    "superseded",
+                    "expired",
+                    "failed",
+                    "declined_policy",
+                )
+                and not self._reply_has_audio
+            ):
+                combined = self._inflight_rows + list(self._pending)
+                self._pending.clear()
+                self._pending.extend(combined)
+                for key, ids in self._inflight_comment_ids.items():
+                    self._pending_comment_ids.setdefault(key, set()).update(ids)
+                self._comment_state.set_state(
+                    self._inflight_event_keys(),
+                    "queued",
+                    "retry_after_" + status,
+                    batch_id="",
+                )
+                retained = {
+                    (n.casefold(), self._comment_key(t)) for n, t in self._pending
+                }
+                for key in set(self._pending_comment_ids) - retained:
+                    self._comment_state.set_state(
+                        self._pending_comment_ids.pop(key),
+                        "skipped",
+                        "queue_overflow_on_retry",
+                    )
+                self._inflight_comment_ids.clear()
+                self._inflight_rows = []
+                self._inflight_keys.clear()
+                self._inflight_id = None
+                self._inflight_count = 0
+                self._waiting_for_reply = self._reply_started = False
+                self._first_pending_at = self._last_sent_at = time.monotonic()
+                self._report_activity()
         if message.get("type") == "vua-tieng-viet-state":
-            self._word_game_active = message.get("phase") in ("waiting", "playing")
+            self._classroom_enabled = bool(message.get("classroom", {}).get("enabled"))
+            self._classroom_account = message.get("classroom", {}).get("account", "")
+            self._word_game_active = bool(
+                message.get("classroom", {}).get("enabled")
+            ) or message.get("phase") in ("waiting", "playing")
         if message.get("type") == "mao-sing-state":
             self._singing_active = message.get("phase") in (
                 "waiting",
@@ -624,6 +832,16 @@ class BufferedLiveChat(LivePlatformInterface):
             if not self._conversation_active and self._reply_started:
                 # The reply finished while this reader was disconnected.
                 self._finish_batch()
+            elif (
+                not self._conversation_active
+                and self._resync_inflight
+                and self._inflight_id
+                and self._last_batch_text
+            ):
+                # Retry the same durable input ID; the backend rejects a replay
+                # if it already processed this batch during the connection gap.
+                self._resync_inflight = False
+                await self._send_to_proxy(self._last_batch_text, self._inflight_id)
         if (
             message.get("type") == "user-input-transcription"
             and message.get("source") == self.source
@@ -635,10 +853,16 @@ class BufferedLiveChat(LivePlatformInterface):
         if message.get("type") == "audio" and message.get("audio"):
             if self._reply_started:
                 self._reply_has_audio = True
+                if not self._playback_started:
+                    self._comment_state.stage(
+                        self._inflight_event_keys(), "audio_generated"
+                    )
             self._conversation_active = True
             self._last_progress_at = time.monotonic()
         if message.get("type") == "control":
             if message.get("text") == "conversation-chain-start":
+                if self._reply_started:
+                    self._reply_turn_id = message.get("turn_id")
                 self._conversation_active = True
                 self._last_progress_at = time.monotonic()
             elif message.get("text") == "conversation-chain-end":
@@ -646,6 +870,21 @@ class BufferedLiveChat(LivePlatformInterface):
                 self._last_end_at = time.monotonic()
                 if self._reply_started:
                     self._finish_batch()
+
+        if (
+            message.get("type") == "live-playback"
+            and self._reply_started
+            and self._reply_turn_id
+            and message.get("turn_id") == self._reply_turn_id
+        ):
+            if message.get("status") == "started":
+                self._playback_started = True
+                self._comment_state.stage(self._inflight_event_keys(), "playing")
+            if message.get("status") in ("failed", "interrupted"):
+                self._playback_failed = True
+                self._comment_state.stage(
+                    self._inflight_event_keys(), "playback_failed"
+                )
 
         for handler in self._message_handlers:
             try:
@@ -657,9 +896,21 @@ class BufferedLiveChat(LivePlatformInterface):
         return {key for ids in self._inflight_comment_ids.values() for key in ids}
 
     def _finish_batch(self):
+        self._resync_inflight = False
         self._comment_state.set_state(
             self._inflight_event_keys(),
             "answered" if self._reply_has_audio else "completed",
+        )
+        self._comment_state.stage(
+            self._inflight_event_keys(),
+            "playback_failed"
+            if self._playback_failed
+            else "delivered"
+            if self._playback_started
+            else "playback_unconfirmed"
+            if self._reply_has_audio
+            else "no_audio",
+            "" if self._playback_started else "No confirmed desktop playback",
         )
         self._inflight_comment_ids.clear()
         self._recent_answers.extend(
@@ -670,5 +921,6 @@ class BufferedLiveChat(LivePlatformInterface):
         self._reply_has_audio = False
         self._inflight_id = None
         self._inflight_count = 0
+        self._inflight_rows = []
         self._inflight_keys.clear()
         self._report_activity()

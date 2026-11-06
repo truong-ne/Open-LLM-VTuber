@@ -2,6 +2,7 @@ import os
 import sys
 import asyncio
 import argparse
+import time
 from loguru import logger
 
 # Add project root to path to enable imports
@@ -13,7 +14,13 @@ from src.open_llm_vtuber.live.idle_host import IdleHost
 from src.open_llm_vtuber.config_manager.utils import read_yaml, validate_config
 
 
-async def main(username: str = "", retry_seconds: float = 15.0):
+async def main(
+    username: str = "",
+    retry_seconds: float = 15.0,
+    *,
+    no_host=False,
+    classroom_only=False,
+):
     """
     Main function to run the TikTok Live platform client.
     Connects to a TikTok live room and forwards comments to the VTuber.
@@ -37,10 +44,18 @@ async def main(username: str = "", retry_seconds: float = 15.0):
             return
 
         port = config.system_config.port
-        host_task = asyncio.create_task(IdleHost(f"ws://127.0.0.1:{port}/proxy-ws").run())
+        if not no_host and not classroom_only:
+            host_task = asyncio.create_task(
+                IdleHost(f"ws://127.0.0.1:{port}/proxy-ws").run()
+            )
+        listen_started_at=time.time()
         while True:
             platform = TikTokLivePlatform(
                 unique_id=unique_id,
+                classroom_only=classroom_only,
+                health_path=os.path.join(
+                    project_root, "private/tiktok-reader-health.json"
+                ),
                 batch_size=tiktok_config.batch_size,
                 batch_window=tiktok_config.batch_window,
                 max_pending_comments=tiktok_config.max_pending_comments,
@@ -50,13 +65,18 @@ async def main(username: str = "", retry_seconds: float = 15.0):
                 blocked_words=tiktok_config.blocked_words,
                 proxy_url=f"ws://127.0.0.1:{port}/proxy-ws",
             )
+            platform._listen_started_at=max(listen_started_at,time.time()-120)
             await platform.run()
             if retry_seconds <= 0:
                 break
+            offline = platform._reader_health.get("phase") == "offline"
+            delay = max(retry_seconds, 60) if offline else retry_seconds
             logger.info(
-                f"TikTok connection ended or room is offline; retrying in {retry_seconds:g}s"
+                "TikTok reader waiting {}s ({})",
+                delay,
+                "offline" if offline else "reconnect",
             )
-            await asyncio.sleep(retry_seconds)
+            await asyncio.sleep(delay)
 
     except ImportError as e:
         logger.error(f"Failed to import required modules: {e}")
@@ -78,12 +98,29 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Read TikTok LIVE comments into Mao")
     parser.add_argument("--username", default="", help="Streamer @username")
     parser.add_argument(
-        "--retry-seconds", type=float, default=15.0,
+        "--retry-seconds",
+        type=float,
+        default=15.0,
         help="Reconnect delay when offline; 0 disables retries",
+    )
+    parser.add_argument(
+        "--no-host", action="store_true", help="Use the already running proactive host"
+    )
+    parser.add_argument(
+        "--classroom-only",
+        action="store_true",
+        help="Forward comments only while this account's classroom is enabled; no joins or idle host",
     )
     args = parser.parse_args()
     try:
-        asyncio.run(main(args.username, args.retry_seconds))
+        asyncio.run(
+            main(
+                args.username,
+                args.retry_seconds,
+                no_host=args.no_host,
+                classroom_only=args.classroom_only,
+            )
+        )
     except KeyboardInterrupt:
         logger.info("Shutting down TikTok Live platform")
 

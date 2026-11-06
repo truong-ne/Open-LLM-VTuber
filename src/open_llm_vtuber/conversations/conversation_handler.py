@@ -76,6 +76,18 @@ async def handle_conversation_trigger(
         from ..interaction.service import enabled
 
         host_authorized = not enabled(context) or verify_host_proposal(data)
+        if data.get("source") == "mao-wesnoth":
+            if not verify_host_proposal(data):
+                await websocket.send_text(
+                    json.dumps({"type": "error", "message": "Invalid game host proof"})
+                )
+                return
+            metadata = {
+                "wesnoth_turn": True,
+                "skip_memory": True,
+                "skip_history": True,
+                "_host_proposal": True,
+            }
         if host_authorized and data.get("source") == "mao-idle-host":
             metadata = {
                 "proactive_speak": True,
@@ -85,11 +97,13 @@ async def handle_conversation_trigger(
             }
         if (
             host_authorized
-            and data.get("source") == "mao-idle-host"
+            and data.get("source") in {"mao-idle-host", "mao-gift"}
+            and (data.get("source") != "mao-gift" or verify_host_proposal(data))
             and isinstance(data.get("narration_speech"), str)
         ):
             metadata = {
                 "narration_speech": data["narration_speech"][:1400],
+                "gift_thanks": data.get("source") == "mao-gift",
                 "skip_history": True,
                 "skip_memory": True,
                 "_host_proposal": True,
@@ -243,7 +257,8 @@ async def handle_conversation_trigger(
             "proactive"
             if msg_type == "ai-speak-signal" or source == "mao-idle-host"
             else "activity"
-            if metadata and metadata.get("game_speech")
+            if metadata
+            and (metadata.get("game_speech") or metadata.get("wesnoth_turn"))
             else "direct"
         )
         await coordinator(context.agent_engine._hybrid.store.scope).submit(

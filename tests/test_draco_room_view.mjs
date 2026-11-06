@@ -46,3 +46,9 @@ settings.width=800;assert.equal(configureAvatarCamera(cached,settings),true,'res
 settings.roomView={kind:'follow',focus:{x:0,z:0}};assert.equal(configureAvatarCamera(cached,settings),true);assert.equal(configureAvatarCamera(cached,settings),false);
 settings.roomView.focus.x=.5;assert.equal(configureAvatarCamera(cached,settings),true,'following Mao reuses stale camera position');
 console.log('Window room camera: footer reserved, 6 pane sizes, orbit/follow, cached projection invalidation and unchanged Pet Mode projection passed.');
+for(const [width,height] of [[370,400],[380,700]]){
+  configureAvatarCamera(camera,{mode:'window',view,width,height,roomView:{classroom:true}});
+  const head=new T.Vector3(0,1.8,-1.65).project(camera),waist=new T.Vector3(0,.95,-1.65).project(camera);
+  assert.ok(Math.abs(head.y)<.98&&Math.abs(waist.y)<.98,'waist-up classroom framing lost the head or torso');
+  assert.equal(configureAvatarCamera(camera,{mode:'window',view,width,height,roomView:{classroom:true}}),false);
+}

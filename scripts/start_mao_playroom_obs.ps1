@@ -1,4 +1,4 @@
-param()
+param([Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$WindowTitle)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path -Parent $PSScriptRoot
 $taskObsRoot=Join-Path $taskRoot 'private/tools/obs-33.0.0'
@@ -28,7 +28,7 @@ while(-not (Get-NetTCPConnection -LocalPort $taskSettings.server_port -State Lis
 }
 Push-Location -LiteralPath $taskRoot
 try{
- & $taskPython scripts/mao_playroom_obs.py configure
- if($LASTEXITCODE -ne 0){throw 'Open the dedicated game Chrome first, then retry. No stream was started.'}
+ & $taskPython scripts/mao_playroom_obs.py configure --window-title $WindowTitle
+ if($LASTEXITCODE -ne 0){throw 'Open exactly one window with the selected title, then retry. No stream was started.'}
 }finally{Pop-Location}
 Write-Output 'Private game scene ready. No stream or recording started.'

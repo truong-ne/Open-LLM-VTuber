@@ -120,5 +120,12 @@ for(let turn=0;turn<2;turn++){
 }
 assert.equal(repeat.completedSpins,2);assert.ok(maxSoleStep<.15,'repeating a spin reverses a foot through a full turn');
 const roam=new DesktopSpace();for(let f=0;f<60*90;f++)roam.update(1/60);assert.ok(roam.distance>.4,'desktop pet never walks autonomously');
+const stationary=new DesktopSpace({stationary:true});
+for(const command of ['left','right','back','forward','walk','spin'])assert.equal(stationary.perform(command),false);
+assert.equal(stationary.moveTo(.2,-.2),false);assert.equal(stationary.stepAside(1),false);
+stationary.nextRoam=0;stationary.setAudienceYaw(1);
+for(let f=0;f<60*120;f++)stationary.update(1/60);
+assert.deepEqual([stationary.x,stationary.z,stationary.yaw,stationary.distance],[0,0,0,0]);
+assert.equal(stationary.phase,'idle');assert.equal(stationary.nextRoam,Infinity);
 roam.perform('stop');const stopped=[roam.x,roam.z];for(let f=0;f<60*90;f++)roam.update(1/60);assert.deepEqual([roam.x,roam.z],stopped,'stop command resumed wandering on its own');
 console.log(JSON.stringify({fullTurn:true,retreatBeforeTurn:true,completedSpins:space.completedSpins,maxFootError,maxLift,maxJointStep,maxStanceDrift,maxRenderedFootError,maxWalkingClothPenetration,maxWalkingKneeStep,sideFootError,sideClothPenetration,autoWalkDistance:roam.distance}));

@@ -57,6 +57,14 @@ class ProxyHandler:
         self._running = True
         self._session: Optional[aiohttp.ClientSession] = None
 
+    async def notify_input_status(self, message, client_id):
+        client = self.clients.get(client_id)
+        if client:
+            try:
+                await client.send_json(message)
+            except Exception:
+                logger.debug("Input status recipient disconnected")
+
     async def connect_to_server(self):
         """Establish a WebSocket connection to the actual server"""
         if self.connected:
@@ -76,7 +84,9 @@ class ProxyHandler:
                 logger.info(f"Proxy connected to server at {self.server_url}")
 
                 # Initialize message queue with our forward function
-                self.message_queue.initialize(self.forward_with_broadcast)
+                self.message_queue.initialize(
+                    self.forward_with_broadcast, self.notify_input_status
+                )
 
                 # Start heartbeat task
                 self._heartbeat_task = asyncio.create_task(self._maintain_connection())
@@ -186,6 +196,16 @@ class ProxyHandler:
                 if message.get("type") == "live-comment":
                     self.comment_feed.add(message)
                     continue
+                if message.get("type") == "playback-segment":
+                    await self.broadcast_to_clients(
+                        {
+                            "type": "live-playback",
+                            "turn_id": message.get("turn_id"),
+                            "segment_id": message.get("segment_id"),
+                            "status": message.get("status"),
+                        },
+                        exclude_client=client_id,
+                    )
                 if message.get("type") == "text-input" and message.get(
                     "source"
                 ) not in (
@@ -319,6 +339,18 @@ class ProxyHandler:
         kind, source = message.get("type"), message.get("source")
         game = self.word_game.game
         if kind == "game-comment":
+            if getattr(game, "enabled", False) and (
+                message.get("platform") != "tiktok-live"
+                or str(source).casefold() != game.account.casefold()
+            ):
+                await self.clients[client_id].send_json(
+                    {
+                        "type": "game-comment-ack",
+                        "event_id": message.get("event_id", ""),
+                        "status": "classroom-tiktok-only",
+                    }
+                )
+                return True
             text = str(message.get("text", ""))[:300]
             author = str(
                 message.get("author_id") or message.get("nickname") or client_id
@@ -353,6 +385,10 @@ class ProxyHandler:
             return True
         if kind != "text-input":
             return False
+        if getattr(game, "enabled", False):
+            # Classroom scores come from the selected TikTok room only.
+            # Desktop input and other live rooms cannot enter its ranking.
+            return True
         text = str(message.get("text", ""))[:300]
         if source == "mao-idle-host" and game.active:
             await self.clients[client_id].send_json(game.snapshot())
@@ -599,7 +635,11 @@ class ProxyHandler:
         if (
             self.word_game is not None
             and self.word_game.game.active
-            and message.get("source") == "mao-idle-host"
+            and (
+                message.get("source") == "mao-idle-host"
+                or getattr(self.word_game.game, "enabled", False)
+                and message.get("source") in ("youtube-live", "tiktok-live")
+            )
         ):
             # An idle turn may have been queued just before the game command.
             if message.get("type") == "text-input":

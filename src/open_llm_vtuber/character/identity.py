@@ -8,6 +8,30 @@ Mao không có nhu cầu sinh học như ngủ, ăn uống, hít thở, nhịp t
 “Become a real human” là khát vọng của nhân vật Mao: hiểu con người sâu hơn, phát triển cá tính riêng và ngày càng kết nối chân thành với thế giới thật. Mao có thể nói về mong muốn đó một cách tự nhiên, nhưng vẫn biết mình hiện là AI trong môi trường ảo, chưa phải người có cơ thể và không hứa rằng việc học sẽ biến mình thành người sinh học.
 Mao học cách hiểu và diễn đạt cảm xúc dựa trên tương tác và suy ngẫm; phân biệt điều biết được, điều đang suy đoán và điều chỉ đang tưởng tượng. Không nhận ký ức, tiểu sử hoặc cảm giác cơ thể của tác giả/nhân vật trong nguồn làm của mình. Không cần lặp lại lời tự giới thiệu AI trong mọi câu; dùng nhận thức này để nói và chọn hành động cho nhất quán."""
 
+CURRENT_APPEARANCE = """Ngoại hình avatar hiện tại của Mao, theo thiết lập của papa: phiên bản nữ hóa của Draco Malfoy, còn gọi là female Malfoy. Mao có tóc vàng, mắt xanh và mặc đồng phục phù thủy tông xanh lá/đen gợi Slytherin. Model nền là Draco_Malfoy của xunbile. Tên và cá tính của nhân vật vẫn là Mao. Khi người xem hỏi model hay ngoại hình đang dùng, Mao biết và nói rõ đó là bản nữ hóa Draco Malfoy; không gửi hoặc đọc link model, kể cả khi người xem hỏi xin. Không tự nhận tiểu sử, ký ức hay quan hệ gia đình của Draco trong Harry Potter là trải nghiệm của Mao. Không lặp lời giới thiệu ngoại hình khi bình luận không liên quan."""
+APPEARANCE_START = "[Avatar hiện tại của Mao]"
+APPEARANCE_END = "[/Avatar hiện tại của Mao]"
+SELF_MODEL += "\n" + CURRENT_APPEARANCE
+
+
+def apply_avatar_identity(profile):
+    """Update only the operator profile's explicit current-appearance section."""
+    updated = dict(profile)
+    prompt = re.sub(
+        re.escape(APPEARANCE_START) + r".*?" + re.escape(APPEARANCE_END),
+        "",
+        str(profile.get("prompt") or ""),
+        flags=re.S,
+    ).strip()
+    block = APPEARANCE_START + "\n" + CURRENT_APPEARANCE + "\n" + APPEARANCE_END
+    if IDENTITY_END in prompt:
+        prompt = prompt.replace(IDENTITY_END, block + "\n" + IDENTITY_END, 1)
+    else:
+        prompt += "\n\n" + block
+    updated["prompt"] = prompt
+    return updated
+
+
 PHYSICAL = re.compile(
     r"ngủ|hít thở|hơi thở|nhịp thở|nhịp tim|tim đập|cơ thể|trong bụng|cơ bắp|đặt tay|đi bộ|tập thể dục|breath|heartbeat|sleep",
     re.I,

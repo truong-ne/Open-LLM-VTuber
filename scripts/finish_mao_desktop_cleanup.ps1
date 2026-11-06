@@ -4,6 +4,12 @@ $cleanupRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot)).TrimEn
 $cleanupPrefix = $cleanupRoot + '\'
 $cleanupTargets = [Collections.Generic.List[string]]::new()
 foreach ($relative in @(
+    'scripts/__pycache__/mao_2048.cpython-312.pyc',
+    'tests/__pycache__/test_game2048.cpython-312.pyc',
+    'tests/__pycache__/test_game2048_driver.cpython-312.pyc',
+    'tests/__pycache__/test_game2048_review.cpython-312.pyc',
+    'src/open_llm_vtuber/agent/hybrid/__pycache__/game2048.cpython-312.pyc',
+    'logs/2048-manual-delete.txt',
     'private/tools/vtuber-desktop/resources/app.asar.original',
     'private/tools/vtuber-desktop-unpacked/out/main/index.js.before-draco',
     'private/tools/vtuber-desktop-unpacked/out/renderer/assets/index-CW5qlpM1.js',

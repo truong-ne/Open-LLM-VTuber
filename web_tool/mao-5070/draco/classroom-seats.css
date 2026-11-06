@@ -1,0 +1,154 @@
+/* Avatar seating: the SVG faces are DiceBear Avataaars, never static portraits. */
+.mao-classroom .classroom-lesson{height:39%}
+.mao-classroom .classroom-pupils{height:31%}
+.mao-classroom .desks{display:grid;flex:1;min-width:0;min-height:0;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:1cqh 1cqw;background:none;border-bottom:0;padding:0}
+.mao-classroom .desk{position:relative;min-width:0;min-height:0;height:100%;contain:layout paint;isolation:isolate;border:1px solid #d8ccb2;border-radius:.7cqw;background:linear-gradient(140deg,#fffdf5,#f4ecd9);box-shadow:0 .4cqh .8cqw #715d3510;overflow:hidden;transition:border-color .25s,background .25s}
+.mao-classroom .desk::before{content:'';position:absolute;left:30%;right:30%;top:9%;aspect-ratio:1;border-radius:50%;background:#e2e9da;opacity:.7}
+.mao-classroom .desk[data-rank="1"]{border-color:#bc9650;background:linear-gradient(135deg,#fff5d7,#f0dfb4)}
+.mao-classroom .desk[data-rank="2"]{border-color:#b4b9ac;background:linear-gradient(135deg,#f9fbf4,#e9ede2)}
+.mao-classroom .desk[data-rank="3"]{border-color:#c4a58e;background:linear-gradient(135deg,#fff7ec,#efe1d1)}
+.mao-classroom .desk.empty{background:#eee7d654;border:1px dashed #d0c4aa;box-shadow:none}
+.mao-classroom .desk.empty::before{background:transparent}
+.mao-classroom .desk .student{display:block;position:absolute;left:19%;top:-5%;width:62%;height:83%;z-index:2}
+.mao-classroom .student-avatar{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;position:relative;filter:drop-shadow(0 .3cqh .2cqw #4e4e3514)}
+.mao-classroom .avatar-fallback{display:none;position:absolute;inset:15% 20% 13%;align-items:center;justify-content:center;border-radius:50%;border:1px solid #d0d8c6;background:#e3ead9;color:#64745b;font:600 clamp(12px,1.4cqw,23px) Georgia}
+.mao-classroom .student[data-failed=true] .student-avatar{visibility:hidden}
+.mao-classroom .student[data-failed=true] .avatar-fallback,.mao-classroom .empty .avatar-fallback{display:flex}
+.mao-classroom .empty .student-avatar{display:none}
+.mao-classroom .empty .avatar-fallback{color:#bcb199;background:transparent;border:1px dashed #d4c9af;inset:20% 25% 20%;font-weight:400}
+.mao-classroom .seat-rank{position:absolute;left:.55cqw;top:.55cqh;z-index:4;font-size:clamp(7px,.6cqw,11px);font-weight:700;color:#b0a186;letter-spacing:.03em}
+.mao-classroom .desk:nth-child(-n+3):not(.empty) .seat-rank{color:#9f7735;background:#fffaf0c9;border:1px solid #cfb778;border-radius:50%;width:1.35cqw;height:1.35cqw;min-width:16px;min-height:16px;display:grid;place-items:center;box-shadow:0 1px 3px #8d692b16}
+.mao-classroom .desk-surface{position:absolute;left:0;right:0;bottom:0;height:29%;z-index:2;background:linear-gradient(#eee0c2,#e8d8b6);border-top:1px solid #d2bc91;box-shadow:0 -.25cqh .6cqw #7c6a4210}
+.mao-classroom .desk.empty .desk-surface{background:#e9e0cb66;border-top-style:dashed;box-shadow:none}
+.mao-classroom .seat-name{position:absolute;left:4%;right:4%;bottom:1%;z-index:3;padding:.3cqh .3cqw;font-size:clamp(8px,.75cqw,13px);font-weight:650;color:#5b5c45;border:0;border-radius:.3cqw;box-shadow:none;background:transparent;text-align:center;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mao-classroom .desk:first-child:not(.empty) .seat-name{background:transparent;border:0;color:#80602d}
+.mao-classroom .desk.empty .seat-name{background:transparent;color:#a99877;border:0;font-size:clamp(7px,.65cqw,11px);font-weight:400}
+.mao-classroom .seat-score{position:absolute;top:.55cqh;right:.5cqw;left:auto;z-index:4;font-size:clamp(7px,.57cqw,10px);font-weight:650;color:#758666;background:#f9fbf2bd;border:1px solid #d1dcc380;border-radius:2cqw;padding:.2cqh .4cqw}
+.mao-classroom .desk.empty .seat-score{display:none}
+.mao-classroom .classroom-honor{background:linear-gradient(145deg,#f4ecd9,#eae1cb);box-shadow:inset 0 1px #fff8e6}
+.mao-classroom .classroom-honor li:first-child .rank{color:#9d742c}
+.mao-classroom .classroom-board{box-shadow:inset 0 0 5cqw #11291e3b,0 1cqh 0 #93764926,0 2cqh 3cqw #5d503410}
+@container classroom (max-aspect-ratio:4/5){
+ .mao-classroom .classroom-lesson{height:38%}
+ .mao-classroom .classroom-pupils{height:33%}
+ .mao-classroom .desks{gap:1cqh 1.5cqw}
+ .mao-classroom .desk{border-radius:1.2cqw}
+ .mao-classroom .desk .student{left:13%;width:74%;height:80%;top:-3%}
+ .mao-classroom .seat-name{font-size:clamp(7px,1.5cqw,17px)}
+ .mao-classroom .desk.empty .seat-name{font-size:clamp(6px,1.2cqw,13px)}
+ .mao-classroom .seat-rank{left:1cqw;top:.5cqh;font-size:clamp(7px,1.15cqw,13px)}
+ .mao-classroom .seat-score{font-size:clamp(6px,1cqw,11px);top:.5cqh;right:.6cqw;padding:.2cqh .5cqw}
+ .mao-classroom .avatar-fallback{font-size:3cqw}
+}
+@media(prefers-reduced-motion:reduce){.mao-classroom .desk{transition:none}}
+
+/* Vietnamese UI uses one complete font family; mixed serif fallback split tone marks. */
+#mao-classroom-desktop{font-family:'Segoe UI',Arial,sans-serif;font-synthesis:none}
+.mao-classroom .classroom-masthead h1{font-family:'Segoe UI',Arial,sans-serif;font-size:6.6cqw;font-weight:800;line-height:1.2;letter-spacing:0;font-kerning:normal}
+.mao-classroom .classroom-masthead h1>span{font-family:'Segoe UI',Arial,sans-serif;font-size:2cqw;font-style:normal;font-weight:400;letter-spacing:0;line-height:1.5}
+.mao-classroom .classroom-session{padding-right:0;font-size:1.8cqw;padding-bottom:1cqh}
+.mao-classroom .classroom-lesson{height:36%}
+.mao-classroom .classroom-pupils{height:38%;padding-top:11.5cqh}
+.mao-classroom .classroom-honor{height:10cqh;display:flex;flex-direction:column;align-items:stretch;gap:.7cqh;padding:.9cqh 1.4cqw;overflow:hidden;background:#f7f0df;border:1px solid #d2bd91;border-radius:1.2cqw}
+.mao-classroom .honor-heading{display:flex;align-items:center;justify-content:space-between;min-height:1.7cqh}
+.mao-classroom .honor-heading h2{font:750 2.6cqw/1.25 'Segoe UI',Arial,sans-serif;margin:0;color:#51654c;white-space:nowrap}
+.mao-classroom .honor-heading>span{font-size:1.2cqw;font-weight:650;letter-spacing:.12cqw;color:#a48a5d}
+.mao-classroom .classroom-honor ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.3cqw;min-height:0;flex:1;width:100%;padding:0;overflow:hidden}
+.mao-classroom .classroom-honor .honor-person{display:flex;position:relative;align-items:center;gap:.9cqw;flex:initial;min-width:0;min-height:0;height:100%;padding:.8cqh .7cqw;border:1px solid #ded0b0;border-radius:.7cqw;background:#fffaf0;box-shadow:0 .3cqh .5cqw #8d71380b;overflow:hidden}
+.mao-classroom .honor-person[data-rank="1"]{background:#f7e9c4;border-color:#c4a365}
+.mao-classroom .honor-person .rank{display:block;font:750 1.25cqw 'Segoe UI',Arial;color:#9d865e;flex:none}
+.mao-classroom .honor-avatar{display:block;flex:none;width:5.5cqw;height:5.5cqw;object-fit:contain;min-width:0;border-radius:50%;background:#e5ebd9}
+.mao-classroom .honor-info{display:flex;flex-direction:column;gap:.45cqh;min-width:0;flex:1}
+.mao-classroom .honor-info .name{font:650 1.7cqw/1.3 'Segoe UI',Arial;color:#5e6048;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.mao-classroom .honor-points{font-size:1.45cqw;line-height:1.3;color:#a68143;font-weight:700;white-space:nowrap}
+.mao-classroom .classroom-honor li.empty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;padding:0;border:0;font-size:1.8cqw;color:#9d8968}
+.classroom-toolbar #preview-badge{display:inline-block;margin-left:7px;font-size:9px;color:#977c4e;background:#fff4d9;padding:2px 5px;border-radius:4px;letter-spacing:0}
+/* Forty-seat portrait broadcast layout: lesson, evidence, lifetime honor, class. */
+.mao-classroom .classroom-frame{display:grid;grid-template-rows:.7fr 3fr .65fr 1.55fr 1fr 3.8fr;gap:.65cqh;padding:2cqh 3cqw;min-height:0}
+.mao-classroom .classroom-frame>*{min-height:0;min-width:0}
+.mao-classroom .classroom-masthead{height:auto;padding:1cqh 0 .7cqh;align-items:flex-end}
+.mao-classroom .classroom-stamp{font-size:1.25cqw;letter-spacing:.13cqw}
+.mao-classroom .classroom-masthead h1{font-size:5.5cqw;line-height:1.15}
+.mao-classroom .classroom-masthead h1>span{display:none}
+.mao-classroom .classroom-session{font-size:1.65cqw;padding:0 0 .3cqh;max-width:31%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mao-classroom .classroom-lesson{height:auto;margin:0;gap:1.5cqw}
+.mao-classroom .classroom-teacher{width:32%}
+.mao-classroom .teacher-tag{font-size:1.65cqw}
+.mao-classroom .teacher-tag small{font-size:1.2cqw}
+.mao-classroom .classroom-teacher #teacher-speech{font-size:2cqw!important;line-height:1.35;max-height:9cqh;bottom:.6cqh;padding:.65cqh .7cqw}
+.mao-classroom .classroom-board{padding:1cqh 1.5cqw;border-width:.75cqw}
+.mao-classroom .board-meta{font-size:1.65cqw}
+.mao-classroom .board-meta #timer{margin-left:auto;width:6cqw;height:6cqw;font-size:3.1cqw}
+.mao-classroom .classroom-board #clue{font-size:3.15cqw;margin:.6cqh 0;max-height:10.5cqh;line-height:1.35}
+.mao-classroom .classroom-board #clue[data-length=long]{font-size:2.45cqw}
+.mao-classroom .letter{font-size:3cqw;min-width:4.5cqw;padding:.6cqh .5cqw}
+.mao-classroom .letters{min-height:2.5cqh;gap:.5cqw}
+.mao-classroom .letters[data-long=true] .letter{font-size:2.05cqw;min-width:2.8cqw;padding:.35cqh .3cqw}
+.mao-classroom .slots{margin-top:1cqh;gap:1cqw;max-width:100%;flex-wrap:wrap}
+.mao-classroom .slot{width:2cqw;height:.3cqh}
+.mao-classroom .hint-label,.mao-classroom .board-meta.bottom{font-size:1.4cqw;margin-top:.7cqh;padding-top:0}
+.mao-classroom .classroom-result{height:auto;min-height:0;margin:0;padding:.55cqh 1.3cqw;gap:1cqw}
+.mao-classroom .result-icon{font-size:3.3cqw}
+.mao-classroom .result-line{font-size:1.9cqw}
+.mao-classroom .result-line>span{font-size:1.5cqw}
+.mao-classroom .classroom-result p{font-size:1.7cqw;margin:.3cqh 0 0;line-height:1.3}
+.mao-classroom .classroom-live{border:1px solid #c8b995;border-radius:1.1cqw;background:#fffaf0;padding:.7cqh 1.5cqw;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 .2cqh .5cqw #6555380b}
+.mao-classroom .classroom-live>header,.mao-classroom .classroom-pupils>header{display:flex;justify-content:space-between;align-items:center;gap:1cqw;flex:none}
+.mao-classroom .classroom-live h2,.mao-classroom .classroom-pupils h2{margin:0;color:#31594d;font:750 2.1cqw/1.3 'Segoe UI',Arial}
+.mao-classroom .classroom-live>header>span,.mao-classroom .classroom-pupils>header>span{font-size:1.25cqw;color:#8e7d60}
+.mao-classroom .comment-method{font-size:1.25cqw;color:#8d7957;margin:.25cqh 0 .35cqh;flex:none}
+.mao-classroom #live-comments{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.3cqh;overflow:hidden;flex:1;min-height:0;justify-content:flex-end}
+.mao-classroom .live-comment{padding:.25cqh .7cqw;border-left:.28cqw solid #d5c8a9;background:#f4eedf66;border-radius:.35cqw;min-height:0;flex:1;max-height:3cqh;display:flex;align-items:center;gap:1cqw;overflow:hidden}
+.mao-classroom .comment-meta{display:flex;align-items:center;gap:.6cqw;flex:0 0 43%;min-width:0}
+.mao-classroom .comment-name{font-size:1.65cqw;color:#36564b;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mao-classroom .comment-meta time{font-size:1.25cqw;color:#8b7d68;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mao-classroom .comment-verdict{font-size:1.15cqw;color:#9b8d76;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mao-classroom .comment-text{font-size:1.9cqw;line-height:1.3;color:#5c5544;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.mao-classroom .live-comment[data-status=correct]{background:#e6eedc;border-left-color:#779b67}
+.mao-classroom .live-comment[data-status=correct] .comment-verdict{color:#527642;font-weight:700}
+.mao-classroom .comments-empty{font-size:1.65cqw;color:#9a8b71;align-self:center;padding:1.5cqh 0}
+.mao-classroom .round-podium{display:flex;gap:.6cqw;flex:none;overflow:hidden}
+.mao-classroom .round-podium:empty{display:none}
+.mao-classroom .podium-chip{flex:1;min-width:0;font-size:1.35cqw;font-weight:650;padding:.45cqh .5cqw;margin:.25cqh 0 .4cqh;color:#7a5d2c;background:#f6e8bf;border:1px solid #d6bd84;border-radius:.45cqw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mao-classroom .podium-chip[data-rank="2"]{background:#ebefe7;color:#65705a;border-color:#c7ceb9}
+.mao-classroom .podium-chip[data-rank="3"]{background:#f2e4d7;color:#8e6b49;border-color:#d6bea7}
+.mao-classroom .classroom-honor{position:static;width:auto;height:auto;padding:.6cqh 1cqw;gap:.45cqh;display:flex;flex-direction:column;overflow:hidden;border-radius:1cqw}
+.mao-classroom .honor-heading h2{font-size:2.1cqw}
+.mao-classroom .honor-heading>span{font-size:1.25cqw;letter-spacing:0}
+.mao-classroom .classroom-honor ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1cqw;width:100%;flex:1;min-height:0;overflow:hidden}
+.mao-classroom .classroom-honor .honor-person{padding:.3cqh .6cqw;gap:.6cqw;min-height:0;display:flex}
+.mao-classroom .honor-person .rank{display:block;font-size:1.3cqw}
+.mao-classroom .honor-avatar{width:5cqw;height:5cqw;display:block}
+.mao-classroom .honor-info .name{font-size:1.85cqw}
+.mao-classroom .honor-points{font-size:1.7cqw}
+.mao-classroom .classroom-pupils{height:auto;position:static;padding:0;display:flex;flex-direction:column;gap:.5cqh;min-height:0}
+.mao-classroom .classroom-pupils>header{min-height:2cqh}
+.mao-classroom .desks{grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));gap:.4cqh .75cqw;min-height:0;flex:1}
+.mao-classroom .desk{border-radius:.7cqw;box-shadow:none}
+.mao-classroom .desk::before,.mao-classroom .desk-surface{display:none}
+.mao-classroom .desk .student{left:0;top:5%;width:36%;height:91%}
+.mao-classroom .seat-name{left:36%;right:3%;top:22%;bottom:auto;font-size:1.85cqw;text-align:left;padding:0;line-height:1.25}
+.mao-classroom .desk.empty .seat-name{font-size:1.3cqw}
+.mao-classroom .seat-score{left:36%;top:57%;right:2%;font-size:1.3cqw;border:0;background:none;padding:0;white-space:nowrap}
+.mao-classroom .seat-rank,.mao-classroom .desk:nth-child(-n+3):not(.empty) .seat-rank{left:3%;top:5%;font-size:1.1cqw;min-width:0;min-height:0;width:auto;height:auto;background:#fff9e2bf;border:0;border-radius:.2cqw;padding:0 .2cqw;box-shadow:none}
+.mao-classroom .classroom-honor li.empty{font-size:1.65cqw}
+.honor-details{margin:12px 0;font-size:12px;color:#645b48}.honor-details summary{cursor:pointer;font-weight:700}.honor-details ol{max-height:230px;overflow:auto;margin:8px 0;padding-left:20px}.honor-full-row{padding:6px 0;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid #e0d4ba}.honor-full-row span{font-size:11px;color:#8b7856}.classroom-controls{max-height:calc(100vh - 110px);overflow:auto}
+/* Readable names and larger faces while keeping all forty classmates on air. */
+.mao-classroom .classroom-frame{grid-template-rows:.55fr 2.5fr .6fr 1.35fr 1fr 4.65fr}
+.mao-classroom .classroom-masthead h1{font-size:5cqw}
+.mao-classroom .classroom-masthead{padding-top:.8cqh;padding-bottom:.4cqh}
+.mao-classroom .desk .student{left:0;top:5%;width:42%;height:90%}
+.mao-classroom .seat-name{left:43%;right:3%;top:8%;bottom:22%;font-size:2.25cqw;line-height:1.08;font-weight:750;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;padding:0;max-height:none;text-overflow:clip}
+.mao-classroom .seat-name[data-length=long]{font-size:1.75cqw;line-height:1.03;-webkit-line-clamp:3}
+.mao-classroom .seat-name[data-length=extra]{font-size:1.35cqw;line-height:1.03;-webkit-line-clamp:4}
+.mao-classroom .seat-score{left:43%;top:77%;right:2%;font-size:1.45cqw;line-height:1.1}
+.mao-classroom .seat-rank,.mao-classroom .desk:nth-child(-n+3):not(.empty) .seat-rank{font-size:1.25cqw}
+.mao-classroom .desk.empty .seat-name{font-size:1.5cqw;line-height:1.15}
+.mao-classroom .honor-avatar{width:7.5cqw;height:7.5cqw}
+.mao-classroom .honor-info{gap:.3cqh}
+.mao-classroom .honor-info .name{font-size:2.35cqw;font-weight:750;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.1}
+.mao-classroom .honor-points{font-size:2cqw;line-height:1.2}
+.mao-classroom .comment-meta{flex-basis:50%}
+.mao-classroom .comment-name{font-size:2cqw;max-width:none;flex:1;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.1}
+.mao-classroom .comment-text{font-size:2cqw}
+.mao-classroom .classroom-teacher #teacher-speech:empty{display:none}

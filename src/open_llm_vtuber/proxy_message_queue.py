@@ -20,7 +20,9 @@ class ProxyMessageQueue:
         self._forward_func = None
         self._running = False
 
-    def initialize(self, forward_func: Callable[[Dict, Optional[str]], Any]):
+    def initialize(
+        self, forward_func: Callable[[Dict, Optional[str]], Any], notify_func=None
+    ):
         """
         Initialize the queue with a message forwarding function.
 
@@ -28,6 +30,7 @@ class ProxyMessageQueue:
             forward_func: Function to call when forwarding messages to the server
         """
         self._forward_func = forward_func
+        self._notify_func = notify_func
         logger.debug("Message queue initialized with forward function")
 
     def queue_message(
@@ -44,8 +47,22 @@ class ProxyMessageQueue:
         # runs to completion; real comments and operator input keep their order.
         if message.get("source") == "mao-idle-host":
             if self.message_queue:
-                return
+                return False
         else:
+            for item in self.message_queue:
+                if item["message"].get("source") == "mao-idle-host" and getattr(
+                    self, "_notify_func", None
+                ):
+                    asyncio.create_task(
+                        self._notify_func(
+                            {
+                                "type": "input-status",
+                                "status": "superseded",
+                                "event_id": item["message"].get("event_id"),
+                            },
+                            item["sender_id"],
+                        )
+                    )
             self.message_queue = deque(
                 item
                 for item in self.message_queue

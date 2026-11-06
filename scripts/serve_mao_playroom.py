@@ -66,7 +66,7 @@ class PreviewBackend:
             return {
                 "configured": record["collection"] == "Mao Playroom",
                 "visible": record["visible"],
-                "window": "Chrome · 2048",
+                "window": str(record.get("window_title", "Cửa sổ đã chọn"))[:200],
             }
         except (OSError, ValueError, KeyError):
             return {"configured": False, "visible": False}

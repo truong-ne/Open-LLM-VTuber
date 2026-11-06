@@ -14,6 +14,16 @@ export function availableAvatarHeight(mode,pane,footer){
 }
 
 export function configureAvatarCamera(camera,{mode,view,width,height,roomView={}}){
+  if(mode==='window'&&roomView.classroom){
+    // Waist-up framing of the existing animated model, with no second renderer
+    // or audio client. Its head, hands and lip sync stay in the desktop pipeline.
+    const previous=cameraFrames.get(camera);
+    if(previous?.classroom&&previous.width===width&&previous.height===height)return false;
+    camera.fov=24;camera.zoom=1;camera.clearViewOffset();camera.aspect=width/height;
+    const distance=.5/Math.tan(T.MathUtils.degToRad(12));
+    camera.position.set(0,1.37,-1.65+distance);camera.lookAt(0,1.36,-1.65);camera.far=distance+25;
+    camera.updateProjectionMatrix();camera.updateMatrixWorld(true);cameraFrames.set(camera,{classroom:true,width,height});return true;
+  }
   // A long-lens broadcast view makes the TV readable without flattening the
   // character or replacing the real 3D stage with a screenshot.
   if(mode==='window'&&roomView.studio){
@@ -36,7 +46,7 @@ export function configureAvatarCamera(camera,{mode,view,width,height,roomView={}
     camera.zoom=view.zoom/1.15;camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
     cameraFrames.set(camera,{loungePortrait:true,width,height,zoom:view.zoom});return true;
   }
-  if(camera.fov===8||camera.fov===12){camera.fov=32;cameraFrames.delete(camera);}
+  if(camera.fov===8||camera.fov===12||camera.fov===24){camera.fov=32;cameraFrames.delete(camera);}
   const pet=mode==='pet',follow=!pet&&roomView.kind==='follow',focus=roomView.focus;
   const direction=roomView.direction||DEFAULT_DIRECTION,fx=follow?(focus?.x||0):0,fz=follow?(focus?.z||0):0;
   const x=pet?view.x:0,y=pet?view.y:0,vw=pet?view.width:0,vh=pet?view.height:0;

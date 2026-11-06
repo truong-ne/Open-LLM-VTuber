@@ -1,6 +1,6 @@
 // The existing desktop owns chat, history, mic, audio queue, settings and IPC.
 // This bridge supplies only the 3D renderer and its audio-driven animation.
-import {desktopCommand} from './desktop-space.mjs?v=6';
+import {desktopCommand} from './desktop-space.mjs?v=7';
 import {BODY_COMMANDS} from './room-orientation.mjs';
 import {performanceCommand} from './performance-context.mjs?v=2';
 export function createNativeBridge(){

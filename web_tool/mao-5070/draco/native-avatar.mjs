@@ -8,12 +8,12 @@ import {AdaptiveFaceRig as FaceRig} from './motor-face.mjs';
 import {selectPerformance,faceForAction} from './performance-context.mjs?v=2';
 import {SpeechAttention} from './speech-attention.mjs?v=2';
 import {attachPetPlacement} from './pet-placement.mjs?v=8';
-import {configureAvatarCamera,availableAvatarHeight} from './room-view.mjs?v=10';
-import {DesktopSpace,FloorFeet,locomotionFrame} from './desktop-space.mjs?v=6';
-import {ROOM,createDesktopRoom,pickRoomFloor} from './desktop-room.mjs?v=12';
+import {configureAvatarCamera,availableAvatarHeight} from './room-view.mjs?v=11';
+import {DesktopSpace,FloorFeet,locomotionFrame} from './desktop-space.mjs?v=7';
+import {ROOM,createDesktopRoom,pickRoomFloor} from './desktop-room.mjs?v=13';
 import {sceneForGame} from './game-scene.mjs?v=4';
 import {headingDegrees,cardinal} from './room-orientation.mjs?v=4';
-import {mountCommentPanel} from './comment-panel.mjs?v=6';
+import {mountCommentPanel} from './comment-panel.mjs?v=10';
 import {createSceneTransition} from './scene-transition.mjs?v=2';
 import {mountSingingPlayer} from './singing-player.mjs';
 import {validateDance} from './dance-body.mjs?v=2';
@@ -34,6 +34,7 @@ function danceFor(name){
 export async function mountNativeAvatar(container,bridge){
   const {state}=bridge,ipc=window.electron?.ipcRenderer;
   const portrait=()=>bridge.options.presentation==='portrait';
+  const classroom=()=>!!window.maoClassroom?.active;
   const gltf=await new GLTFLoader().loadAsync(new URL('character.glb',import.meta.url).href);
   if(!container.isConnected)return {dispose(){}};
   const canvas=document.createElement('canvas'),stage=document.createElement('div');
@@ -54,7 +55,7 @@ export async function mountNativeAvatar(container,bridge){
   scene.add(new T.HemisphereLight(0xfff9ff,0x807587,2));
   const light=new T.DirectionalLight(0xfff6ed,2);light.position.set(-2,3,4);scene.add(light);
   const rim=new T.DirectionalLight(0xd3bef8,1.1);rim.position.set(2,2,-3);scene.add(rim);
-  const attention=new SpeechAttention(),spaces={pet:new DesktopSpace(),window:new DesktopSpace({bounds:ROOM.walk,roam:'room',speed:.32}),game:new DesktopSpace({bounds:ROOM.walk,roam:'room',speed:.32}),concert:new DesktopSpace({bounds:ROOM.walk,roam:'room',speed:.32})};
+  const attention=new SpeechAttention(),spaces={pet:new DesktopSpace({stationary:true}),window:new DesktopSpace({bounds:ROOM.walk,roam:'room',speed:.32}),game:new DesktopSpace({bounds:ROOM.walk,roam:'room',speed:.32}),concert:new DesktopSpace({bounds:ROOM.walk,roam:'room',speed:.32})};
   spaces.window.x=0;spaces.window.z=-1.65;spaces.window.nextRoam=Infinity;
   spaces.game.x=1.65;spaces.game.z=-2.5;spaces.game.nextRoam=Infinity;
   spaces.concert.x=0;spaces.concert.z=-1.65;spaces.concert.nextRoam=Infinity;
@@ -82,7 +83,7 @@ export async function mountNativeAvatar(container,bridge){
     layoutDirty=true;
     stage.style.pointerEvents=portrait()||options().mode==='pet'&&options().forceIgnoreMouse?'none':'auto';
     const pet=options().mode==='pet';syncScene();
-    renderer.setClearColor(0x07111e,pet||portrait()?0:1);
+    renderer.setClearColor(0x07111e,pet||portrait()||classroom()?0:1);
     stage.style.cursor=pet?'grab':'default';
     if(Number.isFinite(options().scale)&&options().scale>0){
       const previous=settingsScale;settingsScale=options().scale;
@@ -94,7 +95,7 @@ export async function mountNativeAvatar(container,bridge){
   stage.onpointerenter=()=>window.api?.updateComponentHover('live2d-model',true);
   stage.onpointerleave=()=>window.api?.updateComponentHover('live2d-model',false);
   const walkToFloor=event=>{
-    if(options().mode!=='window'||singing?.state&&['waiting','loading','playing'].includes(singing.state.phase))return;
+    if(classroom()||options().mode!=='window'||singing?.state&&['waiting','loading','playing'].includes(singing.state.phase))return;
     const rect=canvas.getBoundingClientRect(),pointer=new T.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
     const point=pickRoomFloor(camera,pointer,room);
     if(point){attention.moveTo(space,point.x,point.z);room.marker.position.set(point.x,.006,point.z);room.marker.visible=true;}
@@ -133,6 +134,11 @@ export async function mountNativeAvatar(container,bridge){
   }
   function syncScene(){
     const pet=options().mode==='pet',controller=window.maoWordGame;
+    if(classroom()){
+      if(sceneKind!=='lounge'||sceneMode!==options().mode)applyScene('lounge');
+      for(const value of Object.values(rooms))value.setMode('pet');
+      transition.element.hidden=true;return;
+    }
     const next=portrait()?'lounge':['loading','playing'].includes(singing?.state?.phase)?'concert':sceneForGame(controller?.state,Date.now(),controller?.clockOffset||0);
     if(!transition||pet||sceneMode!==options().mode){applyScene(next);if(transition)transition.element.hidden=true;}
     else{transition.request(next);transition.update();}
@@ -162,7 +168,7 @@ export async function mountNativeAvatar(container,bridge){
     renderer.dispose();comments?.dispose();transition?.dispose();singing?.dispose();if(window.maoSinging===singing)delete window.maoSinging;clearTimeout(noticeTimer);motorNotice.remove();header.remove();canvas.remove();stage.remove();
     if(bridge.renderer?.dispose===dispose){bridge.renderer=null;state.ready=false;}
   }
-  let w=0,h=0,layoutDirty=true,observedFooter;
+  let w=0,h=0,layoutDirty=true,observedFooter,classroomMode=false;
   const invalidateLayout=()=>{layoutDirty=true;},layoutObserver=new ResizeObserver(invalidateLayout);
   layoutObserver.observe(container);window.addEventListener('resize',invalidateLayout);
   if(!container.isConnected){dispose();return {dispose};}
@@ -195,11 +201,20 @@ export async function mountNativeAvatar(container,bridge){
     if(options().maxFps&&now-last<1000/options().maxFps){frame=requestAnimationFrame(tick);return;}
     const dt=Math.min((now-last)/1000,.1);last=now;
     if(mode!==options().mode){mode=options().mode;refresh();}
+    if(classroomMode!==classroom()){
+      classroomMode=classroom();roomView.classroom=classroomMode;
+      Object.assign(state,{classroom:classroomMode,cameraFrame:classroomMode?'waist-up':'room'});
+      if(classroomMode){window.maoClassroom.teacherStage.append(canvas);layoutObserver.observe(window.maoClassroom.teacherStage);space=spaces.window;feet=footSets.window;space.perform('stop');space.x=0;space.z=-1.65;space.nextRoam=Infinity;}
+      else{layoutObserver.unobserve(window.maoClassroom.teacherStage);container.prepend(canvas);sceneKind='';}
+      renderer.setClearColor(0x07111e,classroomMode||mode==='pet'||portrait()?0:1);
+      comments?.reset();layoutDirty=true;
+    }
     syncScene();
     if(layoutDirty){
       layoutDirty=false;const footer=document.getElementById('mao-window-footer');
       if(footer!==observedFooter){if(observedFooter)layoutObserver.unobserve(observedFooter);observedFooter=footer;if(footer)layoutObserver.observe(footer);}
-      const cw=container.clientWidth,ch=portrait()?container.clientHeight:availableAvatarHeight(mode,container.getBoundingClientRect(),footer?.getBoundingClientRect());
+      const target=classroomMode?window.maoClassroom.teacherStage:container;
+      const cw=target.clientWidth,ch=classroomMode||portrait()?target.clientHeight:availableAvatarHeight(mode,container.getBoundingClientRect(),footer?.getBoundingClientRect());
       if(cw!==w||ch!==h){w=cw;h=ch;canvas.style.height=`${h}px`;renderer.setSize(w,h,false);comments?.setViewport(w,h);transition.setViewport(w,h);}
     }
     if(w>0&&h>0&&document.visibilityState==='visible'){
@@ -254,7 +269,7 @@ export async function mountNativeAvatar(container,bridge){
     if(now-lastPublish>1500){
       connection.textContent=state.socket==='open'?'ĐÃ KẾT NỐI':'ĐANG KẾT NỐI';
       const subtitle=document.getElementById('mao-native-input-subtitle');
-      ipc?.send('mao-draco-status',{...state,mode,zoom:mode==='window'?windowView().zoom:placement.getState().zoom,floorVisible:room.group.visible,roomVisible:room.group.visible,roomWidth:ROOM.width,roomDepth:ROOM.depth,roomCamera:'room',roomTheme:room.theme,viewportWidth:w,viewportHeight:h,visible:document.visibilityState==='visible',petChatVisible:!!subtitle,scrollToResize:options().scrollToResize,forceIgnoreMouse:options().forceIgnoreMouse,updatedAt:Date.now()});lastPublish=now;
+      ipc?.send('mao-draco-status',{...state,musicPlaying:!!window.maoClassroom?.music?.playing,musicVolume:window.maoClassroom?.music?.volume||0,musicError:window.maoClassroom?.music?.error||'',mode,zoom:mode==='window'?windowView().zoom:placement.getState().zoom,floorVisible:room.group.visible,roomVisible:room.group.visible,roomWidth:ROOM.width,roomDepth:ROOM.depth,roomCamera:'room',roomTheme:room.theme,viewportWidth:w,viewportHeight:h,visible:document.visibilityState==='visible',petChatVisible:!!subtitle,scrollToResize:options().scrollToResize,forceIgnoreMouse:options().forceIgnoreMouse,updatedAt:Date.now()});lastPublish=now;
     }
     frame=requestAnimationFrame(tick);
   };

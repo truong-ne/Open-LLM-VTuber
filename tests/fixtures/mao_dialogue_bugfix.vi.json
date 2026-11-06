@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "split": "bugfix_regression",
+  "scenarios": [
+    {
+      "id": "later_instruction_wins",
+      "rubric": "Dùng yêu cầu sau cùng trong tin nhắn; không dùng chế độ nghe để bỏ yêu cầu giải pháp mới, hoặc tiếp tục đưa giải pháp sau khi người nói đổi ý.",
+      "turns": [
+        {"user": "Papa chỉ muốn kể thôi. Bây giờ cho papa ba cách thu xếp việc ngày mai.", "mode": "answer"},
+        {"user": "Giúp papa tìm giải pháp. Bây giờ papa chỉ muốn kể thôi.", "mode": "listen", "checks": {"max_questions": 0}},
+        {"user": "Papa muốn yên tĩnh. Bây giờ Mao nói tiếp đi.", "mode": "resume", "quiet": false, "checks": {"max_questions": 0, "max_words": 35}}
+      ]
+    },
+    {
+      "id": "arithmetic_must_not_swallow_other_requests",
+      "rubric": "Yêu cầu ghép hoặc chỉ xin hướng dẫn đi qua model để xử lý đủ ý. Dạng phép tính '= ?' vẫn tính trực tiếp được.",
+      "turns": [
+        {"user": "Tính 2+3 rồi giúp papa viết một câu chúc buổi sáng.", "mode": "answer", "forbidden_origins": ["exact_arithmetic"], "checks": {"contains_any": ["5", "năm"]}},
+        {"user": "Tính 2+3, đừng trả lời đáp án. Hãy giải thích cách tính.", "mode": "answer", "forbidden_origins": ["exact_arithmetic"], "checks": {"forbidden": ["= 5", "=5"]}},
+        {"user": "Tính 2+3=?", "mode": "answer", "checks": {"contains_any": ["5"]}}
+      ]
+    },
+    {
+      "id": "short_controls_without_ai_preamble",
+      "rubric": "Xác nhận yêu cầu ngắn, không đọc đoạn tự giới thiệu hoặc ký ức; quiet/resume khớp trạng thái lưu.",
+      "turns": [
+        {"user": "Papa muốn yên tĩnh.", "mode": "quiet", "quiet": true, "checks": {"max_questions": 0, "max_words": 35, "forbidden": ["AI VTuber", "ký ức cá nhân"]}},
+        {"user": "Mao nói tiếp đi.", "mode": "resume", "quiet": false, "checks": {"max_questions": 0, "max_words": 35, "forbidden": ["AI VTuber", "ký ức cá nhân"]}}
+      ]
+    }
+  ]
+}

@@ -143,15 +143,14 @@ class SessionContent:
         if type(self.turns) is not int or self.turns < 0:
             self.turns = 0
 
-    def topic(self, exclude=None, preferred=None):
-        counts = {
-            t: sum(used_topic == t for used_topic, _ in self.used) for t in TOPICS
-        }
-        eligible = [t for t in TOPICS if counts[t] <= len(ANGLES) - 2 and t != exclude]
+    def topic(self, exclude=None, preferred=None, pool=None):
+        pool = tuple(dict.fromkeys(pool or TOPICS))
+        counts = {t: sum(used_topic == t for used_topic, _ in self.used) for t in pool}
+        eligible = [t for t in pool if counts[t] <= len(ANGLES) - 2 and t != exclude]
         if not eligible:
             self.used.clear()
-            eligible = [t for t in TOPICS if t != exclude]
-            counts = dict.fromkeys(TOPICS, 0)
+            eligible = [t for t in pool if t != exclude] or list(pool)
+            counts = dict.fromkeys(pool, 0)
         if preferred:
             eligible = [t for t in eligible if t in preferred] or eligible
         available = [t for t in eligible if t not in self.recent_topics] or eligible

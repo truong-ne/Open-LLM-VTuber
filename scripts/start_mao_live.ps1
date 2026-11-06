@@ -5,6 +5,20 @@ $taskRoot = Split-Path $PSScriptRoot -Parent
 $taskPython = [IO.Path]::GetFullPath((Join-Path $taskRoot '.venv/Scripts/python.exe'))
 $taskPlatform = & $taskPython -c "import sys,yaml; from pathlib import Path; print(yaml.safe_load(Path(sys.argv[1]).read_text(encoding='utf-8')).get('live_config',{}).get('active_platform','local'))" (Join-Path $taskRoot 'conf.yaml')
 if ($LASTEXITCODE -ne 0 -or $taskPlatform -notin @('youtube','tiktok','local')) { throw 'Invalid default live chat platform.' }
+if ($taskPlatform -eq 'tiktok') {
+    # The backend owns one reader and its idle host. A desktop launch must not
+    # create a second independent reader competing for the same comments.
+    if ($Restart) {
+        $taskManagedReaders = @(Get-CimInstance Win32_Process | Where-Object {
+            $_.Name -eq 'python.exe' -and $_.ExecutablePath -eq $taskPython -and $_.CommandLine -match 'scripts[\\/]run_tiktok_live\.py'
+        })
+        foreach ($taskManagedReader in $taskManagedReaders) {
+            & taskkill /PID $taskManagedReader.ProcessId /T /F | Out-Null
+        }
+    }
+    Write-Output 'Mao backend manages the TikTok reader and LIVE host; no duplicate reader started.'
+    return
+}
 $taskScripts = @{youtube='scripts/run_youtube_live.py';tiktok='scripts/run_tiktok_live.py';local='scripts/run_local_host.py'}
 $taskScript = $taskScripts[$taskPlatform]
 $taskProcesses = @(Get-CimInstance Win32_Process)

@@ -24,7 +24,7 @@ powershell -File private/start-local.ps1
 powershell -File scripts/start_mao_playroom.ps1
 ```
 
-Mở `http://127.0.0.1:12395/mao-5070/playroom.html?obs=1&game=2048`. Góc trên phải có **Sổ tò mò của thiếp** và nút **Tạm dừng / Tiếp tục tự tìm hiểu**. Ý nghĩ của Mao hiện trước; trích đoạn/nguồn thật mở riêng trong **Thiếp vừa đọc gì?**. Bảng điều khiển được ẩn khỏi các lớp OBS/chế độ clean. Đóng tab không dừng dịch vụ.
+Mở `http://127.0.0.1:12395/mao-5070/playroom.html?obs=1`. Góc trên phải có **Sổ tò mò của thiếp** và nút **Tạm dừng / Tiếp tục tự tìm hiểu**. Ý nghĩ của Mao hiện trước; trích đoạn/nguồn thật mở riêng trong **Thiếp vừa đọc gì?**. Bảng điều khiển được ẩn khỏi các lớp OBS/chế độ clean. Đóng tab không dừng dịch vụ.
 
 Không mở giao diện vẫn có thể dùng:
 
@@ -41,7 +41,7 @@ Backend tắt thì dịch vụ dừng và đóng tài nguyên. Chưa cài Window
 ## Phạm vi và giới hạn
 
 - Tự vận hành **tìm hiểu nguồn công khai**, chưa phải tự thao tác toàn bộ Windows. Dịch vụ không có shell, file cá nhân, đăng nhập, cài phần mềm, mua hàng, gửi tin hoặc phát stream.
-- Browser computer-use tổng quát/công cụ explore cũ vẫn có công tắc và allowlist riêng. Vòng này dùng API đọc có cấu trúc, không giả vờ đang bấm Chrome. Adapter 2048 vẫn chạy bằng lệnh riêng, chưa tự mở game trong vòng tò mò.
+- Browser computer-use tổng quát/công cụ explore cũ vẫn có công tắc và allowlist riêng. Vòng này dùng API đọc có cấu trúc, không giả vờ đang bấm Chrome. Bộ tự tìm hiểu không tự mở hoặc điều khiển game.
 - Text, micro, live/game comment và ngắt lời hủy công việc đang làm. Kiểm tra lại trước khi lưu; thao tác ghi DB đã bắt đầu có thể hoàn tất, chỉ ghi trích đoạn đã đọc, không thực hiện hành động bên ngoài.
 - “Rảnh” là không có tương tác trong ứng dụng, không có nghĩa máy AFK hoặc không người xem. Không thu camera hoặc theo dõi hoạt động cá nhân để suy ra điều đó.
 - Nguồn/model là dữ liệu không tin cậy. Chỉ tiêu đề hợp lệ trong danh sách ứng viên được nhận; GET tới Wikipedia cố định, TLS, không redirect, tối đa 64 KiB/phản hồi và timeout. Nội dung trang không có công cụ để thực hiện chỉ thị.

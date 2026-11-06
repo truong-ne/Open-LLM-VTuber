@@ -156,22 +156,8 @@ export function buildDiscoInterior(group){
     const a=i/48*Math.PI,b=(i+1)/48*Math.PI;
     tube([2.04*Math.cos(a),2.44+.48*Math.sin(a),-4.88],[2.04*Math.cos(b),2.44+.48*Math.sin(b),-4.88],.011,'gold');
   }
-  // Geometric neon lettering stays crisp without a font/bitmap dependency.
+  // Rear panel stays unlettered so narrow portrait windows never crop a logo.
   box('stone',[0,2.29,-4.91],[3.8,.91,.055]);
-  const glyph={M:[[[0,0],[0,1],[.5,.48],[1,1],[1,0]]],A:[[[0,0],[.5,1],[1,0]],[[.22,.4],[.78,.4]]],
-    O:[[[.2,0],[0,.2],[0,.8],[.2,1],[.8,1],[1,.8],[1,.2],[.8,0],[.2,0]]],
-    V:[[[0,1],[.5,0],[1,1]]],T:[[[0,1],[1,1]],[[.5,1],[.5,0]]],
-    U:[[[0,1],[0,.2],[.2,0],[.8,0],[1,.2],[1,1]]],
-    B:[[[0,0],[0,1],[.7,1],[1,.8],[.7,.5],[0,.5]],[[.7,.5],[1,.25],[.7,0],[0,0]]],
-    E:[[[1,1],[0,1],[0,0],[1,0]],[[0,.5],[.8,.5]]],
-    R:[[[0,0],[0,1],[.7,1],[1,.8],[.7,.5],[0,.5]],[[.5,.5],[1,0]]]};
-  let cursor=-1.63;
-  for(const char of 'MAO VTUBER'){
-    if(char===' '){cursor+=.15;continue;}
-    for(const stroke of glyph[char])for(let i=1;i<stroke.length;i++)
-      tube([cursor+stroke[i-1][0]*.28,2.12+stroke[i-1][1]*.32,-4.86],[cursor+stroke[i][0]*.28,2.12+stroke[i][1]*.32,-4.86],.012,'neon',opal);
-    cursor+=.36;
-  }
   for(const y of [1.94,1.97])box('gold',[0,y,-4.86],[2.6,.005,.008]);
   for(const x of [-1.38,1.38])add('box','gold',[x,1.955,-4.86],[.04,.04,.008],[0,0,Math.PI/4]);
 

@@ -114,7 +114,7 @@ Alpha hoàn thành tại đây: papa có thể trò chuyện, ngắt lời, sử
 1. Track focus/topic/open thread, câu hỏi đang đợi, hiểu lầm cần sửa và điểm kết thúc; thay đổi chủ đề theo ngữ cảnh thay cho bộ đếm cứng đơn thuần.
 2. Attention policy biết chờ; im lặng là thiếu phản hồi, không tự suy papa buồn/chán/đồng ý.
 3. Activity registry và executor với expected revision, expiry, idempotency; phân biệt accepted, running, completed, failed, unknown.
-4. Hoạt động đầu tiên: cùng kể một câu chuyện có state và lựa chọn. Canon hư cấu lưu riêng khỏi factual memory. Sau đó mới tích hợp game 2048 hoặc hoạt động khác.
+4. Hoạt động đầu tiên: cùng kể một câu chuyện có state và lựa chọn. Canon hư cấu lưu riêng khỏi factual memory. Sau đó mới cân nhắc tích hợp hoạt động khác theo yêu cầu.
 5. Lựa chọn của Mao phải có phương án và lý do; không mặc định đồng ý. Nếu đang thử một lựa chọn mới, diễn đạt như thử nghiệm thay vì sở thích đã có từ lâu.
 
 Nghiệm thu: tiếp tục câu chuyện sau reconnect đúng đoạn; không coi nhân vật truyện là người thật; action hết hạn không chạy; kết quả chưa biết không được kể là thành công; không liên tục hỏi lại khi chưa có phản hồi.

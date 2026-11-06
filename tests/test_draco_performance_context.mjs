@@ -33,3 +33,5 @@ assert.equal(bridge.command('Mao đi sang trái đi'),true);
 assert.equal(bridge.command('Mao lắc hông mạnh quá'),false);
 assert.deepEqual(seen,['refuse','left']);
 console.log('Performance: speech/emotion selection, direct commands, negation, feedback, bridge dispatch and story playback passed.');
+
+assert.equal(selectPerformance("Á, sợ quá! Kaito lại chọc Mao rồi!").action,"surprise");

@@ -296,6 +296,37 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.host.awaiting_reply)
         self.assertEqual(self.host.last_invitation_at, 1040)
 
+    async def test_comment_arriving_during_turn_preparation_cancels_chatter(self):
+        self.activity_at(900)
+
+        async def prepare():
+            self.activity_at(1000, pending=1)
+            return "planned chatter", "idle:chat"
+
+        self.host.make_turn = AsyncMock(side_effect=prepare)
+        ws = AsyncMock()
+        self.assertFalse(await self.host.dispatch_once(ws))
+        ws.send.assert_not_called()
+
+    async def test_share_reminder_waits_for_quiet_and_enough_other_turns(self):
+        write_json(
+            self.settings,
+            {
+                "share_reminders_enabled": True,
+                "share_interval_seconds": 180,
+                "share_min_turns": 3,
+                "share_quiet_seconds": 60,
+            },
+        )
+        self.host.last_share_at = 0
+        self.host.sent = 2
+        self.assertFalse(self.host.share_due(1000))
+        self.host.sent = 3
+        self.host.last_interaction = 950
+        self.assertFalse(self.host.share_due(1000))
+        self.host.last_interaction = 900
+        self.assertTrue(self.host.share_due(1000))
+
     async def test_silent_turn_is_not_counted_as_speech_or_a_question(self):
         self.host.styles = ["question"]
         await self.host.dispatch_once(AsyncMock())
@@ -404,6 +435,41 @@ class IdleHostTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.host.last_support_at, 400)
         self.assertTrue(self.host.support_due(1000))
         self.assertEqual(self.host.sent, 0)
+
+    async def test_share_reminders_are_spaced_and_do_not_interrupt_comments(self):
+        self.activity_at(900)
+        self.host.last_comment_seen = 900
+        write_json(
+            self.settings,
+            {"share_reminders_enabled": True, "share_interval_seconds": 180},
+        )
+        self.host.last_share_at = 820
+        self.assertFalse(self.host.share_due(999.99))
+        self.assertTrue(self.host.share_due(1000))
+        ws = AsyncMock()
+        self.activity_at(900, pending=1)
+        self.assertFalse(await self.host.dispatch_once(ws))
+        self.activity_at(900)
+        self.assertTrue(await self.host.dispatch_once(ws))
+        text = json.loads(ws.send.call_args.args[0])["text"]
+        self.assertEqual(
+            json.loads(text.splitlines()[-1])["live_context"]["style"], "share"
+        )
+        self.assertEqual(self.host.last_share_at, 1000)
+        self.assertFalse(self.host.share_due(1179.99))
+        self.assertTrue(self.host.share_due(1180))
+
+    def test_live_host_waits_for_current_connected_reader(self):
+        self.activity_at(900)
+        write_json(self.settings, {"require_tiktok_live": True})
+        health = self.settings.with_name("tiktok-reader-health.json")
+        self.assertFalse(self.host.ready(1000))
+        write_json(health, {"connected": True, "updated_at": 1000})
+        self.assertTrue(self.host.ready(1000))
+        write_json(health, {"connected": False, "updated_at": 1000})
+        self.assertFalse(self.host.ready(1000))
+        write_json(health, {"connected": True, "updated_at": 900})
+        self.assertFalse(self.host.ready(1000))
 
     async def test_real_conversation_and_listening_pause_take_priority_over_support(
         self,

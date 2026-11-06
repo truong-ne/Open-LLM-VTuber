@@ -121,7 +121,9 @@ class Experiences:
             ).fetchone()
             items = db.execute(
                 """SELECT k.id,k.content,k.claim_type,k.item_key,k.revision,k.valid_from,k.valid_until,k.actor_id,k.room_id,k.visibility,
-                array_agg(e.event_id::text) AS evidence FROM mao_hybrid.knowledge_items k
+                array_agg(e.event_id::text) AS evidence,
+                bool_and(s.kind='input' AND strpos(COALESCE(s.content,''),k.content)>0) AS exact_user_quote
+                FROM mao_hybrid.knowledge_items k
                 JOIN mao_hybrid.memory_evidence e ON e.scope=k.scope AND e.item_id=k.id
                 JOIN mao_hybrid.interaction_events s ON s.scope=e.scope AND s.id=e.event_id
                 WHERE k.scope=%s AND k.room_id=%s AND k.status='active' AND k.claim_type!='fiction' AND NOT s.deleted
@@ -403,10 +405,18 @@ class Experiences:
                     ),
                 ),
             )
-            db.execute(
-                "DELETE FROM mao_hybrid.dialogue_focus WHERE scope=%s AND source_event=%s",
-                (self.scope, event_id),
-            )
+            if db.execute(
+                "SELECT 1 FROM mao_hybrid.schema_versions WHERE version=10"
+            ).fetchone():
+                db.execute(
+                    "DELETE FROM mao_hybrid.dialogue_focus WHERE scope=%s AND (source_event=%s OR topic_event=%s OR quiet_event=%s)",
+                    (self.scope, event_id, event_id, event_id),
+                )
+            else:
+                db.execute(
+                    "DELETE FROM mao_hybrid.dialogue_focus WHERE scope=%s AND source_event=%s",
+                    (self.scope, event_id),
+                )
             # Conservative invalidation removes any derivation that used this source.
             db.execute(
                 "UPDATE mao_hybrid.policy_versions SET status='retired' WHERE scope=%s AND status IN ('active','trial') AND preference_id IN (SELECT id FROM mao_hybrid.character_preferences WHERE scope=%s AND room_id=%s AND actor_id=%s)",

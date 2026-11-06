@@ -39,6 +39,7 @@ def apply_profile(document, profile=None):
             conf_uid="mao_synthetic_test", persona_prompt="Synthetic diagnostic AI."
         )
         hybrid.update(
+            wesnoth_enabled=False,
             database_url_env="MAO_TEST_DATABASE_URL",
             database_env_file="private/mao-test.env",
             scope=TEST_SCOPE,

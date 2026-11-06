@@ -21,6 +21,7 @@ export function selectPerformance(text,expressions=[],motions=[]){
   let action=tag||storyAction(raw);
   if(!tag){
     if(/^\s*(?:xin chao|chao\b|hi\b|hello\b)/.test(t))action='greet';
+    else if(/\b(?:so qua|so het hon|lam mao so|mao so roi)\b/.test(t))action='surprise';
     else if(/\b(?:khong chiu dau|khong dong y dau|khong muon dau)\b/.test(t))action='refuse';
     else if(/^\s*(?:mao|minh)\s+(?:se|thu)\s+lac hong\b/.test(t))action='hipSway';
   }

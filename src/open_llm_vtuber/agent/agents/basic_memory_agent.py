@@ -956,9 +956,65 @@ class BasicMemoryAgent(AgentInterface):
                     self._memory.clear()
                     self._reset_memory_summary()
             messages = self._to_messages(input_data)
+            if self._hybrid and (input_data.metadata or {}).get("wesnoth_turn"):
+                from ...games.wesnoth_turn import play_turn
+
+                # Keep plans, malformed calls and unconfirmed narration out of TTS.
+                reply = await play_turn(
+                    self._llm, self._system_prompt(), self._hybrid, input_data
+                )
+                yield reply
+                return
             if self._hybrid and self._hybrid.direct_reply:
                 self._add_message(self._hybrid.direct_reply, "assistant")
                 yield self._hybrid.direct_reply
+                return
+            if self._hybrid and getattr(
+                getattr(self._hybrid, "dialogue_plan", None), "mode", None
+            ) in {"listen", "quiet", "resume"}:
+                from ...dialogue.listening import collect_listening_reply
+                from ...dialogue.control_speech import collect_control_reply
+
+                # Buffer speech-only listening before TTS; rejected questions or
+                # invitations must never be spoken and then retracted.
+                stream = self._llm.chat_completion(
+                    messages, self._system_prompt(), tools=None
+                )
+                reply = (
+                    await collect_listening_reply(stream)
+                    if self._hybrid.dialogue_plan.mode == "listen"
+                    else await collect_control_reply(
+                        stream, self._hybrid.dialogue_plan.mode
+                    )
+                )
+                self._add_message(reply, "assistant")
+                yield reply
+                return
+            from ...dialogue.story import story_request, generate_story
+            from ..hybrid.runtime import user_evidence
+
+            metadata = input_data.metadata or {}
+            story_genre = (
+                story_request(user_evidence(input_data.texts))
+                if not any(
+                    metadata.get(key)
+                    for key in (
+                        "_host_proposal",
+                        "proactive_speak",
+                        "narration_speech",
+                        "game_speech",
+                        "wesnoth_turn",
+                    )
+                )
+                else None
+            )
+            if story_genre:
+                # Do not speak a partial draft and then abandon its ending.
+                reply = await generate_story(
+                    self._llm, messages, self._system_prompt(), story_genre
+                )
+                self._add_message(reply, "assistant")
+                yield reply
                 return
             if (input_data.metadata or {}).get("_speech_recovery"):
                 # A host-controlled recovery pass cannot call tools, even when

@@ -1,5 +1,5 @@
 import * as T from '../3d/vendor/three.module.js';
-import {buildDiscoInterior} from './disco-interior.mjs?v=4';
+import {buildDiscoInterior} from './disco-interior.mjs?v=5';
 import {buildTvStudio} from './tv-studio.mjs?v=7';
 import {buildConcertStage} from './concert-stage.mjs';
 

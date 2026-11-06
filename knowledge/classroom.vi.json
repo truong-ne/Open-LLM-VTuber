@@ -1,0 +1,1832 @@
+[
+  {
+    "answer": "con khỉ",
+    "category": "Con vật",
+    "hints": [
+      "Leo trèo giỏi, thích ăn chuối.",
+      "Có bàn tay linh hoạt, thường sống thành đàn trên cây.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Khỉ dùng tay bám cành và chuyền từ cây này sang cây khác. Mình hay thấy khỉ trong những câu chuyện đi rừng đó!"
+  },
+  {
+    "answer": "con mèo",
+    "category": "Con vật",
+    "hints": [
+      "Bạn nhỏ hay kêu meo meo trong nhà.",
+      "Có ria mép, thích nằm cuộn tròn và có thể bắt chuột.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Mèo là vật nuôi quen thuộc, có ria giúp cảm nhận khoảng cách. Có bạn còn thích nằm ngủ ngay trên bàn học nữa nè!"
+  },
+  {
+    "answer": "con chó",
+    "category": "Con vật",
+    "hints": [
+      "Bạn giữ nhà thường vẫy đuôi khi chủ về.",
+      "Tiếng kêu quen thuộc là gâu gâu.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Chó là vật nuôi có khứu giác rất nhạy. Khi thấy chủ về, nhiều chú chó mừng đến mức chạy vòng quanh đó!"
+  },
+  {
+    "answer": "con vịt",
+    "category": "Con vật",
+    "hints": [
+      "Đi lạch bạch và bơi dưới ao.",
+      "Chân có màng, tiếng kêu cạp cạp.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Vịt có màng giữa các ngón chân giúp bơi. Nhìn đàn vịt nối đuôi nhau dưới ao vui mắt lắm nha!"
+  },
+  {
+    "answer": "con gà",
+    "category": "Con vật",
+    "hints": [
+      "Gia cầm quen thuộc trong sân nhà.",
+      "Con trống có mào, sáng sớm thường gáy ò ó o.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Gà được nuôi để lấy thịt và trứng. Tiếng gà gáy còn gắn với buổi sáng ở nhiều làng quê mình nữa!"
+  },
+  {
+    "answer": "con trâu",
+    "category": "Con vật",
+    "hints": [
+      "Bạn của nhà nông, thân to và có sừng.",
+      "Thường kéo cày, thích ngâm mình dưới nước.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Trâu từng giúp người nông dân cày ruộng rất nhiều. Bức tranh chú bé ngồi trên lưng trâu chắc nhiều bạn từng thấy rồi ha!"
+  },
+  {
+    "answer": "con bò",
+    "category": "Con vật",
+    "hints": [
+      "Ăn cỏ, có sừng, có giống cho sữa.",
+      "Tiếng kêu thường được viết là ụm bò.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Bò là gia súc quen thuộc ở nông trại. Sữa mình uống có thể được làm từ sữa của những cô bò sữa đó!"
+  },
+  {
+    "answer": "con heo",
+    "category": "Con vật",
+    "hints": [
+      "Vật nuôi có mõm tròn, hay kêu ụt ịt.",
+      "Có một món đồ đựng tiền tiết kiệm cũng mang hình bạn này.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Heo còn được gọi là lợn. Chú heo đất trên bàn học giúp nhiều bạn để dành từng đồng tiền nhỏ nè!"
+  },
+  {
+    "answer": "con thỏ",
+    "category": "Con vật",
+    "hints": [
+      "Tai dài, chạy nhanh, hay xuất hiện cạnh củ cà rốt.",
+      "Bạn này là đối thủ của rùa trong một truyện ngụ ngôn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Thỏ có tai dài và chân sau khỏe. Ngoài cà rốt, thức ăn của thỏ còn có cỏ và nhiều loại rau thích hợp nữa nha!"
+  },
+  {
+    "answer": "con rùa",
+    "category": "Con vật",
+    "hints": [
+      "Đi chậm và mang một lớp mai trên lưng.",
+      "Trong truyện thi chạy, bạn này thắng nhờ kiên trì.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Rùa có mai cứng bảo vệ cơ thể. Chuyện rùa thi với thỏ nhắc mình cứ bình tĩnh cố gắng từng chút đó!"
+  },
+  {
+    "answer": "con voi",
+    "category": "Con vật",
+    "hints": [
+      "Thân rất to và có chiếc vòi dài.",
+      "Dùng vòi lấy thức ăn, hút nước rồi đưa vào miệng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Voi dùng vòi như một công cụ rất khéo. Hình ảnh voi cũng quen thuộc trong nhiều câu chuyện ở Tây Nguyên mình nè!"
+  },
+  {
+    "answer": "con hươu",
+    "category": "Con vật",
+    "hints": [
+      "Sống trong rừng, chân thon và nhanh nhẹn.",
+      "Nhiều con đực có cặp gạc phân nhánh trên đầu.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Hươu ăn lá và cỏ, có đôi chân giúp di chuyển nhanh. Cặp gạc phân nhánh là điểm dễ nhận ra ở nhiều loài hươu đó!"
+  },
+  {
+    "answer": "con ong",
+    "category": "Con vật",
+    "hints": [
+      "Bay tìm hoa và có thể làm ra mật.",
+      "Sống trong tổ, có ong chúa và ong thợ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Ong lấy mật hoa và giúp thụ phấn cho cây. Ly nước chanh thêm chút mật ong là hình ảnh rất gần gũi ha!"
+  },
+  {
+    "answer": "con bướm",
+    "category": "Con vật",
+    "hints": [
+      "Có đôi cánh nhiều màu, bay quanh hoa.",
+      "Trước khi có cánh, bạn này từng là sâu rồi thành nhộng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Bướm trải qua các giai đoạn từ trứng, sâu, nhộng rồi mới có cánh. Một cuộc thay đổi thú vị ngay trong vườn mình đó!"
+  },
+  {
+    "answer": "chuồn chuồn",
+    "category": "Con vật",
+    "hints": [
+      "Côn trùng có thân dài, thường bay trên ao.",
+      "Có câu dân gian về việc bạn này bay thấp thì mưa.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 5."
+    ],
+    "explanation": "Chuồn chuồn có hai đôi cánh và đôi mắt lớn. Câu nói về độ cao khi bay là kinh nghiệm dân gian, không phải dự báo luôn đúng nha!"
+  },
+  {
+    "answer": "con kiến",
+    "category": "Con vật",
+    "hints": [
+      "Rất nhỏ, thường nối thành hàng đi tìm thức ăn.",
+      "Sống thành đàn, cùng nhau mang những mẩu thức ăn về tổ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Kiến phối hợp với nhau qua dấu mùi. Thấy một hàng kiến đi đều đều là có thể chúng đang theo đường đến đồ ăn nè!"
+  },
+  {
+    "answer": "con cua",
+    "category": "Con vật",
+    "hints": [
+      "Đi ngang, có hai càng và lớp vỏ cứng.",
+      "Có loại sống ở đồng ruộng, thường dùng nấu canh.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Cua dùng càng để gắp thức ăn và tự vệ. Canh cua ăn cùng rau là bữa cơm quen thuộc của nhiều gia đình mình!"
+  },
+  {
+    "answer": "con tôm",
+    "category": "Con vật",
+    "hints": [
+      "Sống dưới nước, có râu dài và vỏ ngoài.",
+      "Khi nấu chín, nhiều loại chuyển sang màu đỏ cam.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Tôm có thân chia đốt và lớp vỏ bên ngoài. Tôm rang ăn với cơm nóng là món giản dị mà đưa cơm lắm nha!"
+  },
+  {
+    "answer": "cá vàng",
+    "category": "Con vật",
+    "hints": [
+      "Bạn bơi trong bể, thường có màu cam rực.",
+      "Hay được nuôi làm cảnh, có chiếc đuôi mềm xòe ra.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Cá vàng là cá cảnh nước ngọt. Muốn nuôi khỏe thì mình cần chăm nước và cho ăn vừa đủ đó nha!"
+  },
+  {
+    "answer": "nồi cơm điện",
+    "category": "Trong bếp",
+    "hints": [
+      "Đồ dùng giúp chuẩn bị món chính trong bữa cơm.",
+      "Cắm điện, cho gạo và nước vào rồi bật nút nấu.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 3 và 3 và 4."
+    ],
+    "explanation": "Nồi cơm điện giúp nấu cơm và giữ ấm. Tiếng nút bật sang giữ ấm báo cả nhà sắp có cơm ăn rồi nè!"
+  },
+  {
+    "answer": "cái chảo",
+    "category": "Trong bếp",
+    "hints": [
+      "Dụng cụ có lòng rộng, thường dùng chiên xào.",
+      "Có cán cầm, đặt lên bếp để làm trứng rán.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Chảo có bề mặt rộng giúp chiên hoặc đảo thức ăn. Chỉ cần một cái chảo là mình đã làm được món trứng cho bữa sáng đó!"
+  },
+  {
+    "answer": "cái rổ",
+    "category": "Trong bếp",
+    "hints": [
+      "Dụng cụ đựng rau, có rất nhiều lỗ nhỏ.",
+      "Rửa xong, nước chảy qua lỗ để rau ráo hơn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Rổ dùng đựng đồ và làm ráo nước. Lúc phụ nhà nhặt rau, mình thường cho rau sạch vào rổ nè!"
+  },
+  {
+    "answer": "đôi đũa",
+    "category": "Trong bếp",
+    "hints": [
+      "Dụng cụ ăn cơm gồm hai thanh dài.",
+      "Dùng tay điều khiển để gắp thức ăn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Đũa là dụng cụ ăn quen thuộc ở Việt Nam. Tập gắp một hạt lạc cũng là cách luyện dùng đũa vui vui đó!"
+  },
+  {
+    "answer": "cái thìa",
+    "category": "Trong bếp",
+    "hints": [
+      "Dụng cụ nhỏ để xúc thức ăn.",
+      "Một đầu có lòng lõm, miền Nam còn hay gọi là muỗng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Thìa còn được gọi là muỗng, dùng xúc thức ăn hoặc khuấy nước. Một bát cháo nóng thì có chiếc thìa rất tiện ha!"
+  },
+  {
+    "answer": "ấm nước",
+    "category": "Trong bếp",
+    "hints": [
+      "Đồ dùng có vòi để đun hoặc chứa nước.",
+      "Cầm quai rồi rót nước qua phần vòi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Ấm nước có thân chứa nước và vòi rót. Khi nước nóng, mình nhớ cầm đúng quai để tránh bị bỏng nha!"
+  },
+  {
+    "answer": "tủ lạnh",
+    "category": "Trong bếp",
+    "hints": [
+      "Thiết bị giúp thực phẩm mát và lâu hỏng hơn.",
+      "Có ngăn mát, nhiều loại còn có ngăn đá.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Tủ lạnh làm chậm sự phát triển của nhiều vi sinh vật. Cất thức ăn vào rồi vẫn cần chú ý thời gian bảo quản nhé!"
+  },
+  {
+    "answer": "bếp gas",
+    "category": "Trong bếp",
+    "hints": [
+      "Thiết bị nấu ăn tạo ngọn lửa từ khí đốt.",
+      "Thường nối với bình nhiên liệu qua dây dẫn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Bếp gas dùng khí đốt để tạo nhiệt nấu ăn. Dùng xong nhớ tắt bếp và khóa nguồn theo hướng dẫn an toàn nha!"
+  },
+  {
+    "answer": "cái thớt",
+    "category": "Trong bếp",
+    "hints": [
+      "Mặt phẳng kê bên dưới khi thái thực phẩm.",
+      "Có loại bằng gỗ hoặc nhựa, dùng cùng dao.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Thớt giúp kê thực phẩm khi thái. Nhà mình nên tách thớt đồ sống và đồ ăn chín cho sạch sẽ nè!"
+  },
+  {
+    "answer": "hộp cơm",
+    "category": "Trong bếp",
+    "hints": [
+      "Đồ đựng bữa ăn mang đi học, đi làm.",
+      "Thường có nắp và có thể chia nhiều ngăn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Hộp cơm giúp mang bữa ăn từ nhà đi. Mở ra thấy món mình thích thì giờ nghỉ trưa vui hơn hẳn ha!"
+  },
+  {
+    "answer": "phở bò",
+    "category": "Món ngon",
+    "hints": [
+      "Món nước có bánh sợi, thường ăn buổi sáng.",
+      "Nước dùng thơm, phía trên có thịt của gia súc kêu ụm bò.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Phở bò gồm bánh phở, nước dùng và thịt bò. Thêm hành cùng rau thơm là có bát ăn sáng quen thuộc rồi nè!"
+  },
+  {
+    "answer": "bún chả",
+    "category": "Món ngon",
+    "hints": [
+      "Món có bún, thịt nướng và nước chấm.",
+      "Gắn với Hà Nội, thường có chả miếng và chả viên.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Bún chả dùng bún ăn cùng thịt nướng và nước mắm pha. Mùi thịt nướng thơm ngoài phố dễ làm bụng réo lắm ha!"
+  },
+  {
+    "answer": "bánh xèo",
+    "category": "Món ngon",
+    "hints": [
+      "Bánh đổ trong chảo, thường vàng và giòn mép.",
+      "Tên gợi tiếng bột chạm vào chảo nóng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Bánh xèo có lớp vỏ mỏng, bên trong thường có giá, thịt hoặc tôm. Cuốn cùng rau rồi chấm là món nhiều người mê đó!"
+  },
+  {
+    "answer": "bánh cuốn",
+    "category": "Món ngon",
+    "hints": [
+      "Lớp bột gạo mỏng được tráng rồi cuộn lại.",
+      "Thường có nhân thịt mộc nhĩ, ăn cùng hành phi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Bánh cuốn làm từ lớp bột tráng mỏng. Đĩa bánh nóng thêm hành phi thơm là bữa sáng nhẹ nhàng quen thuộc nè!"
+  },
+  {
+    "answer": "bánh bao",
+    "category": "Món ngon",
+    "hints": [
+      "Bánh hấp mềm, thường có lớp vỏ trắng.",
+      "Có thể có nhân thịt, miến và trứng cút.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Bánh bao thường được làm chín bằng hơi nước. Bẻ chiếc bánh còn ấm thấy phần nhân thơm là muốn ăn ngay nè!"
+  },
+  {
+    "answer": "xôi gấc",
+    "category": "Món ngon",
+    "hints": [
+      "Món nếp có màu đỏ cam, hay có trong mâm cỗ.",
+      "Màu của món ăn đến từ loại quả có vỏ gai.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Xôi gấc được đồ từ nếp trộn với phần thịt gấc. Màu đỏ cam làm mâm cỗ thêm rực rỡ đó nha!"
+  },
+  {
+    "answer": "cháo gà",
+    "category": "Món ngon",
+    "hints": [
+      "Món mềm từ gạo nấu nhiều nước với thịt gia cầm.",
+      "Thường có hành, tiêu, phần thịt xé nhỏ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Cháo gà là gạo nấu mềm cùng thịt gà. Một bát nóng vào ngày trời lạnh dễ làm mình thấy ấm bụng ha!"
+  },
+  {
+    "answer": "canh chua",
+    "category": "Món ngon",
+    "hints": [
+      "Món nước có vị chua dịu, thường có cà chua.",
+      "Có thể nấu với cá, thêm dứa và rau thơm.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Canh chua có nhiều cách nấu tùy vùng. Vị chua nhẹ giúp bữa cơm bớt ngấy, nhất là ngày nóng đó!"
+  },
+  {
+    "answer": "chả giò",
+    "category": "Món ngon",
+    "hints": [
+      "Món cuốn nhỏ chiên giòn, có lớp bánh tráng bên ngoài.",
+      "Ở nhiều nơi miền Bắc gọi là nem rán.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Chả giò và nem rán là những tên gọi quen thuộc cho món cuốn chiên. Phần nhân có thể thay đổi theo từng nhà nha!"
+  },
+  {
+    "answer": "cơm tấm",
+    "category": "Món ngon",
+    "hints": [
+      "Món cơm từ hạt gạo vỡ, hay ăn cùng sườn.",
+      "Một đĩa quen thuộc có sườn, bì, chả và mỡ hành.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Cơm tấm dùng gạo tấm, thường ăn kèm sườn nướng. Rưới chút nước mắm pha là đủ làm nhiều bạn thèm rồi ha!"
+  },
+  {
+    "answer": "chè đậu đen",
+    "category": "Món ngon",
+    "hints": [
+      "Món ngọt nấu từ hạt đậu sẫm màu.",
+      "Có thể thêm nước cốt dừa, ăn nóng hoặc cùng đá.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 3 và 3 và 3."
+    ],
+    "explanation": "Chè đậu đen là món tráng miệng giản dị. Bát chè mát thêm chút cốt dừa rất hợp buổi trưa hè nè!"
+  },
+  {
+    "answer": "sữa chua",
+    "category": "Món ngon",
+    "hints": [
+      "Món từ sữa lên men có vị chua nhẹ.",
+      "Thường để lạnh trong hũ, có loại ăn kèm trái cây.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Sữa chua được tạo ra nhờ vi khuẩn lên men sữa. Trộn với trái cây cắt nhỏ là thành bữa ăn phụ dễ làm đó!"
+  },
+  {
+    "answer": "trà sữa",
+    "category": "Món ngon",
+    "hints": [
+      "Thức uống phối trà cùng nguyên liệu từ sữa.",
+      "Hay có trân châu, uống bằng ống hút lớn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Trà sữa có nhiều kiểu phối vị và topping. Chọn độ ngọt vừa miệng là ly của riêng mình rồi nè!"
+  },
+  {
+    "answer": "nước mía",
+    "category": "Món ngon",
+    "hints": [
+      "Đồ uống ép từ cây có thân dài nhiều đốt.",
+      "Ngoài quán thường có máy ép các khúc cây lấy nước.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Nước mía được ép từ thân cây mía. Ly nước mát vào ngày nóng là hình ảnh rất quen ở nhiều con phố mình đó!"
+  },
+  {
+    "answer": "quả chuối",
+    "category": "Trái cây",
+    "hints": [
+      "Quả dài cong, khi chín thường có vỏ vàng.",
+      "Mọc thành nải, bóc vỏ rồi ăn phần ruột mềm.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Chuối mọc thành nải và có nhiều giống khác nhau. Một quả chín là món ăn nhẹ tiện mang đi học, đi làm nè!"
+  },
+  {
+    "answer": "quả xoài",
+    "category": "Trái cây",
+    "hints": [
+      "Quả nhiệt đới, lúc xanh có thể chấm muối.",
+      "Khi chín nhiều giống có thịt vàng, hạt dẹt to.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Xoài có thể ăn xanh hoặc chín tùy giống và sở thích. Xoài xanh chấm muối là món khiến nhiều bạn nghĩ tới đã chảy nước miếng ha!"
+  },
+  {
+    "answer": "dưa hấu",
+    "category": "Trái cây",
+    "hints": [
+      "Quả lớn, vỏ xanh, ruột thường đỏ nhiều nước.",
+      "Hạt thường màu đen, hay bổ thành những miếng tam giác.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Dưa hấu chứa nhiều nước, có nhiều giống và màu ruột khác nhau. Đĩa miếng đỏ mát lạnh rất quen trong ngày hè nè!"
+  },
+  {
+    "answer": "quả cam",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có múi, thường dùng vắt lấy nước.",
+      "Tên quả cũng là tên một màu giữa đỏ và vàng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Cam là trái cây có múi, có thể ăn hoặc vắt nước. Bóc vỏ xong bàn tay còn thơm mùi tinh dầu nữa đó!"
+  },
+  {
+    "answer": "quả bưởi",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có múi to, lớp vỏ thường khá dày.",
+      "Tép nằm trong từng múi lớn, hay bày mâm ngũ quả.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Bưởi có vỏ dày và múi lớn. Cả nhà ngồi tách múi chia nhau cũng là một buổi trò chuyện vui ha!"
+  },
+  {
+    "answer": "quả ổi",
+    "category": "Trái cây",
+    "hints": [
+      "Quả giòn, trong ruột có nhiều hạt nhỏ cứng.",
+      "Có giống ruột trắng, có giống ruột hồng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Ổi có mùi thơm riêng và thường được ăn tươi. Một miếng chấm muối ớt là món quà vặt gần gũi nè!"
+  },
+  {
+    "answer": "quả mít",
+    "category": "Trái cây",
+    "hints": [
+      "Quả to, vỏ gai, bên trong chia thành múi.",
+      "Múi chín vàng thơm, mỗi múi thường có một hạt.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Mít có nhiều múi nằm trong quả lớn. Hạt mít nấu chín cũng là món nhiều người từng ăn đó nha!"
+  },
+  {
+    "answer": "sầu riêng",
+    "category": "Trái cây",
+    "hints": [
+      "Quả vỏ gai, mùi rất đặc trưng.",
+      "Ruột vàng kem, có người mê và có người ngại mùi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Sầu riêng có phần thịt mềm và mùi đậm. Đây đúng là món dễ chia cả lớp thành hai đội thích và không thích ha!"
+  },
+  {
+    "answer": "quả dừa",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có lớp xơ, bên trong có nước và cùi.",
+      "Cây cao, lá dài, thường gắn với miền biển và Bến Tre.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Dừa cho nước, cùi và nhiều nguyên liệu khác. Ly nước dừa cùng chút cùi non là món giải khát quen thuộc nè!"
+  },
+  {
+    "answer": "quả nhãn",
+    "category": "Trái cây",
+    "hints": [
+      "Quả nhỏ có vỏ nâu, thịt trong và hạt đen.",
+      "Tên còn gợi hình ảnh đôi mắt của con rồng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Nhãn có lớp cùi bọc quanh hạt đen. Khi ăn mình nhớ bỏ hạt, nhất là lúc chia cho các em nhỏ nha!"
+  },
+  {
+    "answer": "quả vải",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có vỏ sần đỏ hồng khi chín.",
+      "Bóc vỏ thấy cùi trắng trong, gắn với mùa hè Bắc Giang.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Vải có cùi mọng nước và thơm ngọt. Đến mùa, những chùm vải đỏ trên xe hàng làm đường phố rực lên đó!"
+  },
+  {
+    "answer": "thanh long",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có nhiều tai xanh trên vỏ hồng hoặc đỏ.",
+      "Ruột có nhiều hạt đen nhỏ, thường trắng hoặc đỏ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 4."
+    ],
+    "explanation": "Thanh long có những hạt nhỏ phân bố trong phần ruột. Bổ đôi rồi xúc bằng thìa cũng là một cách ăn tiện nè!"
+  },
+  {
+    "answer": "chôm chôm",
+    "category": "Trái cây",
+    "hints": [
+      "Quả nhỏ có lớp vỏ nhiều lông mềm.",
+      "Khi chín thường đỏ hoặc vàng, bên trong có cùi trắng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Chôm chôm dễ nhận ra nhờ lớp lông trên vỏ. Chỉ nhìn một chùm thôi đã thấy tên gọi rất hợp hình dáng rồi ha!"
+  },
+  {
+    "answer": "măng cụt",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có vỏ tím dày, ruột trắng thành múi.",
+      "Có đài xanh ở đầu, bóc ra thấy các múi như bông hoa.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Măng cụt có lớp vỏ tím và các múi trắng mềm. Bóc nhẹ tay để phần vỏ không làm dính màu vào áo nha!"
+  },
+  {
+    "answer": "quả na",
+    "category": "Trái cây",
+    "hints": [
+      "Quả có nhiều mắt nổi trên vỏ xanh.",
+      "Ruột trắng mềm, có nhiều hạt đen; miền Nam thường gọi là mãng cầu ta.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Na còn được gọi là mãng cầu ta. Khi chín quả mềm và thơm, ăn từng múi rồi bỏ hạt nhé!"
+  },
+  {
+    "answer": "cà rốt",
+    "category": "Rau củ",
+    "hints": [
+      "Củ thường màu cam, hay được vẽ cạnh thỏ.",
+      "Có thể thái nhỏ nấu canh hoặc xào.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Cà rốt là phần rễ phình to của cây. Một ít cắt hạt lựu giúp món cơm chiên thêm màu sắc nè!"
+  },
+  {
+    "answer": "khoai tây",
+    "category": "Rau củ",
+    "hints": [
+      "Củ dùng làm món chiên que được nhiều người thích.",
+      "Có thể nghiền mịn hoặc nấu cùng thịt bò.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 3."
+    ],
+    "explanation": "Khoai tây được dùng trong nhiều món. Những củ xanh hoặc mọc mầm không nên dùng làm thức ăn nha!"
+  },
+  {
+    "answer": "khoai lang",
+    "category": "Rau củ",
+    "hints": [
+      "Củ quen thuộc có thể luộc hoặc nướng.",
+      "Có giống ruột vàng, tím, trắng; hay bán nóng trên phố.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 4."
+    ],
+    "explanation": "Khoai lang nướng thơm và ấm tay trong ngày lạnh. Đây là món quà vặt mộc mạc mà nhiều người nhớ mãi đó!"
+  },
+  {
+    "answer": "rau muống",
+    "category": "Rau củ",
+    "hints": [
+      "Rau thân rỗng, hay luộc rồi vắt chanh vào nước.",
+      "Cũng thường được xào với tỏi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Rau muống là loại rau quen thuộc trong mâm cơm. Đĩa rau luộc cùng nước rau chua nhẹ là bữa ăn mùa hè giản dị nè!"
+  },
+  {
+    "answer": "rau cải",
+    "category": "Rau củ",
+    "hints": [
+      "Nhóm rau lá thường nấu canh hoặc xào.",
+      "Có nhiều loại như cải xanh, cải ngọt, cải bẹ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Rau cải gồm nhiều loại khác nhau. Có loại vị nhẹ, có loại hơi cay, nên món canh mỗi nhà cũng có vị riêng ha!"
+  },
+  {
+    "answer": "bí đỏ",
+    "category": "Rau củ",
+    "hints": [
+      "Quả có ruột vàng cam, hay nấu canh.",
+      "Tên gọi có một màu, cũng được dùng nấu chè.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 2."
+    ],
+    "explanation": "Bí đỏ có phần ruột mềm khi nấu chín. Món canh bí thêm ít thịt băm là bữa cơm quen thuộc đó!"
+  },
+  {
+    "answer": "dưa chuột",
+    "category": "Rau củ",
+    "hints": [
+      "Quả dài giòn, thường ăn sống kèm cơm.",
+      "Còn được gọi là dưa leo.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Dưa chuột và dưa leo là hai tên gọi quen thuộc. Thái vài lát đặt cạnh món mặn giúp đĩa cơm nhìn mát mắt nè!"
+  },
+  {
+    "answer": "cà chua",
+    "category": "Rau củ",
+    "hints": [
+      "Quả thường chín đỏ, dùng nấu canh hoặc làm sốt.",
+      "Hay đi cùng trứng trong món canh rất dễ nấu.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Cà chua được dùng như rau trong bữa ăn dù về thực vật là quả. Canh trứng cà chua là món nhiều bạn tập nấu đầu tiên ha!"
+  },
+  {
+    "answer": "hành lá",
+    "category": "Rau củ",
+    "hints": [
+      "Rau gia vị có phần lá dài hình ống.",
+      "Thường thái nhỏ rắc lên bát phở hoặc cháo.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Hành lá giúp món ăn có thêm màu xanh và mùi thơm. Chút hành cắt nhỏ làm bát cháo trông hấp dẫn hơn nè!"
+  },
+  {
+    "answer": "củ tỏi",
+    "category": "Rau củ",
+    "hints": [
+      "Gia vị có nhiều tép, khi phi thơm rất hấp dẫn.",
+      "Hay dùng xào rau muống, mùi khá nồng khi còn sống.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Tỏi có nhiều tép nằm trong một củ. Phi lên thơm là bước mở đầu của rất nhiều món xào ở nhà mình đó!"
+  },
+  {
+    "answer": "bút chì",
+    "category": "Trường học",
+    "hints": [
+      "Dụng cụ viết có nét có thể tẩy đi.",
+      "Ruột thường làm từ than chì, bên ngoài bọc gỗ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Bút chì viết nhờ phần ruột than chì. Mình thường dùng để phác hình hoặc làm bài trước khi cần sửa nè!"
+  },
+  {
+    "answer": "bút mực",
+    "category": "Trường học",
+    "hints": [
+      "Dụng cụ viết cho nét khó tẩy bằng gôm.",
+      "Có loại dùng ngòi kim loại và bơm mực.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Bút mực dùng mực để ghi chữ lên giấy. Nắn nót từng dòng trong vở là kỷ niệm của nhiều bạn ha!"
+  },
+  {
+    "answer": "cục tẩy",
+    "category": "Trường học",
+    "hints": [
+      "Vật nhỏ giúp xóa nét bút chì.",
+      "Ở một số nơi còn gọi là cục gôm.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Cục tẩy hay cục gôm giúp lấy nét chì khỏi giấy. Tẩy nhẹ để trang vở không bị rách nha!"
+  },
+  {
+    "answer": "thước kẻ",
+    "category": "Trường học",
+    "hints": [
+      "Đồ dùng giúp vẽ đường thẳng và đo độ dài.",
+      "Thường có các vạch chia xăng-ti-mét.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 2."
+    ],
+    "explanation": "Thước kẻ vừa giúp đo vừa giúp kẻ thẳng. Đừng quên đặt vạch số không đúng đầu đoạn cần đo nè!"
+  },
+  {
+    "answer": "quyển vở",
+    "category": "Trường học",
+    "hints": [
+      "Đồ dùng gồm nhiều trang để ghi bài.",
+      "Có thể có dòng kẻ ngang hoặc ô ly.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 2."
+    ],
+    "explanation": "Vở giúp giữ lại những điều mình học mỗi ngày. Trang đầu sạch đẹp luôn làm mình muốn viết cẩn thận hơn ha!"
+  },
+  {
+    "answer": "cặp sách",
+    "category": "Trường học",
+    "hints": [
+      "Đồ mang theo khi đi học, chứa sách vở.",
+      "Có loại đeo trên vai, có loại cầm bằng quai.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Cặp sách giúp gom đồ học tập gọn lại. Soạn cặp từ tối hôm trước để sáng mai đỡ cuống nhé!"
+  },
+  {
+    "answer": "bảng đen",
+    "category": "Trường học",
+    "hints": [
+      "Mặt bảng giáo viên viết phấn lên để giảng bài.",
+      "Tên có màu đen nhưng nhiều chiếc thực tế màu xanh.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Bảng đen là tên quen thuộc của bảng viết phấn. Màu xanh được dùng nhiều, nhưng mình vẫn thường gọi theo tên cũ đó!"
+  },
+  {
+    "answer": "viên phấn",
+    "category": "Trường học",
+    "hints": [
+      "Vật nhỏ để viết lên bảng học.",
+      "Khi viết hoặc xóa có thể tạo bụi trắng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Phấn để lại nét nhờ các hạt bám lên mặt bảng. Tiếng phấn viết và tiếng trống trường là ký ức rất quen ha!"
+  },
+  {
+    "answer": "khăn quàng",
+    "category": "Trường học",
+    "hints": [
+      "Món đeo quanh cổ, học sinh đội viên thường dùng màu đỏ.",
+      "Được gấp rồi thắt thành nút trước ngực.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 5."
+    ],
+    "explanation": "Khăn quàng đỏ gắn với đội viên thiếu niên. Nhiều bạn từng tập thắt sao cho hai đuôi khăn cân nhau nè!"
+  },
+  {
+    "answer": "trống trường",
+    "category": "Trường học",
+    "hints": [
+      "Vật phát tiếng báo giờ ở sân trường.",
+      "Tiếng tùng tùng có thể báo vào lớp hoặc ra chơi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 6."
+    ],
+    "explanation": "Trống trường giúp báo các mốc trong ngày học. Nghe trống ra chơi là cả lớp thường vui hẳn lên ha!"
+  },
+  {
+    "answer": "giờ ra chơi",
+    "category": "Trường học",
+    "hints": [
+      "Khoảng nghỉ giữa các tiết học.",
+      "Học sinh có thể ra sân, uống nước hoặc trò chuyện.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 3 và 2 và 4."
+    ],
+    "explanation": "Giờ ra chơi giúp mình nghỉ sau khi tập trung học. Chỉ vài phút chơi nhẹ rồi vào lớp cũng thấy tỉnh táo hơn nè!"
+  },
+  {
+    "answer": "thư viện",
+    "category": "Trường học",
+    "hints": [
+      "Nơi có nhiều sách để đọc và mượn.",
+      "Thường cần giữ yên tĩnh, xếp sách đúng chỗ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Thư viện giúp mọi người tiếp cận nhiều cuốn sách. Mượn xong nhớ giữ gìn và trả đúng hẹn nha!"
+  },
+  {
+    "answer": "bài tập",
+    "category": "Trường học",
+    "hints": [
+      "Việc học được giao để luyện lại kiến thức.",
+      "Có thể làm trên lớp hoặc về nhà làm tiếp.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Bài tập giúp mình thử dùng điều vừa học. Làm sai rồi hiểu vì sao cũng là một cách tiến bộ đó!"
+  },
+  {
+    "answer": "học bạ",
+    "category": "Trường học",
+    "hints": [
+      "Sổ ghi kết quả học tập qua các năm.",
+      "Có thông tin môn học, điểm và nhận xét của nhà trường.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Học bạ lưu lại quá trình học ở trường. Nhìn lại có thể thấy mình đã đi được một chặng đường dài ha!"
+  },
+  {
+    "answer": "bằng khen",
+    "category": "Trường học",
+    "hints": [
+      "Giấy ghi nhận thành tích hoặc việc làm tốt.",
+      "Thường được trao khi tuyên dương, có tên người nhận.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Bằng khen dùng để ghi nhận thành tích. Điều đáng vui nhất vẫn là công sức mình đã bỏ ra nè!"
+  },
+  {
+    "answer": "cái giường",
+    "category": "Trong nhà",
+    "hints": [
+      "Đồ nội thất mình nằm nghỉ mỗi đêm.",
+      "Thường có đệm, gối và chăn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 6."
+    ],
+    "explanation": "Giường là nơi nghỉ ngơi quen thuộc. Dọn chăn gối gọn lại một chút là căn phòng trông sáng sủa hơn ha!"
+  },
+  {
+    "answer": "cái gối",
+    "category": "Trong nhà",
+    "hints": [
+      "Đồ mềm để kê đầu khi nằm.",
+      "Có vỏ bọc, đặt ở đầu giường.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Gối giúp kê đầu khi ngủ hoặc nghỉ. Một chiếc vỏ sạch thơm khiến giờ đi ngủ dễ chịu hơn nè!"
+  },
+  {
+    "answer": "cái chăn",
+    "category": "Trong nhà",
+    "hints": [
+      "Đồ dùng phủ lên người để giữ ấm.",
+      "Còn được gọi là mền ở nhiều nơi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Chăn hay mền giúp giữ ấm khi nằm nghỉ. Ngày lạnh cuộn trong chăn rồi nghe mưa thì dễ buồn ngủ lắm ha!"
+  },
+  {
+    "answer": "cái quạt",
+    "category": "Trong nhà",
+    "hints": [
+      "Thiết bị tạo gió giúp mình thấy mát.",
+      "Có loại treo tường, để bàn hoặc gắn trên trần.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Quạt làm không khí chuyển động quanh mình. Nhớ giữ tay và đồ vật tránh xa cánh đang quay nha!"
+  },
+  {
+    "answer": "đèn bàn",
+    "category": "Trong nhà",
+    "hints": [
+      "Đèn nhỏ đặt ở chỗ học hoặc làm việc.",
+      "Chiếu sáng tập trung trên mặt bàn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Đèn bàn giúp góc học sáng hơn. Chọn vị trí để tay mình không che mất ánh sáng lên trang vở nè!"
+  },
+  {
+    "answer": "đồng hồ",
+    "category": "Trong nhà",
+    "hints": [
+      "Đồ dùng giúp biết giờ.",
+      "Có loại dùng kim, có loại hiện số điện tử.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Đồng hồ giúp theo dõi thời gian. Đặt báo thức sớm một chút đôi khi giúp buổi sáng bớt vội vàng đó!"
+  },
+  {
+    "answer": "cái gương",
+    "category": "Trong nhà",
+    "hints": [
+      "Bề mặt phản chiếu giúp mình nhìn thấy khuôn mặt.",
+      "Hay dùng khi chải tóc hoặc chỉnh trang.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Gương phản xạ ánh sáng nên mình thấy hình của mình trong đó. Trước khi ra ngoài, nhiều bạn đều nhìn qua một lần ha!"
+  },
+  {
+    "answer": "chổi quét",
+    "category": "Trong nhà",
+    "hints": [
+      "Đồ dùng gom bụi và rác trên sàn.",
+      "Có cán dài, phần đầu gồm nhiều sợi hoặc cành nhỏ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Chổi giúp gom rác trước khi hót đi. Mỗi người phụ một tay là nhà sạch nhanh hơn nè!"
+  },
+  {
+    "answer": "thùng rác",
+    "category": "Trong nhà",
+    "hints": [
+      "Đồ để bỏ vật không còn dùng.",
+      "Có loại có nắp và bàn đạp mở bằng chân.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 3."
+    ],
+    "explanation": "Thùng rác giúp gom rác đúng chỗ. Phân loại theo cách thu gom ở nơi mình sống sẽ tiện xử lý hơn nha!"
+  },
+  {
+    "answer": "móc áo",
+    "category": "Trong nhà",
+    "hints": [
+      "Vật giúp treo trang phục cho gọn.",
+      "Thường có đầu cong để treo lên thanh hoặc dây.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Móc áo giúp quần áo được treo và phơi gọn. Chọn kích cỡ vừa áo để vai áo đỡ bị kéo lệch nè!"
+  },
+  {
+    "answer": "rèm cửa",
+    "category": "Trong nhà",
+    "hints": [
+      "Tấm vải che ở cửa sổ hoặc lối đi.",
+      "Kéo lại có thể bớt nắng chiếu vào phòng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Rèm cửa vừa che sáng vừa trang trí phòng. Chỉ đổi màu rèm thôi đôi khi góc nhà đã có cảm giác khác rồi ha!"
+  },
+  {
+    "answer": "chìa khóa",
+    "category": "Trong nhà",
+    "hints": [
+      "Vật nhỏ dùng mở một ổ có cùng cấu tạo.",
+      "Thường được xâu thành chùm mang theo.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Chìa khóa giúp mở khóa tương ứng. Có chỗ cố định để treo sẽ đỡ phải đi tìm trước giờ ra ngoài nè!"
+  },
+  {
+    "answer": "xe đạp",
+    "category": "Đi lại",
+    "hints": [
+      "Phương tiện hai bánh chạy nhờ sức người.",
+      "Dùng chân đạp bàn đạp để làm bánh quay.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Xe đạp giúp đi lại và vận động. Khi đạp ngoài đường, mình cần chú ý giao thông và trang bị phù hợp nha!"
+  },
+  {
+    "answer": "xe máy",
+    "category": "Đi lại",
+    "hints": [
+      "Phương tiện hai bánh có động cơ rất phổ biến.",
+      "Người đi cần đội mũ bảo hiểm đúng quy định.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Xe máy quen thuộc trên đường phố Việt Nam. Đi bình tĩnh và đội mũ đúng cách để về nhà an toàn nhé!"
+  },
+  {
+    "answer": "xe buýt",
+    "category": "Đi lại",
+    "hints": [
+      "Xe chở nhiều người chạy theo tuyến cố định.",
+      "Đón khách ở trạm, thường có số tuyến ở phía trước.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Xe buýt giúp nhiều người đi cùng một chuyến. Xem đúng số tuyến và trạm xuống trước khi đi nha!"
+  },
+  {
+    "answer": "tàu hỏa",
+    "category": "Đi lại",
+    "hints": [
+      "Phương tiện nhiều toa chạy trên đường ray.",
+      "Đầu máy kéo các toa, đi qua ga để đón khách.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Tàu hỏa chạy trên đường ray và ghé các ga. Nhìn cảnh vật qua cửa sổ là điều nhiều người thích trong chuyến đi đó!"
+  },
+  {
+    "answer": "máy bay",
+    "category": "Đi lại",
+    "hints": [
+      "Phương tiện chở người bay trên bầu trời.",
+      "Cất cánh từ đường băng, thường có hai cánh lớn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Máy bay giúp đi xa trong thời gian ngắn hơn nhiều phương tiện khác. Nhớ làm theo hướng dẫn của tổ bay khi đi nhé!"
+  },
+  {
+    "answer": "thuyền buồm",
+    "category": "Đi lại",
+    "hints": [
+      "Phương tiện trên nước có tấm vải lớn đón gió.",
+      "Dùng sức gió tác động lên buồm để di chuyển.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 6 và 4."
+    ],
+    "explanation": "Thuyền buồm tận dụng gió để đi trên nước. Hình cánh buồm trắng trên biển là cảnh đẹp rất dễ nhớ ha!"
+  },
+  {
+    "answer": "đèn đỏ",
+    "category": "Đi lại",
+    "hints": [
+      "Tín hiệu giao thông yêu cầu phương tiện dừng lại.",
+      "Nằm trong bộ đèn có ba màu đỏ, vàng, xanh.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Đèn đỏ báo dừng theo quy định giao thông. Chờ đúng lượt giúp mọi người qua đường trật tự hơn nè!"
+  },
+  {
+    "answer": "vỉa hè",
+    "category": "Đi lại",
+    "hints": [
+      "Phần đường thường cao hơn mặt xe chạy, dành cho người đi bộ.",
+      "Nằm hai bên nhiều tuyến phố.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Vỉa hè tạo không gian cho người đi bộ. Giữ lối thông thoáng giúp cả người lớn tuổi và trẻ em đi thuận tiện hơn nhé!"
+  },
+  {
+    "answer": "ngã tư",
+    "category": "Đi lại",
+    "hints": [
+      "Chỗ hai con đường cắt nhau tạo bốn hướng.",
+      "Thường có đèn tín hiệu hoặc người điều tiết giao thông.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Ngã tư là nơi các dòng xe gặp nhau. Giảm chú ý vào điện thoại và quan sát kỹ khi đi qua nha!"
+  },
+  {
+    "answer": "cầu vượt",
+    "category": "Đi lại",
+    "hints": [
+      "Công trình giúp một luồng đi phía trên luồng khác.",
+      "Có loại dành cho xe, có loại dành riêng cho người đi bộ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Cầu vượt giúp các hướng đi tách nhau về độ cao. Đi đúng loại cầu và đúng lối cho mình nhé!"
+  },
+  {
+    "answer": "hạt mưa",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Giọt nước nhỏ rơi từ mây xuống.",
+      "Nhiều giọt tạo tiếng tí tách trên mái nhà.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Hạt mưa là những giọt nước từ mây rơi xuống. Nghe tiếng trên mái tôn là biết trời đang đổ mưa nè!"
+  },
+  {
+    "answer": "tia chớp",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Vệt sáng lóe trên trời trong cơn giông.",
+      "Ta thường thấy ánh sáng này trước khi nghe tiếng sấm.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Chớp là ánh sáng của sự phóng điện trong khí quyển. Thấy giông thì mình tìm nơi trú an toàn, đừng đứng ngoài đồng trống nha!"
+  },
+  {
+    "answer": "ngọn gió",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Không nhìn thấy trực tiếp nhưng có thể làm lá rung.",
+      "Cảm nhận được khi không khí thổi qua da.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Gió là không khí chuyển động. Lá cây xào xạc hay cánh diều bay đều giúp mình nhận ra gió đó!"
+  },
+  {
+    "answer": "mặt trời",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Thiên thể chiếu sáng cho Trái Đất ban ngày.",
+      "Mọc phía đông và lặn phía tây theo cách quan sát thông thường.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Mặt Trời là ngôi sao cung cấp năng lượng cho Trái Đất. Mình không nhìn thẳng vào ánh sáng chói để bảo vệ mắt nha!"
+  },
+  {
+    "answer": "ngôi sao",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Chấm sáng thường thấy trên bầu trời đêm.",
+      "Nhiều thiên thể này là những quả cầu khí nóng ở rất xa.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Ngôi sao ở rất xa nên nhìn nhỏ như chấm sáng. Trời quang ở vùng ít đèn thường giúp mình thấy nhiều sao hơn nè!"
+  },
+  {
+    "answer": "dòng sông",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Dòng nước tự nhiên chảy qua nhiều vùng đất.",
+      "Có bờ hai bên, có thể đổ ra biển hoặc nhập vào sông khác.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Sông đưa nước qua các vùng đất. Bến sông và con đò là hình ảnh quen trong nhiều bài thơ, bài hát mình biết đó!"
+  },
+  {
+    "answer": "ngọn núi",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Khối đất đá nhô cao rõ rệt trên mặt đất.",
+      "Có chân, sườn và đỉnh; leo lên thường khá mệt.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Núi là dạng địa hình cao và dốc. Nếu đi leo núi, chuẩn bị sức khỏe và đi theo lối được hướng dẫn nha!"
+  },
+  {
+    "answer": "bãi biển",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Dải đất ven biển thường có cát và sóng vỗ.",
+      "Mọi người hay đến tắm hoặc xây lâu đài cát.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Bãi biển là nơi đất liền tiếp giáp biển. Chơi vui rồi nhớ mang rác về đúng chỗ để bãi cát sạch nha!"
+  },
+  {
+    "answer": "thác nước",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Dòng nước đổ từ chỗ cao xuống thấp.",
+      "Thường tung bọt trắng và phát tiếng ào ào.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Thác nước hình thành ở đoạn dòng chảy có độ cao thay đổi mạnh. Ngắm từ vị trí cho phép sẽ an toàn hơn đến quá sát nè!"
+  },
+  {
+    "answer": "giọt sương",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Hạt nước nhỏ hay đọng trên lá vào sáng sớm.",
+      "Xuất hiện khi hơi nước ngưng tụ trên bề mặt mát.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 5."
+    ],
+    "explanation": "Sương đọng thành giọt khi không khí đủ ẩm và bề mặt đủ mát. Nhìn lá cỏ sáng lấp lánh buổi sớm đẹp lắm ha!"
+  },
+  {
+    "answer": "chiếc lá",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Bộ phận cây thường xanh, nằm trên cành.",
+      "Nhiều loại có phiến mỏng và gân chạy trên mặt.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 2."
+    ],
+    "explanation": "Lá giúp cây thực hiện quang hợp và trao đổi khí. Nhặt một chiếc rụng rồi nhìn đường gân cũng thú vị nè!"
+  },
+  {
+    "answer": "bông hoa",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Bộ phận cây thường có cánh và màu sắc đẹp.",
+      "Có loài thơm, thường được cắm trong bình để trang trí.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Hoa có nhiều hình dáng và màu sắc. Một bình nhỏ trên bàn cũng khiến góc phòng thêm tươi vui đó!"
+  },
+  {
+    "answer": "hạt giống",
+    "category": "Thiên nhiên",
+    "hints": [
+      "Vật nhỏ gieo vào đất có thể nảy mầm thành cây.",
+      "Cần điều kiện phù hợp như nước, không khí và nhiệt độ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Hạt giống chứa phần có thể phát triển thành cây mới. Tự gieo rồi đợi mầm nhú là một niềm vui rất dễ thương ha!"
+  },
+  {
+    "answer": "đánh răng",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Việc làm với bàn chải để vệ sinh miệng.",
+      "Thường làm buổi sáng và trước khi đi ngủ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Đánh răng giúp làm sạch mảng bám trên răng. Làm đều đặn và dùng cách phù hợp giúp giữ nụ cười khỏe nè!"
+  },
+  {
+    "answer": "rửa tay",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Làm sạch đôi bàn tay bằng nước và chất làm sạch.",
+      "Nên nhớ làm trước khi ăn và sau khi đi vệ sinh.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Rửa tay đúng cách giúp giảm mầm bệnh trên tay. Chú ý cả kẽ ngón và đầu ngón, đừng chỉ xoa lòng bàn tay nha!"
+  },
+  {
+    "answer": "quét nhà",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Dùng chổi gom bụi rác trong phòng.",
+      "Thường làm trước bước lau sàn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Quét nhà giúp gom bụi và rác trên mặt sàn. Phụ một góc nhỏ thôi cũng làm việc nhà nhẹ hơn nè!"
+  },
+  {
+    "answer": "giặt đồ",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Làm sạch quần áo bằng nước và chất giặt.",
+      "Có thể làm bằng tay hoặc bằng máy.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Giặt đồ giúp quần áo sạch hơn. Nhớ xem cách chăm vải và phân đồ dễ phai màu trước khi giặt ha!"
+  },
+  {
+    "answer": "nấu cơm",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Chuẩn bị món từ gạo và nước cho bữa ăn.",
+      "Thường dùng nồi cơm điện trong gia đình.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Nấu cơm cần lượng gạo và nước phù hợp. Mỗi loại gạo có thể cần khác nhau nên mình thử và điều chỉnh nha!"
+  },
+  {
+    "answer": "tưới cây",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Bổ sung nước cho cây bằng bình hoặc vòi.",
+      "Cần vừa đủ, không phải càng nhiều càng tốt.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Tưới cây giúp cây có nước để sống. Nhìn đất và nhu cầu của từng cây sẽ tốt hơn tưới theo cảm tính đó!"
+  },
+  {
+    "answer": "phơi quần áo",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Mang đồ vừa giặt treo ở nơi thoáng để khô.",
+      "Hay dùng dây, sào và móc treo.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 4 và 4 và 2."
+    ],
+    "explanation": "Phơi quần áo giúp nước bay hơi khỏi vải. Treo có khoảng cách thì đồ thường thoáng và dễ khô hơn nè!"
+  },
+  {
+    "answer": "gấp quần áo",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Xếp đồ vải thành nếp gọn trước khi cất.",
+      "Sau khi phơi khô, nhiều nhà làm việc này cùng nhau.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 3 và 4 và 2."
+    ],
+    "explanation": "Gấp quần áo giúp tủ gọn và dễ lấy đồ. Gấp xong một chồng ngay ngắn cũng thấy vui mắt ha!"
+  },
+  {
+    "answer": "đọc sách",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Theo dõi chữ và nội dung trong một cuốn in hoặc bản điện tử.",
+      "Có thể giúp hiểu thêm câu chuyện và kiến thức mới.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Đọc sách mở ra nhiều câu chuyện và ý tưởng. Chọn chủ đề mình thích là cách dễ bắt đầu một thói quen nè!"
+  },
+  {
+    "answer": "đi bộ",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Di chuyển bằng hai chân, không chạy.",
+      "Có thể làm quanh công viên để vận động nhẹ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 2."
+    ],
+    "explanation": "Đi bộ là cách vận động gần gũi. Đi cùng bạn rồi trò chuyện một vòng cũng làm tinh thần thoải mái hơn ha!"
+  },
+  {
+    "answer": "ngủ trưa",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Giấc nghỉ ngắn vào khoảng giữa ngày.",
+      "Nhiều bạn làm sau bữa ăn trưa.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Ngủ trưa là khoảng nghỉ ban ngày. Có người thấy tỉnh táo hơn sau một giấc ngắn, miễn hợp sinh hoạt của mình nè!"
+  },
+  {
+    "answer": "chào hỏi",
+    "category": "Việc mỗi ngày",
+    "hints": [
+      "Lời nói hoặc cử chỉ khi gặp người khác.",
+      "Có thể bắt đầu bằng xin chào, chào cô, chào bác.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Chào hỏi giúp mở đầu cuộc gặp một cách thân thiện. Một lời chào nhỏ có thể làm người đối diện vui hơn đó!"
+  },
+  {
+    "answer": "cảm ơn",
+    "category": "Lời đẹp",
+    "hints": [
+      "Hai tiếng nói khi nhận được sự giúp đỡ.",
+      "Mình thường nói sau khi ai đó nhường chỗ hoặc tặng quà.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Cảm ơn là cách ghi nhận điều tốt người khác làm cho mình. Nói đúng lúc và chân thành là đủ ấm lòng rồi nè!"
+  },
+  {
+    "answer": "xin lỗi",
+    "category": "Lời đẹp",
+    "hints": [
+      "Lời nói khi mình gây ra lỗi hoặc làm ai buồn.",
+      "Thường nên đi cùng việc nhận trách nhiệm và sửa sai.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Xin lỗi giúp mình nhận phần trách nhiệm của mình. Sau lời nói, cố gắng sửa điều đã xảy ra mới làm người khác yên tâm hơn ha!"
+  },
+  {
+    "answer": "trung thực",
+    "category": "Lời đẹp",
+    "hints": [
+      "Nói và làm đúng với sự thật mình biết.",
+      "Không gian lận dù có thể được lợi trước mắt.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 4."
+    ],
+    "explanation": "Trung thực giúp người khác tin mình. Trong trò chơi này, tự nghĩ đáp án cũng làm lúc đoán đúng vui hơn nè!"
+  },
+  {
+    "answer": "chăm chỉ",
+    "category": "Lời đẹp",
+    "hints": [
+      "Siêng năng làm việc hoặc học tập.",
+      "Đều đặn bỏ công sức, không chỉ hứng lên một lần.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Chăm chỉ là cố gắng đều đặn trong việc mình làm. Nghỉ hợp lý rồi học tiếp sẽ giúp mình giữ sức lâu hơn nè!"
+  },
+  {
+    "answer": "lễ phép",
+    "category": "Lời đẹp",
+    "hints": [
+      "Cư xử kính trọng, có lời thưa gửi phù hợp.",
+      "Trẻ nhỏ thường được nhắc chào người lớn theo cách này.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Lễ phép thể hiện qua lời nói và cách cư xử tôn trọng. Nói nhẹ nhàng và biết lắng nghe là những việc rất gần gũi đó!"
+  },
+  {
+    "answer": "tự tin",
+    "category": "Lời đẹp",
+    "hints": [
+      "Tin vào khả năng của bản thân để thử làm điều gì.",
+      "Dám giơ tay trả lời dù vẫn có thể sai.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Tự tin giúp mình dám thử, nhưng vẫn sẵn sàng học khi sai. Cứ gửi đáp án, cả lớp học cùng nhau mà nè!"
+  },
+  {
+    "answer": "khiêm tốn",
+    "category": "Lời đẹp",
+    "hints": [
+      "Không khoe khoang, biết mình còn có điều cần học.",
+      "Giỏi rồi vẫn lắng nghe ý kiến người khác.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 3."
+    ],
+    "explanation": "Khiêm tốn giúp mình tiếp tục học và tôn trọng người khác. Đứng đầu bảng rồi vẫn động viên bạn mới thì đẹp lắm ha!"
+  },
+  {
+    "answer": "chia sẻ",
+    "category": "Lời đẹp",
+    "hints": [
+      "Cho người khác cùng có hoặc cùng biết điều mình có.",
+      "Có thể là chia món ăn, kể cảm xúc hay giúp một ý tưởng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Chia sẻ có thể nhỏ như bẻ đôi chiếc bánh. Biết hỏi người kia cần gì cũng làm sự giúp đỡ đúng lúc hơn nè!"
+  },
+  {
+    "answer": "vui vẻ",
+    "category": "Cảm xúc",
+    "hints": [
+      "Trạng thái thoải mái, thường đi cùng nụ cười.",
+      "Cảm giác khi gặp lại bạn hoặc nhận tin tốt.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Vui vẻ là cảm xúc tích cực trong nhiều khoảnh khắc thường ngày. Đoán đúng một câu cũng đủ vui thêm một chút ha!"
+  },
+  {
+    "answer": "hồi hộp",
+    "category": "Cảm xúc",
+    "hints": [
+      "Tim như đập nhanh khi chờ kết quả.",
+      "Thường có trước lúc lên sân khấu hoặc mở điểm thi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Hồi hộp xuất hiện khi mình mong đợi hoặc lo về điều sắp tới. Hít thở chậm một chút rồi thử tiếp nha!"
+  },
+  {
+    "answer": "bất ngờ",
+    "category": "Cảm xúc",
+    "hints": [
+      "Cảm giác khi có việc xảy ra ngoài dự đoán.",
+      "Một món quà bí mật có thể tạo cảm giác này.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Bất ngờ là phản ứng trước điều mình không đoán trước. Có khi một lời chào từ bạn cũ cũng đủ làm mình ngạc nhiên vui nè!"
+  },
+  {
+    "answer": "nhớ nhung",
+    "category": "Cảm xúc",
+    "hints": [
+      "Cảm xúc khi nghĩ về người hoặc nơi đang xa.",
+      "Đi xa nhà lâu ngày thường có cảm giác này.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Nhớ nhung là mong được gặp lại điều thân thuộc. Một món ăn quê đôi khi làm mình nhớ nhà ngay ha!"
+  },
+  {
+    "answer": "tò mò",
+    "category": "Cảm xúc",
+    "hints": [
+      "Muốn tìm hiểu điều mình chưa biết.",
+      "Thường khiến mình hỏi tại sao hoặc thử khám phá.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 2."
+    ],
+    "explanation": "Tò mò giúp mình đặt câu hỏi và học điều mới. Chưa biết từ nào thì mình cùng hỏi, chẳng có gì ngại nè!"
+  },
+  {
+    "answer": "nhảy dây",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Trò vận động với một sợi được quay vòng.",
+      "Người chơi bật chân qua dây khi nó lướt sát đất.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Nhảy dây có thể chơi một mình hoặc theo nhóm. Chọn chỗ trống, bằng phẳng để chơi thoải mái hơn nha!"
+  },
+  {
+    "answer": "kéo co",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Hai đội cùng nắm một sợi dây và kéo về phía mình.",
+      "Trò chơi cần cả sức lực lẫn phối hợp.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Kéo co là trò tập thể quen thuộc trong ngày hội. Các bạn cùng kéo đúng nhịp thường phối hợp tốt hơn đó!"
+  },
+  {
+    "answer": "trốn tìm",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Một người đi tìm, những người khác ẩn đi.",
+      "Người tìm thường nhắm mắt đếm trước khi bắt đầu.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Trốn tìm là trò chơi rất quen thời nhỏ. Nhớ chọn nơi an toàn và thống nhất phạm vi trước khi chơi nha!"
+  },
+  {
+    "answer": "ô ăn quan",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Trò dân gian dùng sỏi hoặc hạt, có các ô trên đất.",
+      "Hai ô lớn ở hai đầu thường gọi là ô quan.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 1 và 2 và 4."
+    ],
+    "explanation": "Ô ăn quan cần tính cách rải và thu quân. Chỉ vài viên sỏi cùng một mặt sân là có thể mở bàn chơi nè!"
+  },
+  {
+    "answer": "thả diều",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Cho một vật nhẹ có khung và dây bay nhờ gió.",
+      "Hay chơi ở nơi rộng, tránh xa đường điện.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Thả diều cần gió và không gian thoáng. Tuyệt đối chọn nơi xa dây điện để cuộc chơi an toàn nha!"
+  },
+  {
+    "answer": "đá cầu",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Dùng chân tâng một vật có đế và lông.",
+      "Có thể chơi giữ vật trên không hoặc thi qua lưới.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Đá cầu rèn sự khéo léo và phối hợp. Một vòng bạn bè tâng qua lại là giờ ra chơi vui lắm đó!"
+  },
+  {
+    "answer": "cờ vua",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Trò bàn cờ có vua, hậu, xe, tượng, mã và tốt.",
+      "Mục tiêu quan trọng là chiếu hết vua đối phương.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 3."
+    ],
+    "explanation": "Cờ vua là trò chơi tính nước đi trên bàn 64 ô. Nghĩ trước vài bước giúp mình tránh mất quân oan nè!"
+  },
+  {
+    "answer": "cầu lông",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Môn chơi dùng vợt đánh quả có lông qua lưới.",
+      "Có thể đánh đơn hoặc đôi.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Cầu lông cần di chuyển và điều khiển vợt. Khởi động trước rồi chọn chỗ đủ rộng để chơi nhé!"
+  },
+  {
+    "answer": "bóng đá",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Môn thể thao thường có hai đội 11 người trên sân lớn.",
+      "Cố đưa quả bóng vào khung thành đối phương.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Bóng đá là môn tập thể quen thuộc. Một đường chuyền cho đồng đội cũng quan trọng như cú sút ghi bàn đó!"
+  },
+  {
+    "answer": "bóng rổ",
+    "category": "Chơi cùng nhau",
+    "hints": [
+      "Môn dùng tay đưa bóng vào vành gắn trên cao.",
+      "Khi di chuyển thường cần dẫn bóng nảy xuống sân.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Bóng rổ kết hợp ném, chuyền và dẫn bóng. Tập ném gần chuẩn rồi tăng khoảng cách dần là cách luyện dễ theo nè!"
+  },
+  {
+    "answer": "giáo viên",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người hướng dẫn học sinh học tập ở trường.",
+      "Thường soạn bài, giảng bài và nhận xét việc học.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Giáo viên giúp học sinh tiếp cận kiến thức và rèn kỹ năng. Một lời giải dễ hiểu có thể làm mình thích cả môn học ha!"
+  },
+  {
+    "answer": "bác sĩ",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người được đào tạo để khám và điều trị bệnh.",
+      "Thường làm việc tại bệnh viện hoặc phòng khám.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Bác sĩ khám và tư vấn chăm sóc sức khỏe theo chuyên môn. Khi có vấn đề sức khỏe, mình nên tìm hỗ trợ phù hợp nhé!"
+  },
+  {
+    "answer": "nông dân",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người làm việc trồng trọt hoặc chăn nuôi.",
+      "Gắn với ruộng, vườn và mùa thu hoạch.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Nông dân tạo ra nhiều loại thực phẩm cho bữa ăn. Nhìn bát cơm cũng là nhớ đến công sức ngoài đồng đó!"
+  },
+  {
+    "answer": "đầu bếp",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người chuyên chuẩn bị và chế biến món ăn.",
+      "Thường làm việc trong bếp nhà hàng, có thể đội mũ cao.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Đầu bếp kết hợp nguyên liệu và kỹ thuật để làm món ngon. Sau một đĩa ăn đẹp là rất nhiều công đoạn nè!"
+  },
+  {
+    "answer": "thợ may",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người cắt và ráp vải thành trang phục.",
+      "Hay dùng máy may, kéo, kim và thước dây.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Thợ may biến tấm vải thành quần áo vừa người. Đo cẩn thận giúp chiếc áo mặc thoải mái hơn đó!"
+  },
+  {
+    "answer": "thợ mộc",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người làm đồ dùng từ gỗ.",
+      "Có thể đóng bàn, ghế, tủ bằng cưa và dụng cụ khác.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Thợ mộc đo, cắt và ghép gỗ để tạo đồ dùng. Chiếc bàn mình đang ngồi cũng có thể từ đôi tay người thợ đó ha!"
+  },
+  {
+    "answer": "tài xế",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người điều khiển xe để chở người hoặc hàng.",
+      "Có thể lái taxi, xe buýt hoặc xe tải.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Tài xế cần tập trung và tuân thủ giao thông. Những chuyến đi đúng giờ, an toàn có nhiều công sức phía sau nè!"
+  },
+  {
+    "answer": "họa sĩ",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người tạo tác phẩm bằng hình và màu.",
+      "Có thể dùng bút, cọ, màu nước hoặc công cụ số.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Họa sĩ thể hiện ý tưởng qua hình ảnh. Cùng một cảnh nhưng mỗi người vẽ lại có một cảm xúc khác đó!"
+  },
+  {
+    "answer": "ca sĩ",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người biểu diễn bằng giọng hát.",
+      "Thường đứng trên sân khấu, cầm micro và hát theo nhạc.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 2."
+    ],
+    "explanation": "Ca sĩ dùng giọng hát truyền cảm xúc. Hát rõ lời và hiểu câu chuyện của bài cũng quan trọng như nốt cao ha!"
+  },
+  {
+    "answer": "thủ thư",
+    "category": "Nghề quanh ta",
+    "hints": [
+      "Người quản lý sách và hỗ trợ bạn đọc trong thư viện.",
+      "Giúp mượn trả và tìm sách đúng vị trí.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Thủ thư giúp kho sách được sắp xếp và sử dụng thuận tiện. Khi không tìm được một cuốn, mình có thể nhờ họ nè!"
+  },
+  {
+    "answer": "múa lân",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Màn diễn với đầu thú rực rỡ, hay có dịp Trung thu.",
+      "Đi cùng tiếng trống, người diễn phối hợp dưới bộ trang phục.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Múa lân thường xuất hiện trong dịp lễ hội. Tiếng trống rộn ràng làm cả con phố có không khí vui hơn ha!"
+  },
+  {
+    "answer": "lì xì",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Phong tục tặng tiền may mắn trong dịp Tết.",
+      "Thường bỏ tiền vào phong bao đỏ rồi gửi lời chúc.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 2."
+    ],
+    "explanation": "Lì xì gửi gắm lời chúc đầu năm. Điều vui là sự quan tâm và lời chúc, không phải so ai nhận nhiều hơn nha!"
+  },
+  {
+    "answer": "mâm ngũ quả",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Mâm trái cây thường được bày trong dịp Tết.",
+      "Tên gợi năm loại quả, cách chọn tùy vùng miền.",
+      "Từ cần tìm có 3 tiếng, số chữ từng tiếng là 3 và 3 và 3."
+    ],
+    "explanation": "Mâm ngũ quả thể hiện ước mong trong ngày Tết. Mỗi vùng chọn loại quả khác nhau nên nhìn rất đa dạng nè!"
+  },
+  {
+    "answer": "câu đối",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Hai vế lời được viết thành cặp, hay treo ngày Tết.",
+      "Thường có chữ trên nền giấy đỏ.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Câu đối có hai vế cân xứng về cách diễn đạt. Cặp giấy đỏ trước cửa là hình ảnh Tết rất dễ nhận ra ha!"
+  },
+  {
+    "answer": "đình làng",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Công trình sinh hoạt tín ngưỡng chung của làng truyền thống.",
+      "Thường gắn với việc thờ thành hoàng và tổ chức hội làng.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Đình làng là không gian văn hóa chung ở nhiều làng Việt. Sân đình cũng gắn với nhiều buổi hội và trò dân gian đó!"
+  },
+  {
+    "answer": "chợ quê",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Nơi mua bán quen thuộc ở làng hoặc vùng nông thôn.",
+      "Có rau, cá, quà bánh và nhiều cuộc hỏi thăm.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Chợ quê vừa là nơi trao đổi hàng hóa vừa là chỗ gặp gỡ. Một gói quà sáng ở chợ có thể thành kỷ niệm lâu lắm nè!"
+  },
+  {
+    "answer": "gánh hàng",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Đồ bán được mang bằng đòn gánh với hai đầu treo.",
+      "Hình ảnh người bán rong trên phố xưa hay có vật này.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Gánh hàng dùng sức người mang đồ bằng đòn gánh. Những tiếng rao quen thuộc cũng làm nên ký ức của nhiều con phố ha!"
+  },
+  {
+    "answer": "rối nước",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Nghệ thuật điều khiển con rối biểu diễn trên mặt nước.",
+      "Người diễn ẩn sau màn, dùng cơ cấu điều khiển dưới nước.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Rối nước là nghệ thuật sân khấu truyền thống Việt Nam. Nhân vật xuất hiện trên mặt ao sân khấu tạo cảm giác rất độc đáo nè!"
+  },
+  {
+    "answer": "quan họ",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Lối hát giao duyên gắn với Bắc Ninh và Bắc Giang.",
+      "Có liền anh, liền chị hát đối đáp.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 2."
+    ],
+    "explanation": "Quan họ là hình thức hát đối đáp truyền thống. Cách xưng hô liền anh, liền chị khiến nhiều người nhớ ngay vùng Kinh Bắc ha!"
+  },
+  {
+    "answer": "đàn bầu",
+    "category": "Văn hóa quen",
+    "hints": [
+      "Nhạc cụ Việt Nam chỉ có một dây.",
+      "Người chơi dùng cần để thay đổi cao độ và tạo tiếng ngân.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Đàn bầu có một dây nhưng tạo được nhiều âm sắc. Tiếng ngân luyến mềm là điểm khiến nhạc cụ này rất dễ nhớ đó!"
+  },
+  {
+    "answer": "bình minh",
+    "category": "Từ đời thường",
+    "hints": [
+      "Khoảng trời bắt đầu sáng trước và lúc mặt trời lên.",
+      "Thường gắn với buổi sáng sớm, ngược với hoàng hôn.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 4."
+    ],
+    "explanation": "Bình minh mở đầu một ngày mới. Nhìn trời sáng dần sau cửa sổ là khoảnh khắc rất yên bình nè!"
+  },
+  {
+    "answer": "hoàng hôn",
+    "category": "Từ đời thường",
+    "hints": [
+      "Thời điểm trời chuyển về chiều tối khi mặt trời lặn.",
+      "Bầu trời có thể mang sắc vàng, cam hoặc tím.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 5 và 3."
+    ],
+    "explanation": "Hoàng hôn là lúc mặt trời lặn và ngày chuyển sang tối. Một màu trời đẹp đôi khi làm mình muốn dừng lại ngắm thêm chút ha!"
+  },
+  {
+    "answer": "quê hương",
+    "category": "Từ đời thường",
+    "hints": [
+      "Nơi mình sinh ra, lớn lên hoặc gắn bó sâu sắc.",
+      "Có thể gợi bờ tre, con phố cũ và người thân.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 5."
+    ],
+    "explanation": "Quê hương là nơi mang nhiều gắn bó trong mỗi người. Với bạn có thể là làng nhỏ, với người khác là một con phố đông vui nè!"
+  },
+  {
+    "answer": "gia đình",
+    "category": "Từ đời thường",
+    "hints": [
+      "Những người có quan hệ thân thuộc, cùng gắn bó chăm sóc nhau.",
+      "Là nơi nhiều người nghĩ tới khi nói về mái ấm.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 4."
+    ],
+    "explanation": "Gia đình có nhiều hình thức và hoàn cảnh khác nhau. Điều làm mình thấy ấm thường là sự quan tâm dành cho nhau đó!"
+  },
+  {
+    "answer": "bạn bè",
+    "category": "Từ đời thường",
+    "hints": [
+      "Những người mình có quan hệ thân thiện, cùng chia sẻ.",
+      "Có thể quen từ lớp học, nơi làm hoặc một sở thích chung.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Bạn bè có thể cùng vui, cùng học và động viên nhau. Một tin hỏi thăm đúng lúc cũng khiến ngày khó nhẹ hơn nè!"
+  },
+  {
+    "answer": "kỷ niệm",
+    "category": "Từ đời thường",
+    "hints": [
+      "Điều đã trải qua còn được lưu trong trí nhớ.",
+      "Một tấm ảnh cũ có thể gợi lại rất nhiều điều này.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Kỷ niệm là những điều mình còn nhớ về quá khứ. Có khi chỉ mùi món ăn cũng kéo cả một mùa hè trở lại ha!"
+  },
+  {
+    "answer": "ước mơ",
+    "category": "Từ đời thường",
+    "hints": [
+      "Điều tốt đẹp mình mong muốn đạt tới.",
+      "Có thể bắt đầu bằng mong sau này được làm điều gì.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 2."
+    ],
+    "explanation": "Ước mơ giúp mình hình dung điều muốn hướng tới. Chia thành việc nhỏ để làm hôm nay thì nó gần hơn một chút nè!"
+  },
+  {
+    "answer": "hy vọng",
+    "category": "Từ đời thường",
+    "hints": [
+      "Niềm mong đợi một điều tốt có thể xảy ra.",
+      "Giúp mình có động lực tiếp tục khi chưa biết kết quả.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 2 và 4."
+    ],
+    "explanation": "Hy vọng là mong đợi điều tốt trong tương lai. Vừa hy vọng vừa làm phần việc trong khả năng là cách bước tiếp đó!"
+  },
+  {
+    "answer": "bình yên",
+    "category": "Từ đời thường",
+    "hints": [
+      "Trạng thái yên ổn, ít xáo động hoặc lo âu.",
+      "Có người thấy điều này khi ngồi nghe mưa ở nhà.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 4 và 3."
+    ],
+    "explanation": "Bình yên có thể đến từ những khoảnh khắc rất nhỏ. Một bữa cơm thong thả cùng người thương cũng đủ rồi ha!"
+  },
+  {
+    "answer": "sum họp",
+    "category": "Từ đời thường",
+    "hints": [
+      "Mọi người trở về gặp nhau sau thời gian xa cách.",
+      "Hay dùng khi nói cả nhà quây quần dịp Tết.",
+      "Từ cần tìm có 2 tiếng, số chữ từng tiếng là 3 và 3."
+    ],
+    "explanation": "Sum họp là tụ lại bên nhau sau thời gian xa. Bữa cơm có đủ người thường làm câu chuyện kéo dài hơn nè!"
+  }
+]

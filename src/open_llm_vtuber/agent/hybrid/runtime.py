@@ -6,6 +6,7 @@ import math
 import re
 import uuid
 from ...dialogue.policy import communication_prompt
+from ...dialogue.grounding import dialogue_grounding_prompt
 
 from .computer import BrowserComputer
 from .config import HybridConfig
@@ -55,6 +56,7 @@ def user_evidence(texts):
         elif text.startswith(
             (
                 "[Mao chủ động",
+                "[Lượt chơi Wesnoth",
                 "[Một số khán giả thật vừa vào",
                 "[Thông báo nhận diện giọng nói:",
             )
@@ -82,6 +84,7 @@ TOOL = {
                     "explore",
                     "feedback",
                     "computer",
+                    "wesnoth",
                     "cancel",
                 ],
             },
@@ -100,11 +103,28 @@ TOOL = {
 _properties = {}
 for _contract in CONTRACTS.values():
     _schema = _contract.model_json_schema()
-    _properties.update(_schema.get("properties", {}))
+    for _name, _field_schema in _schema.get("properties", {}).items():
+        if (
+            _name in _properties
+            and "enum" in _field_schema
+            and "enum" in _properties[_name]
+        ):
+            _field_schema = {
+                **_field_schema,
+                "enum": list(
+                    dict.fromkeys([*_properties[_name]["enum"], *_field_schema["enum"]])
+                ),
+            }
+        _properties[_name] = _field_schema
     if _schema.get("$defs"):
         TOOL["input_schema"].setdefault("$defs", {}).update(_schema["$defs"])
 TOOL["input_schema"]["properties"]["data"].update(
     properties=_properties, additionalProperties=False
+)
+TOOL["input_schema"]["properties"]["data"]["description"] += (
+    " wesnoth: action=observe to read the current game; action=choose with session, "
+    "request_id,action_id from that observation. Only select a listed legal action. "
+    "Submitted is not completed: report success only after confirmed=true from game."
 )
 
 
@@ -141,6 +161,7 @@ class HybridRuntime:
         self.experience_context = ""
         self.experience_revision = None
         self.affect_identity = {}
+        self.dialogue_plan = None
 
     async def prepare(self, input_data):
         from ..input_types import TextSource
@@ -166,6 +187,25 @@ class HybridRuntime:
         )
         appraisal_history = []
         self.experience_context = ""
+        from ...dialogue.intent import response_plan
+
+        synthetic = bool(
+            any(
+                (input_data.metadata or {}).get(key)
+                for key in (
+                    "rehearsal",
+                    "skip_memory",
+                    "proactive_speak",
+                    "game_speech",
+                    "narration_speech",
+                    "wesnoth_turn",
+                    "_host_proposal",
+                )
+            )
+            or self.interaction
+            and self.interaction.get("synthetic")
+        )
+        self.dialogue_plan = response_plan(self.evidence) if not synthetic else None
         self._feedback_applied = False
         self.direct_reply = None
         self.persona_changed = False
@@ -222,6 +262,20 @@ class HybridRuntime:
                     self.interaction["visibility"],
                 )
                 appraisal_history = view.get("delivered_turns", [])
+                if not synthetic:
+                    self.dialogue_plan = response_plan(self.evidence, appraisal_history)
+                    if self.config.persona_source == "postgres":
+                        from ...dialogue.recall import quoted_recall
+                        from ...dialogue.arithmetic import (
+                            arithmetic_reply,
+                            arithmetic_hint,
+                        )
+
+                        self.direct_reply = (
+                            arithmetic_hint(self.evidence)
+                            or arithmetic_reply(self.evidence, appraisal_history)
+                            or quoted_recall(self.evidence, view)
+                        )
                 # Invalidate raw working context and in-flight summaries after edits/deletions.
                 self.persona_changed = self.persona_changed or (
                     self.experience_revision is not None
@@ -242,22 +296,6 @@ class HybridRuntime:
             self.storage_status = "ready"
             if self.config.emotion_enabled and hasattr(self.store, "observe_affect"):
                 try:
-                    synthetic = bool(
-                        input_data.metadata
-                        and any(
-                            input_data.metadata.get(key)
-                            for key in (
-                                "rehearsal",
-                                "skip_memory",
-                                "proactive_speak",
-                                "game_speech",
-                                "narration_speech",
-                            )
-                        )
-                    )
-                    synthetic = synthetic or bool(
-                        self.interaction and self.interaction.get("synthetic")
-                    )
                     if self.evidence.strip() and not synthetic:
                         observation = appraise_conversation(
                             self.evidence, appraisal_history
@@ -387,7 +425,9 @@ class HybridRuntime:
                 else POLICY
             )
             + (expression_prompt(self.affect) if self.config.emotion_enabled else "")
+            + dialogue_grounding_prompt()
             + self.experience_context
+            + (self.dialogue_plan.prompt() if self.dialogue_plan else "")
             + (
                 "\nCurrent communication settings (not identity or permissions): "
                 + json.dumps(self.interaction["policy"]["settings"])
@@ -411,7 +451,8 @@ class HybridRuntime:
                     if self.config.emotion_enabled
                     else None,
                     "character_expression_status": self.expression_status,
-                    "memories": self.memories,
+                    # Scoped knowledge already went through context_block's budget.
+                    "memories": [] if self.interaction else self.memories,
                     "goal": self.goal,
                     "storage_status": self.storage_status,
                     "embedding_status": self.store.embedding_status,
@@ -624,6 +665,12 @@ class HybridRuntime:
             return await self.explore()
         if operation == "computer":
             return await self.computer.execute(data)
+        if operation == "wesnoth":
+            if not self.config.wesnoth_enabled:
+                raise PermissionError("Wesnoth integration is disabled by operator")
+            from ...games.wesnoth import WesnothBridge
+
+            return await WesnothBridge().execute(data)
         return await asyncio.to_thread(self._dispatch, operation, data)
 
     def _dispatch(self, operation, data):

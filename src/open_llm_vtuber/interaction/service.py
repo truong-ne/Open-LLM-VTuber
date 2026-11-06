@@ -128,7 +128,7 @@ class TurnSession:
             if self.persist
             else {"revision": 0, "settings": {}}
         )
-        proactive = bool(
+        proactive = not self.metadata.get("gift_thanks") and bool(
             self.metadata.get("proactive_speak")
             or self.metadata.get("narration_speech")
         )
@@ -137,8 +137,15 @@ class TurnSession:
             and proactive
             and await asyncio.to_thread(self.focus.room_waiting, self.room)
         )
+        quiet = (
+            self.persist
+            and proactive
+            and await asyncio.to_thread(
+                self.focus.room_quiet, self.room, self.event.visibility
+            )
+        )
         if proactive and (
-            waiting or self.policy["settings"].get("initiative") == "wait"
+            waiting or quiet or self.policy["settings"].get("initiative") == "wait"
         ):
             self.rejection = "declined_policy"
             await self.finish("rejected")

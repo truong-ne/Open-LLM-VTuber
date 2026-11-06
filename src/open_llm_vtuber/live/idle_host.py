@@ -12,7 +12,7 @@ import websockets
 from loguru import logger
 
 from .idle_host_storage import read_json, write_json
-from .session_content import SessionContent, ENGAGEMENT_TOPICS
+from .session_content import SessionContent, ENGAGEMENT_TOPICS, TOPICS
 
 ROOT = Path(__file__).resolve().parents[3]
 ACTIVITY_PATH = ROOT / "private/mao-chat-activity.json"
@@ -27,7 +27,7 @@ class ChatActivity:
         self.path = path
         self.last_comment_at = read_json(path).get("last_comment_at", 0)
 
-    def update(self, pending_count, *, comment=False, connected=None):
+    def update(self, pending_count, *, comment=False, connected=None, details=None):
         if comment:
             self.last_comment_at = time.time()
         data = {
@@ -37,6 +37,8 @@ class ChatActivity:
         }
         if connected is not None:
             data["connected"] = connected
+        if details:
+            data.update(details)
         try:
             write_json(self.path, data)
         except OSError as error:
@@ -145,6 +147,8 @@ class IdleHost:
         self._planned_content = None
         self.started_at = time.monotonic()
         self.last_support_at = self.started_at
+        self.last_share_at = self.started_at
+        self.last_share_turn = 0
         self.styles = []
         self.word_game_active = False
         self.singing_active = False
@@ -197,7 +201,9 @@ class IdleHost:
         if data.get("type") == "mao-sing-state":
             self.singing_active = data.get("phase") in ("waiting", "loading", "playing")
         if data.get("type") == "vua-tieng-viet-state":
-            self.word_game_active = data.get("phase") in ("waiting", "playing")
+            self.word_game_active = bool(
+                data.get("classroom", {}).get("enabled")
+            ) or data.get("phase") in ("waiting", "playing")
             self.word_game_until = (
                 data.get("show_until", 0) if data.get("phase") == "finished" else 0
             )
@@ -280,6 +286,9 @@ class IdleHost:
         turn = await self.make_turn()
         if turn is None:
             return False
+        if not self.ready(time.monotonic()):
+            self._planned_content = None
+            return False
         text, label = turn
         from ..interaction.ingress import sign_host_proposal
 
@@ -296,6 +305,9 @@ class IdleHost:
         self.sent += 1
         if self._planned_style == "support":
             self.last_support_at = self.last_sent
+        if self._planned_style == "share":
+            self.last_share_at = self.last_sent
+            self.last_share_turn = self.sent
         if self._planned_content:
             try:
                 self.content.commit(*self._planned_content)
@@ -393,6 +405,22 @@ class IdleHost:
         ):
             return False
         settings = read_json(self.settings_path)
+        if settings.get("require_tiktok_live") is True:
+            live = read_json(self.settings_path.with_name("tiktok-reader-health.json"))
+            if live.get("connected") is not True or not (
+                0 <= time.time() - live.get("updated_at", 0) < 60
+            ):
+                return False
+        if settings.get("require_desktop") is True:
+            desktop = read_json(
+                self.settings_path.with_name("draco-desktop-status.json")
+            )
+            if (
+                desktop.get("socket") != "open"
+                or not desktop.get("visible")
+                or not 0 <= time.time() * 1000 - desktop.get("updatedAt", 0) < 10000
+            ):
+                return False
         # During the operator-selected learning stage, only research narration
         # and actual audience replies may speak. No random hosting fallback.
         if settings.get("learning_stage") is True:
@@ -488,8 +516,9 @@ class IdleHost:
     def _topic(self, *, engagement=False):
         profile = self.operator_profile()
         if profile is not None:
-            topics = [t for t in profile.get("topics", []) if t != self.current_topic]
-            return self.rng.choice(topics) if topics else "mạch trò chuyện hiện tại"
+            return self.content.topic(
+                exclude=self.current_topic, pool=[*TOPICS, *profile.get("topics", [])]
+            )
         return self.content.topic(
             exclude=self.current_topic,
             preferred=ENGAGEMENT_TOPICS if engagement else None,
@@ -505,6 +534,27 @@ class IdleHost:
         if type(interval) not in (int, float) or not 300 <= interval <= 3600:
             interval = 600
         return now - self.last_support_at >= interval
+
+    def share_due(self, now):
+        settings = read_json(self.settings_path)
+        if settings.get("share_reminders_enabled") is not True:
+            return False
+        interval = settings.get("share_interval_seconds", 240)
+        if type(interval) not in (int, float) or not 120 <= interval <= 1800:
+            interval = 240
+        minimum_turns = settings.get("share_min_turns", 0)
+        minimum_turns = (
+            minimum_turns
+            if type(minimum_turns) is int and 0 <= minimum_turns <= 10
+            else 3
+        )
+        quiet = settings.get("share_quiet_seconds", 0)
+        quiet = quiet if type(quiet) in (int, float) and 0 <= quiet <= 300 else 60
+        return (
+            now - self.last_share_at >= interval
+            and self.sent - self.last_share_turn >= minimum_turns
+            and now - self.last_interaction >= quiet
+        )
 
     async def make_turn(self):
         # An unanswered invitation is a short listening pause, not a permanent
@@ -531,10 +581,16 @@ class IdleHost:
         elif (
             not self.awaiting_reply
             and not moved_on
+            and self.share_due(time.monotonic())
+        ):
+            style = "share"
+        elif (
+            not self.awaiting_reply
+            and not moved_on
             and self.support_due(time.monotonic())
         ):
             style = "support"
-        conversational = style not in ("followup", "support")
+        conversational = style not in ("followup", "support", "share")
         changed_topic = self.current_topic is None or self.topic_turns >= 3
         if changed_topic and conversational:
             self.current_topic = self._topic(
@@ -544,6 +600,8 @@ class IdleHost:
         topic = (
             "mạch trò chuyện vừa diễn ra"
             if followup
+            else "rủ chia sẻ livestream hiện tại của Mao"
+            if style == "share"
             else "thông báo hỗ trợ do operator cấu hình"
             if style == "support"
             else self.current_topic
@@ -551,6 +609,8 @@ class IdleHost:
         angle = (
             "thêm một ý mới đúng mạch"
             if followup
+            else "trêu vui, rủ người xem chia sẻ LIVE một cách tự nguyện"
+            if style == "share"
             else "một lời nhắc donate trực tiếp, chân thành, tự nguyện"
             if style == "support"
             else self.content.angle(topic)
@@ -569,7 +629,7 @@ class IdleHost:
             "[Mao chủ động mở chuyện khi chat yên; đây không phải bình luận khán giả]\n"
             + rules
             + "\n"
-            + "Chỉ nói một đến hai câu hoàn chỉnh, tối đa 45 tiếng tách bằng khoảng trắng. "
+            + "Nói hai đến bốn câu hoàn chỉnh, tối đa 80 tiếng tách bằng khoảng trắng. "
             + "Không chào lại, không tự giới thiệu lại; không nhắc việc chat im lặng. "
             + "Không có bình luận mới; không bịa người xem, trải nghiệm hoặc kết quả hành động. "
             + "Không tự trả lời thay khán giả. Chỉ dùng persona đang bật, không tự đặt tính cách hoặc cách xưng hô. "
@@ -583,6 +643,13 @@ class IdleHost:
         if style == "initiative":
             instruction += (
                 "Nêu lựa chọn riêng trước; không tự khởi động game hoặc hát. "
+            )
+        if style == "share":
+            instruction += (
+                "Lượt này chỉ rủ chia sẻ livestream hiện tại bằng một đến hai câu vui, tinh nghịch. "
+                "Ví dụ về sắc thái: 'Ngồi cười một mình hả, rủ bạn vô chơi với Mao nữa nha~'. "
+                "Đổi cách nói, không đọc lại câu mẫu mỗi lần. Không yêu cầu donate hay tặng quà, "
+                "không ép buộc, chê trách hoặc hứa phần thưởng; không nói như đã biết ai vừa chia sẻ. "
             )
         if conversational and not self.awaiting_reply:
             instruction += f"Gợi ý dự phòng: {topic}. Góc nhìn: {angle}. "

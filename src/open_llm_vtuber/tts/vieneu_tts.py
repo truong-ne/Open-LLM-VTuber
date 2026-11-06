@@ -10,6 +10,7 @@ from loguru import logger
 from .tts_interface import TTSInterface
 from .prosody import SpeechProsody, NATIVE_CUES
 from ..utils.math_speech import normalize_vietnamese_math
+from ..utils.pronunciation import normalize_spoken_names
 
 try:
     from vieneu import Vieneu
@@ -158,7 +159,7 @@ class TTSEngine(TTSInterface):
             )
 
         try:
-            text = normalize_vietnamese_math(text)
+            text = normalize_spoken_names(normalize_vietnamese_math(text))
             speed = self.speed
             pause_ms = 0
             if self.expressive and prosody:

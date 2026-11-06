@@ -1,4 +1,4 @@
-param([switch]$Restart,[ValidateSet('pet','window')][string]$Mode='pet')
+param([switch]$Restart,[ValidateSet('pet','window')][string]$Mode='window',[switch]$GameOnly)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 & (Join-Path $taskRoot 'private/start-local.ps1')
@@ -28,5 +28,7 @@ if ($Restart -or -not $taskDraco) {
     $taskDesktop = Start-Process -FilePath $taskExe -ArgumentList @('--mao-draco-local','--autoplay-policy=no-user-gesture-required') -WorkingDirectory (Split-Path -Parent $taskExe) -PassThru
     $taskDesktop.Id | Set-Content -LiteralPath (Join-Path $taskRoot 'private/draco-desktop.pid')
 }
-& (Join-Path $taskRoot 'scripts/start_mao_live.ps1')
-Write-Output 'Mao Studio desktop started with the configured TTS voice and live chat reader.'
+if (-not $GameOnly) {
+    & (Join-Path $taskRoot 'scripts/start_mao_live.ps1')
+}
+Write-Output 'Mao Studio desktop started with the configured TTS voice.'

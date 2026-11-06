@@ -62,6 +62,13 @@ class Computer(Arguments):
     dy: FiniteFloat | None = Field(None, ge=-720, le=720)
 
 
+class Wesnoth(Arguments):
+    action: Literal["observe", "choose"]
+    session: str | None = Field(None, pattern=r"^[a-f0-9]{32}$")
+    request_id: str | None = Field(None, pattern=r"^[0-9]+:[0-9]+:[0-9]+$")
+    action_id: str | None = Field(None, pattern=r"^a[0-9]{1,3}$")
+
+
 CONTRACTS = {
     "recall": Recall,
     "remember": Remember,
@@ -72,6 +79,7 @@ CONTRACTS = {
     "explore": Arguments,
     "cancel": Arguments,
     "computer": Computer,
+    "wesnoth": Wesnoth,
 }
 
 
@@ -79,6 +87,12 @@ def validate(operation, data):
     if operation not in CONTRACTS:
         raise ValueError("Unknown hybrid operation")
     result = CONTRACTS[operation].model_validate(data).model_dump(exclude_none=True)
+    if operation == "wesnoth":
+        fields = {"session", "request_id", "action_id"}
+        if result["action"] == "choose" and not fields <= result.keys():
+            raise ValueError("Choosing requires session, request_id and action_id")
+        if result["action"] == "observe" and fields & result.keys():
+            raise ValueError("Observe takes no action identifiers")
     if operation == "computer":
         required = {
             "navigate": ("url",),

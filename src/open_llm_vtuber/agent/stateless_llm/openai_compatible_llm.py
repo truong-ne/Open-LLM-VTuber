@@ -59,11 +59,29 @@ class AsyncLLM(StatelessLLMInterface):
             f"Initialized AsyncLLM with the parameters: {self.base_url}, {self.model}"
         )
 
+    def structured_completion(self, messages, system, schema):
+        """A per-request JSON schema; ordinary streamed speech is unchanged."""
+        return self.chat_completion(
+            messages,
+            system,
+            tools=None,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "spoken_story",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+        )
+
     async def chat_completion(
         self,
         messages: List[Dict[str, Any]],
         system: str = None,
         tools: List[Dict[str, Any]] | NotGiven = NOT_GIVEN,
+        *,
+        response_format: Dict[str, Any] | NotGiven = NOT_GIVEN,
     ) -> AsyncIterator[str | List[ChoiceDeltaToolCall]]:
         """
         Generates a chat completion using the OpenAI API asynchronously.
@@ -112,6 +130,7 @@ class AsyncLLM(StatelessLLMInterface):
                 temperature=self.temperature,
                 tools=available_tools,
                 extra_body=self.extra_body,
+                response_format=response_format,
             )
 
             async for chunk in stream:

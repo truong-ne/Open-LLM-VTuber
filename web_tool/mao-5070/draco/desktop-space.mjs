@@ -35,7 +35,7 @@ export function desktopCommand(text){
 // in world space; spin is an unwrapped
 // 2π turn so quaternion shortest-path interpolation cannot erase the rotation.
 export class DesktopSpace{
-  constructor({bounds=PET_BOUNDS,roam='pet',speed=.24}={}){this.bounds=bounds;this.roam=roam;this.walkSpeed=speed;this.x=0;this.z=0;this.yaw=0;this.audienceYaw=0;this.phase='idle';this.time=0;this.nextRoam=roam==='room'?8:16;this.serial=0;this.steps=[];this.elapsed=0;this.distance=0;this.gaitPhase=0;this.pose={speed:0,yawRate:0,yawAcceleration:0,acceleration:{x:0,z:0}};this.previousVelocity={x:0,z:0};this.completedSpins=0;}
+  constructor({bounds=PET_BOUNDS,roam='pet',speed=.24,stationary=false}={}){this.bounds=bounds;this.roam=roam;this.stationary=stationary;this.walkSpeed=speed;this.x=0;this.z=0;this.yaw=0;this.audienceYaw=0;this.phase='idle';this.time=0;this.nextRoam=stationary?Infinity:roam==='room'?8:16;this.serial=0;this.steps=[];this.elapsed=0;this.distance=0;this.gaitPhase=0;this.pose={speed:0,yawRate:0,yawAcceleration:0,acceleration:{x:0,z:0}};this.previousVelocity={x:0,z:0};this.completedSpins=0;}
   setAudienceYaw(yaw){if(!Number.isFinite(yaw))return false;this.audienceYaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));return true;}
   enqueue(kind,x,z,yaw,duration){this.steps.push({kind,x:clamp(x,this.bounds.minX,this.bounds.maxX),z:clamp(z,this.bounds.minZ,this.bounds.maxZ),yaw,duration});}
   planWalk(x,z,faceViewer=true){
@@ -50,14 +50,16 @@ export class DesktopSpace{
     this.enqueue('arrive',x,z,heading,.45);
     if(faceViewer){const front=nearAngle(heading,this.audienceYaw);if(Math.abs(front-heading)>.08)this.enqueue('face-viewer',x,z,front,Math.max(.65,Math.abs(front-heading)/1.65));this.enqueue('settle',x,z,front,.4);}
   }
-  moveTo(x,z){if(!Number.isFinite(x)||!Number.isFinite(z))return false;if(Math.abs(z-this.z)<.015&&Math.abs(x-this.x)<=.20&&Math.abs(nearAngle(this.yaw,this.audienceYaw)-this.yaw)<.08)return this.stepAside(Math.sign(x-this.x),Math.abs(x-this.x));this.steps=[];this.planWalk(x,z);this.start();return true;}
+  moveTo(x,z){if(this.stationary||!Number.isFinite(x)||!Number.isFinite(z))return false;if(Math.abs(z-this.z)<.015&&Math.abs(x-this.x)<=.20&&Math.abs(nearAngle(this.yaw,this.audienceYaw)-this.yaw)<.08)return this.stepAside(Math.sign(x-this.x),Math.abs(x-this.x));this.steps=[];this.planWalk(x,z);this.start();return true;}
   stepAside(direction,distance=.16){
+    if(this.stationary)return false;
     this.steps=[];const front=nearAngle(this.yaw,this.audienceYaw),x=clamp(this.x+direction*clamp(distance,0,.20),this.bounds.minX,this.bounds.maxX);
     if(Math.abs(front-this.yaw)>.08)this.enqueue('face-viewer',this.x,this.z,front,Math.max(.65,Math.abs(front-this.yaw)/1.65));
     if(Math.abs(x-this.x)>.015)this.enqueue('sidestep',x,this.z,front,2.6);
     this.start();return true;
   }
   perform(command){
+    if(this.stationary&&command!=='stop')return false;
     this.nextRoam=this.time+22;
     const destination=roomDestination(command,this.x,this.z);
     if(destination)return this.roam==='room'?this.moveTo(destination.x,destination.z):false;
@@ -90,6 +92,7 @@ export class DesktopSpace{
   predict(seconds){const s=this.segment;if(!s){const error=nearAngle(this.yaw,this.audienceYaw)-this.yaw;return {x:this.x,z:this.z,yaw:this.yaw+clamp(error*(1-Math.exp(-seconds*2.8)),-seconds*1.1,seconds*1.1)};}const p=ease((this.elapsed+seconds)/s.duration);return {x:mix(s.fromX,s.x,p),z:mix(s.fromZ,s.z,p),yaw:mix(s.fromYaw,s.yaw,p)};}
   update(dt,{enabled=true,paused=false}={}){
     dt=clamp(dt,0,.1);this.time+=dt;
+    if(this.stationary){this.steps=[];this.segment=null;this.sideStep=null;this.phase='idle';this.nextRoam=Infinity;this.pose={speed:0,yawRate:0,yawAcceleration:0,vx:0,vz:0,lookYaw:0,prepare:0,acceleration:{x:0,z:0}};this.previousVelocity={x:0,z:0};return this;}
     if(!enabled||paused){this.pose.speed=0;this.pose.yawRate=0;this.pose.yawAcceleration=0;this.pose.acceleration={x:0,z:0};this.previousVelocity={x:0,z:0};return this;}
     if(!this.segment&&this.time>=this.nextRoam){
       if(this.roam==='room'){const destinations=[[-1.8,-1.5],[1.9,-3.2],[2.3,-.6],[-2.2,-3.4],[0,-1.4]],point=destinations[this.serial++%destinations.length];this.moveTo(...point);}

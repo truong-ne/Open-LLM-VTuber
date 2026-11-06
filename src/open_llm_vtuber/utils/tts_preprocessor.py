@@ -3,6 +3,7 @@ import unicodedata
 from loguru import logger
 from ..translate.translate_interface import TranslateInterface
 from .math_speech import normalize_vietnamese_math
+from .pronunciation import normalize_spoken_names
 
 
 def tts_filter(
@@ -32,6 +33,7 @@ def tts_filter(
     Returns:
         str: The filtered text.
     """
+    text = normalize_spoken_names(text)
     if vietnamese_math:
         # Do this before filters erase ^, superscripts, products or groups.
         text = normalize_vietnamese_math(text)

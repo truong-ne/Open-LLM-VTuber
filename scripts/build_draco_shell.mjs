@@ -36,6 +36,9 @@ export function buildDracoShell(root){
 <script type="module">
 import {createNativeBridge} from 'http://127.0.0.1:12393/web-tool/mao-5070/draco/native-bridge.mjs?v=7';
 window.maoDraco=createNativeBridge();
+const {mountDesktopClassroom}=await import('http://127.0.0.1:12393/web-tool/mao-5070/draco/classroom-desktop.mjs?v=13');
+window.maoClassroom=mountDesktopClassroom();
+if(new URLSearchParams(location.search).get('mao-classroom-preview')==='1')window.maoClassroom.showPreview();
 await import('./assets/mao-draco-shell.js');
 </script>
 <script type="module">import {createWordGameOverlay} from 'http://127.0.0.1:12393/web-tool/mao-5070/draco/word-game-overlay.mjs?v=10';window.maoWordGame=createWordGameOverlay();</script>

@@ -24,6 +24,7 @@ class AutonomyConfig(BaseModel):
 
 class HybridConfig(BaseModel):
     enabled: bool = False
+    wesnoth_enabled: bool = False
     emotion_enabled: bool = True
     interaction_enabled: bool = True
     coordinator_enabled: bool = True

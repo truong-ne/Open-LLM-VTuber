@@ -82,6 +82,8 @@ def _proposal_body(message):
     if message.get("type") != "text-input" or message.get("source") not in {
         "mao-idle-host",
         "vua-tieng-viet",
+        "mao-wesnoth",
+        "mao-gift",
     }:
         raise ValueError("Unsupported host proposal")
     value = {

@@ -56,6 +56,8 @@ def answer_score(guess, answer):
 
 class VuaTiengViet:
     duration = 60
+    hint_count = 3
+    speak_hints = True
     cooldown_seconds = 60
 
     def __init__(
@@ -176,9 +178,12 @@ class VuaTiengViet:
         self.revision += 1
         return "accepted"
 
-    def _prepare(self, nickname):
+    def _choose_word(self):
         candidates = [i for i in range(len(self.words)) if i not in self.recent]
-        chosen = self.rng.choice(candidates or list(range(len(self.words))))
+        return self.rng.choice(candidates or list(range(len(self.words))))
+
+    def _prepare(self, nickname):
+        chosen = self._choose_word()
         self.recent.append(chosen)
         self.word = self.words[chosen]
         self.phase, self.round_id, self.starter = "waiting", uuid.uuid4().hex, nickname
@@ -224,7 +229,10 @@ class VuaTiengViet:
             self._announce("result", self._result_speech())
             self.revision += 1
             return
-        index = min(2, int((now - self.started) // 20))
+        index = min(
+            self.hint_count - 1,
+            int((now - self.started) / (self.duration / self.hint_count)),
+        )
         if index > self.hint_index:
             self.hint_index = index
             self._announce(
@@ -233,7 +241,8 @@ class VuaTiengViet:
             )
             self.revision += 1
         if (
-            (now - self.started) % 20 >= 10
+            (now - self.started) % (self.duration / self.hint_count)
+            >= self.duration / (2 * self.hint_count)
             and index not in self.feedback_windows
             and self.players
         ):
@@ -251,15 +260,20 @@ class VuaTiengViet:
             guess = re.sub(r"[\[\]<>\n]", " ", recent["last_guess"])[:60]
             self._announce(
                 f"feedback-{index}",
-                f"{name} đoán là {guess}. Cả nhà đoán tiếp nhé!",
+                self.feedback_speech(name, guess),
             )
+
+    def feedback_speech(self, nickname, guess):
+        return f"{nickname} đoán là {guess}. Cả nhà đoán tiếp nhé!"
 
     def start_speech(self):
         return f"Gợi ý 1: {self.word['hints'][0]}"
 
     def _result_line(self, kind, choices):
         previous = self._last_result_lines.get(kind)
-        line = self.rng.choice([line for line in choices if line != previous])
+        line = self.rng.choice(
+            [line for line in choices if line != previous] or list(choices)
+        )
         self._last_result_lines[kind] = line
         return line
 
@@ -339,6 +353,7 @@ class VuaTiengViet:
             else [],
             "letters": self.letters,
             "hint_index": self.hint_index,
+            "hint_count": self.hint_count,
             "hints": self.word["hints"][: self.hint_index + 1]
             if self.word and self.phase != "waiting"
             else [],
@@ -373,6 +388,14 @@ class WordGameService:
         self.prefetch_task = None
         self.prefetch_round = ""
         self.prepared = set()
+        self.classroom_transport = None
+        self.chat = None
+
+    def configure_chat(self, llm):
+        if llm is not None and hasattr(self.game, "enabled"):
+            from .classroom_chat import ClassroomChat
+
+            self.chat = ClassroomChat(self.game, llm)
 
     def configure_speech(self, engine):
         from .game_speech import PreparedGameSpeech
@@ -397,20 +420,32 @@ class WordGameService:
             self.prefetch_round = self.game.round_id
             self.prepared.clear()
         if self.game.phase == "waiting":
-            kind, script = "start", self.game.start_speech() + " Hết giờ!"
+            opening = self.game.start_speech()
+            if not opening:
+                return
+            kind, script = "start", opening + " Hết giờ!"
         else:
+            if not self.game.speak_hints:
+                return
             # Leave an eight-second margin before a timed hint/result. Jobs
             # run only between spoken turns, never competing with live TTS.
             elapsed = self.game.clock() - self.game.started
             if elapsed >= self.game.duration:
                 return
-            next_event = min(moment for moment in (20, 40, 60) if moment > elapsed)
+            next_event = min(
+                moment
+                for moment in (
+                    self.game.duration * i / self.game.hint_count
+                    for i in range(1, self.game.hint_count + 1)
+                )
+                if moment > elapsed
+            )
             if next_event - elapsed < 8:
                 return
             index = next(
                 (
                     i
-                    for i in (1, 2)
+                    for i in range(1, self.game.hint_count)
                     if i > self.game.hint_index and f"hint-{i}" not in self.prepared
                 ),
                 None,
@@ -449,14 +484,22 @@ class WordGameService:
         )
 
     async def start(self):
+        if hasattr(self.game, "enabled"):
+            from .classroom_transport import ClassroomTransport
+
+            self.classroom_transport = ClassroomTransport()
         self.task = asyncio.create_task(self._run())
 
     async def stop(self):
+        if self.chat:
+            await self.chat.close()
         if self.task:
             self.task.cancel()
             await asyncio.gather(self.task, return_exceptions=True)
         if self.prefetch_task:
             await asyncio.gather(self.prefetch_task, return_exceptions=True)
+        if self.classroom_transport:
+            await asyncio.to_thread(self.classroom_transport.stop)
 
     async def submit(self, nickname, text, *, player_id, event_id="", created_at=0):
         # All state transitions happen on the backend event loop.
@@ -475,6 +518,9 @@ class WordGameService:
             # The operator/viewer chose a game: finish automatic chatter now,
             # then let the first clue wait for the actual conversation end signal.
             await self.proxy.forward_to_server({"type": "interrupt-signal"})
+        if self.chat and status in ("accepted", "not-playing", "rate-limited"):
+            if not created_at or created_at >= self.game.started_at:
+                self.chat.offer(nickname, text, event_id)
         await self.publish()
         return status
 
@@ -498,6 +544,21 @@ class WordGameService:
                     and self.presentation_ready
                 )
                 self.game.tick(ready=ready)
+                if self.chat:
+                    self.chat.tick(self.proxy)
+                if self.classroom_transport:
+                    await asyncio.to_thread(
+                        self.classroom_transport.sync,
+                        bool(
+                            self.game.enabled
+                            or (
+                                self.proxy
+                                and self.proxy.connected
+                                and self.proxy.clients
+                            )
+                        ),
+                        self.game.account,
+                    )
                 await self.publish()
                 if self.proxy:
                     while self.game.announcements:

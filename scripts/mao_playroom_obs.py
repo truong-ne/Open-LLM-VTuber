@@ -1,4 +1,4 @@
-"""An isolated, local OBS composition using a real Chrome/game window."""
+"""An isolated, local OBS composition using an explicitly selected window."""
 
 import argparse
 import base64
@@ -21,7 +21,18 @@ def ensure_collection(obs):
         raise PermissionError("Only the dedicated Mao Playroom collection is permitted")
 
 
-def configure(obs):
+def select_window(windows, title):
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("Provide the exact window title with --window-title")
+    matches = [item for item in windows if item.get("itemName") == title]
+    if len(matches) != 1:
+        raise ValueError("Open exactly one window with the selected title")
+    return matches[0]
+
+
+def configure(obs, window_title):
+    if not isinstance(window_title, str) or not window_title.strip():
+        raise ValueError("Provide the exact window title with --window-title")
     obs.assert_idle_stream()
     if obs.call("GetRecordStatus")["outputActive"]:
         raise PermissionError("Stop the current recording before configuring")
@@ -82,7 +93,7 @@ def configure(obs):
                 "inputName": name,
                 "inputKind": "browser_source",
                 "inputSettings": {
-                    "url": BASE + "?mode=game&layer=" + layer + "&game=2048",
+                    "url": BASE + "?mode=game&layer=" + layer,
                     "width": 1920,
                     "height": 1080,
                     "fps": 30,
@@ -115,22 +126,13 @@ def configure(obs):
         "GetInputPropertiesListPropertyItems",
         {"inputName": CAPTURE, "propertyName": "window"},
     )["propertyItems"]
-    matches = [
-        item
-        for item in windows
-        if "2048 Game - Play 2048 Game Online" in item["itemName"]
-        and "chrome.exe" in str(item["itemValue"]).lower()
-    ]
-    if len(matches) != 1:
-        raise ValueError(
-            "Open exactly one dedicated Chrome window for the selected 2048 game"
-        )
+    selected = select_window(windows, window_title)
     obs.call(
         "SetInputSettings",
         {
             "inputName": CAPTURE,
             "inputSettings": {
-                "window": matches[0]["itemValue"],
+                "window": selected["itemValue"],
                 "priority": 0,
                 "method": 2,
                 "capture_audio": False,
@@ -173,8 +175,8 @@ def configure(obs):
         "item_id": created["sceneItemId"],
         "visible": False,
         "url": BASE,
-        "window_title": "2048 Game - Play 2048 Game Online - Google Chrome",
-        "window_value": matches[0]["itemValue"],
+        "window_title": selected["itemName"],
+        "window_value": selected["itemValue"],
     }
     REGISTRY.write_text(
         json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -208,7 +210,7 @@ def visibility(obs, show):
             "sceneItemEnabled": bool(show),
         },
     )
-    url = BASE + "?mode=game&layer=overlay&game=2048" + ("" if show else "&shield=1")
+    url = BASE + "?mode=game&layer=overlay" + ("" if show else "&shield=1")
     obs.call(
         "SetInputSettings",
         {"inputName": OVERLAY, "inputSettings": {"url": url}, "overlay": True},
@@ -227,17 +229,7 @@ def frame(obs, program=False):
         "GetInputPropertiesListPropertyItems",
         {"inputName": CAPTURE, "propertyName": "window"},
     )["propertyItems"]
-    if (
-        len(
-            [
-                w
-                for w in windows
-                if w["itemValue"] == registry.get("window_value")
-                and "chrome.exe" in str(w["itemValue"]).lower()
-            ]
-        )
-        != 1
-    ):
+    if len([w for w in windows if w["itemValue"] == registry.get("window_value")]) != 1:
         raise PermissionError("The selected game window is no longer present")
     source = registry["scene"] if program else CAPTURE
     request = {
@@ -255,14 +247,17 @@ def frame(obs, program=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["configure", "hide", "show", "snapshot"])
+    parser.add_argument("--window-title", help="Exact OBS window picker label")
     parser.add_argument(
         "--output", type=Path, default=ROOT / "logs/mao-playroom-real-game.png"
     )
     args = parser.parse_args()
+    if args.command == "configure" and not args.window_title:
+        parser.error("configure requires --window-title")
     obs = Obs()
     try:
         if args.command == "configure":
-            result = configure(obs)
+            result = configure(obs, args.window_title)
         elif args.command in {"hide", "show"}:
             result = visibility(obs, args.command == "show")
         else:

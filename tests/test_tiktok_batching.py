@@ -82,6 +82,7 @@ class TikTokBatchingTests(unittest.IsolatedAsyncioTestCase):
             {
                 "type": "control",
                 "text": "conversation-chain-start",
+                "turn_id": "test-turn",
             }
         )
 
@@ -111,6 +112,81 @@ class TikTokBatchingTests(unittest.IsolatedAsyncioTestCase):
                 content="Mao thích gì?",
             )
         )
+
+    async def test_delivery_audit_waits_for_real_matching_playback(self):
+        self.client._accept_comment("Mèo Gian Khổ", "123 + 123", event_key="trace")
+        self.clock.return_value = 1002
+        await self.client._dispatch_once()
+        await self.own_start()
+        await self.client.handle_incoming_messages({"type": "audio", "audio": "spoken"})
+        self.assertEqual(
+            self.client._comment_state.snapshot()[0]["state"], "audio_generated"
+        )
+        await self.client.handle_incoming_messages(
+            {"type": "live-playback", "status": "started", "turn_id": "wrong-turn"}
+        )
+        self.assertFalse(self.client._playback_started)
+        await self.client.handle_incoming_messages(
+            {"type": "live-playback", "status": "started", "turn_id": "test-turn"}
+        )
+        self.assertEqual(self.client._comment_state.snapshot()[0]["state"], "playing")
+        await self.end()
+        self.assertEqual(self.client._comment_state.snapshot()[0]["state"], "delivered")
+
+    async def test_proxy_resync_retries_same_durable_id_without_claiming_delivery(self):
+        self.client._accept_comment('A','hello',event_key='resync')
+        self.clock.return_value=1002
+        await self.client._dispatch_once()
+        batch=self.client._inflight_id
+        self.client._last_batch_text='original batch'
+        self.client._resync_inflight=True
+        await self.client.handle_incoming_messages({'type':'conversation-state','active':False})
+        self.client._send_to_proxy.assert_awaited_with('original batch',batch)
+        await self.client.handle_incoming_messages({'type':'input-status','event_id':batch,'status':'duplicate'})
+        self.assertFalse(self.client._waiting_for_reply)
+        self.assertEqual(self.client._comment_state.snapshot()[0]['state'],'delivery_unknown')
+
+    async def test_generated_audio_without_desktop_ack_is_not_delivered(self):
+        self.client._accept_comment('A','hello',event_key='unconfirmed')
+        self.clock.return_value=1002
+        await self.client._dispatch_once()
+        await self.own_start()
+        await self.client.handle_incoming_messages({'type':'audio','audio':'spoken'})
+        await self.end()
+        self.assertEqual(self.client._comment_state.snapshot()[0]['state'],'playback_unconfirmed')
+
+    async def test_rejected_batch_requeues_instead_of_waiting_forever(self):
+        self.client._accept_comment("A", "hello", event_key="retry")
+        self.clock.return_value = 1002
+        await self.client._dispatch_once()
+        batch = self.client._inflight_id
+        await self.client.handle_incoming_messages(
+            {"type": "input-status", "event_id": batch, "status": "rejected_busy"}
+        )
+        self.assertFalse(self.client._waiting_for_reply)
+        self.assertEqual(list(self.client._pending), [("A", "hello")])
+        self.clock.return_value = 1005
+        self.assertTrue(await self.client._dispatch_once())
+        self.assertNotEqual(batch, self.client._inflight_id)
+
+    async def test_unsent_queue_survives_reader_restart_without_replaying_sent_batches(
+        self,
+    ):
+        self.client._accept_comment("A", "hello", event_key="recover")
+        with patch("src.open_llm_vtuber.live.tiktok_live.ChatActivity") as tracker:
+            tracker.return_value = ChatActivity(self.activity)
+            reopened = TikTokLivePlatform(
+                "test", comment_state_path=self.client._comment_state.path
+            )
+        self.assertEqual(list(reopened._pending), [("A", "hello")])
+        self.clock.return_value = 1002
+        await self.client._dispatch_once()
+        with patch("src.open_llm_vtuber.live.tiktok_live.ChatActivity") as tracker:
+            tracker.return_value = ChatActivity(self.activity)
+            sent = TikTokLivePlatform(
+                "test", comment_state_path=self.client._comment_state.path
+            )
+        self.assertFalse(sent._pending)
 
     async def test_answered_event_stays_answered_after_timeout_cache_eviction_and_reopen(
         self,
@@ -223,7 +299,7 @@ class TikTokBatchingTests(unittest.IsolatedAsyncioTestCase):
             identity("@test", 0, 0, 123, "hi"), identity("@test", 0, 0, 123, "hi")
         )
 
-    async def test_collects_burst_and_retains_all_bounded_groups_not_just_last_three(
+    async def test_burst_answers_three_groups_and_retains_the_rest_for_following_turns(
         self,
     ):
         for i in range(12):
@@ -233,10 +309,22 @@ class TikTokBatchingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.client._dispatch_once())
         text, batch_id = self.client._send_to_proxy.call_args.args
         data = json.loads(text.splitlines()[-1])
-        self.assertEqual(len(data["comment_groups"]), 12)
+        self.assertEqual(len(data["comment_groups"]), 3)
+        self.assertEqual(len(self.client._pending), 9)
         self.assertEqual(data["comment_groups"][0]["comment"], "Câu hỏi 0?")
         self.assertTrue(batch_id)
         self.assertEqual(read_json(self.activity)["pending_count"], 12)
+        answered = [g["comment"] for g in data["comment_groups"]]
+        for _ in range(3):
+            await self.own_start()
+            await self.end()
+            self.clock.return_value += 3
+            self.assertTrue(await self.client._dispatch_once())
+            payload = json.loads(
+                self.client._send_to_proxy.call_args.args[0].splitlines()[-1]
+            )
+            answered.extend(g["comment"] for g in payload["comment_groups"])
+        self.assertEqual(answered, [f"Câu hỏi {i}?" for i in range(12)])
 
     async def test_duplicate_comments_count_once_per_viewer_and_collapse_across_viewers(
         self,
@@ -466,7 +554,7 @@ class TikTokBatchingTests(unittest.IsolatedAsyncioTestCase):
             self.client._send_to_proxy.call_args.args[0].splitlines()[-1]
         )
         self.assertNotIn("joined_viewers", payload)
-        self.clock.return_value = 1032
+        self.clock.return_value = 1092
         self.client._accept_join("Bông", "123")
         self.assertFalse(self.client._pending_joins)
         self.client._accept_join("Khách mới", "456")
@@ -538,8 +626,56 @@ class TikTokBatchingTests(unittest.IsolatedAsyncioTestCase):
         await on_join(SimpleNamespace(action=1, common=None, user=None))
         self.assertEqual(len(self.client._pending_joins), 1)
 
+    async def test_room_change_restarts_reader_instead_of_following_old_broadcast(self):
+        lookup = AsyncMock(return_value="new-live-room")
+        self.client._client = SimpleNamespace(
+            room_id="old-live-room",
+            web=SimpleNamespace(fetch_room_id_from_api=lookup),
+        )
+        with self.assertRaisesRegex(RuntimeError, "room changed"):
+            await self.client._check_current_room()
+        lookup.assert_awaited_once_with("test")
+
+    async def test_current_room_keeps_reader_and_records_health(self):
+        self.client._client = SimpleNamespace(
+            room_id="current-live-room",
+            web=SimpleNamespace(
+                fetch_room_id_from_api=AsyncMock(return_value="current-live-room")
+            ),
+        )
+        await self.client._check_current_room()
+        self.assertEqual(
+            self.client._reader_health["resolved_room_id"], "current-live-room"
+        )
+
 
 class ProxyChatPriorityTests(unittest.IsolatedAsyncioTestCase):
+    async def test_superseded_host_gets_status_and_releases_waiting_state(self):
+        queue = ProxyMessageQueue()
+        notify = AsyncMock()
+        queue.initialize(AsyncMock(), notify)
+        queue.conversation_active = True
+        queue.queue_message(
+            {
+                "type": "text-input",
+                "source": "mao-idle-host",
+                "event_id": "host-id",
+                "text": "hello",
+            },
+            "host-client",
+        )
+        queue.queue_message(
+            {"type": "text-input", "source": "tiktok-live", "text": "question"},
+            "reader",
+        )
+        await asyncio.sleep(0)
+        notify.assert_awaited_once_with(
+            {"type": "input-status", "status": "superseded", "event_id": "host-id"},
+            "host-client",
+        )
+        self.assertEqual(len(queue.message_queue), 1)
+        queue.stop()
+
     async def test_burst_cannot_preempt_a_story_and_only_one_batch_starts_after_end(
         self,
     ):
@@ -711,7 +847,9 @@ class TikTokReconnectTests(unittest.IsolatedAsyncioTestCase):
             client._create_client = Mock(return_value=live)
             await asyncio.wait_for(client.run(), 1)
             client.disconnect.assert_awaited_once()
-            live.connect.assert_awaited_once_with(process_connect_events=False)
+            live.connect.assert_awaited_once_with(
+                process_connect_events=False, room_id=None
+            )
 
 
 if __name__ == "__main__":

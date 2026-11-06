@@ -10,7 +10,7 @@ if(layer)document.body.dataset.layer=layer;
 document.body.dataset.clean=String(clean);
 document.body.dataset.shield=String(params.get('shield')==='1');
 let mode=modeOf(params.get('mode')),mirror=null,chatTimer=null,chatController=null,chatState={session:'',revision:0,comments:[]};
-const obsMode=params.get('obs')==='1';let obsToken='',obsCovered=true,hiddenByOperator=false,frameTimer,frameObjectURL,gameTimer;
+const obsMode=params.get('obs')==='1';let obsToken='',obsCovered=true,hiddenByOperator=false,frameTimer,frameObjectURL;
 let autonomyTimer,autonomyToken='',autonomyPaused=false;
 function resize(){document.documentElement.style.setProperty('--scale',String(fitStage(innerWidth,innerHeight)));}
 resize();window.addEventListener('resize',resize);
@@ -69,7 +69,7 @@ async function pollObsFrame(){
   finally{if(!obsCovered)frameTimer=setTimeout(pollObsFrame,500);}
 }
 if(obsMode&&!layer){
-  $('choose').disabled=true;$('choose').textContent='Nguồn: Chrome · 2048';$('capture').hidden=true;
+  $('choose').disabled=true;$('choose').textContent='Nguồn: cửa sổ OBS';$('capture').hidden=true;
   const image=document.createElement('img');image.id='obs-frame';image.alt='Ảnh cập nhật từ cửa sổ game Chrome thật';Object.assign(image.style,{position:'absolute',inset:'0',width:'100%',height:'100%',objectFit:'contain',background:'#050b08'});$('content-aperture').prepend(image);
   try{
     const response=await fetch('/api/playroom/session',{cache:'no-store'});const info=await response.json();obsToken=info.token;
@@ -77,16 +77,6 @@ if(obsMode&&!layer){
     $('preview-badge').textContent='XEM TRƯỚC · ẢNH CẬP NHẬT';$('operator-note').textContent='Ảnh từ cửa sổ game thật được cập nhật định kỳ. Cảnh OBS lấy video cửa sổ trực tiếp.';
   }catch{$('operator-note').textContent='Chưa cấu hình nguồn game OBS. Hãy chạy hướng dẫn Playroom.';}
 }
-async function pollGame(){
-  try{
-    const response=await fetch('./state/game2048.json',{cache:'no-store'});if(!response.ok)return;
-    const state=await response.json();
-    if(state.game==='2048'&&Number.isFinite(state.updated_at)&&Date.now()/1000-state.updated_at<15&&typeof state.caption==='string'&&!hiddenByOperator){
-      $('subtitle').textContent=state.caption.slice(0,500);$('eyebrow').textContent=state.phase==='playing'?'MAO ĐANG CHƠI · 2048':'NHẬT KÝ CHƠI GAME';
-    }
-  }catch{}finally{gameTimer=setTimeout(pollGame,700);}
-}
-if(params.get('game')==='2048'&&layer!=='background')pollGame();
 async function pollAutonomy(){
   const labels={searching_for_new_sources:'Đang tìm nguồn chưa đọc',waiting_for_zero_viewers:'Chờ khi không có người xem',planning:'Đang chọn chủ đề',reading:'Đang đọc nguồn',reflecting:'Đang xử lý dữ liệu',saving:'Đang lưu kết quả',resting:'Đã hoàn thành',paused:'Đã tạm dừng',yielded:'Nhường lượt cho hội thoại',waiting_for_conversation:'Đang có hội thoại',waiting_for_idle:'Chờ lúc rảnh',budget_or_cooldown:'Đang nghỉ theo hạn mức',storage_or_service_unavailable:'Dịch vụ chưa kết nối',backoff:'Lượt trước chưa thành công',offline:'Dịch vụ chưa chạy',stopped:'Đã dừng',time_budget:'Hết thời gian lượt',waiting_for_persona:'Chờ persona mới'};
   try{
@@ -146,4 +136,4 @@ if(layer!=='background'){
     $('avatar').dataset.ready='error';
   }
 }
-window.addEventListener('pagehide',()=>{session.dispose();mirror?.stop();clearTimeout(chatTimer);clearTimeout(frameTimer);clearTimeout(gameTimer);clearTimeout(autonomyTimer);if(frameObjectURL)URL.revokeObjectURL(frameObjectURL);chatController?.abort();avatar?.dispose();window.removeEventListener('resize',resize);},{once:true});
+window.addEventListener('pagehide',()=>{session.dispose();mirror?.stop();clearTimeout(chatTimer);clearTimeout(frameTimer);clearTimeout(autonomyTimer);if(frameObjectURL)URL.revokeObjectURL(frameObjectURL);chatController?.abort();avatar?.dispose();window.removeEventListener('resize',resize);},{once:true});

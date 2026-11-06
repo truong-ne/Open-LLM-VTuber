@@ -1,0 +1,5 @@
+DiceBear core and styles 10.6.0
+Remix of „Avataaars” (https://avataaars.com/) by „Pablo Stanley”, licensed under „Free for personal and commercial use” (https://avataaars.com/)
+Style: https://www.dicebear.com/styles/avataaars/
+Library: https://github.com/dicebear/dicebear
+Bundled locally to remove network dependence.

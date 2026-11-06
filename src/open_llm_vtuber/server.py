@@ -21,6 +21,7 @@ from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
 from .service_context import ServiceContext
 from .config_manager.utils import Config
 from .live.vua_tieng_viet import WordGameService
+from .live.classroom import ClassroomGame, install_classroom_routes
 from .live.singing import SingingService
 
 
@@ -92,7 +93,7 @@ class WebSocketServer:
 
     def __init__(self, config: Config, default_context_cache: ServiceContext = None):
         self.config = config
-        self.word_game = WordGameService(require_presentation=True)
+        self.word_game = WordGameService(ClassroomGame(), require_presentation=True)
         self.singing = SingingService()
         self.autonomy = None
         self.proxy_handler = None
@@ -102,6 +103,7 @@ class WebSocketServer:
             self.word_game.configure_speech(self.default_context_cache.tts_engine)
             await self.word_game.start()
             await self.singing.start()
+            gift_task = asyncio.create_task(self.gifts.run())
             learning_task = None
             autonomy_task = None
             experience_task = None
@@ -131,6 +133,8 @@ class WebSocketServer:
             try:
                 yield
             finally:
+                gift_task.cancel()
+                await asyncio.gather(gift_task, return_exceptions=True)
                 if experience_task:
                     experience_task.cancel()
                     await asyncio.gather(experience_task, return_exceptions=True)
@@ -171,6 +175,23 @@ class WebSocketServer:
         install_local_control(
             self.app, os.environ.get("MAO_RUNTIME_PROFILE", "local_companion")
         )
+        install_classroom_routes(
+            self.app,
+            self.word_game,
+            os.environ.get("MAO_RUNTIME_PROFILE", "local_companion"),
+        )
+        from .live.diagnostics import install_live_diagnostics
+
+        install_live_diagnostics(self.app)
+        from .live.gifts import GiftService
+
+        self.gifts = GiftService(
+            lambda: self.proxy_handler, lambda: self.word_game.game.account
+        )
+
+        @self.app.get("/api/live/gifts")
+        async def gift_board():
+            return self.gifts.store.snapshot(self.word_game.game.account)
 
         @self.app.get("/api/vuatiengviet/state")
         async def word_game_state():

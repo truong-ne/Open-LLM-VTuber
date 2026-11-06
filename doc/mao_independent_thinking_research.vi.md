@@ -21,7 +21,7 @@ Không cần bắt đầu bằng huấn luyện mô hình từ đầu. Nên ki�
 
 ## Khoảng trống của Mao
 
-`agent/hybrid/store.py` có lưu trữ và truy hồi; `runtime.py` có mục tiêu và kế hoạch bị giới hạn; `scripts/mao_live_research.py` đọc, diễn giải, lưu suy ngẫm và đề xuất thử nghiệm. Tuy nhiên, trường `experiment` chưa được nối vào một bộ thực thi và đánh giá tổng quát. `character/personality.py` chọn phong cách từ tập hữu hạn; đây chưa phải một hệ thống quan điểm có bằng chứng. `hybrid/learning.py` chủ yếu điều chỉnh giới hạn từ; adapter 2048 chọn giữa chiến thuật có sẵn.
+`agent/hybrid/store.py` có lưu trữ và truy hồi; `runtime.py` có mục tiêu và kế hoạch bị giới hạn; `scripts/mao_live_research.py` đọc, diễn giải, lưu suy ngẫm và đề xuất thử nghiệm. Tuy nhiên, trường `experiment` chưa được nối vào một bộ thực thi và đánh giá tổng quát. `character/personality.py` chọn phong cách từ tập hữu hạn; đây chưa phải một hệ thống quan điểm có bằng chứng. `hybrid/learning.py` chủ yếu điều chỉnh giới hạn từ.
 
 Trạng thái kiểm tra: cấu hình hybrid bật; autonomy/exploration/computer/daily learning tắt. LiveResearch có đường điều khiển riêng. Số chu kỳ trong nhật ký không đo chất lượng học. Chưa có bài đo trực tiếp để kết luận năng lực mô hình đang chạy.
 

@@ -46,7 +46,11 @@ class HybridExecutor(ToolExecutor):
                 False,
                 "[UNTRUSTED TOOL DATA]\n" + json.dumps(result, ensure_ascii=False),
                 {
-                    "confirmation": result.get("request_id")
+                    "confirmation": (
+                        result.get("request_id")
+                        if tool_input["operation"] != "wesnoth"
+                        else None
+                    )
                     or next(
                         (
                             p.get("request_id")

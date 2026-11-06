@@ -7,7 +7,7 @@ export function replyComments(message){
     try{const index=message.text.lastIndexOf('\n{');if(index<0)return [];data=JSON.parse(message.text.slice(index+1));}catch{return [];}
     if(!Array.isArray(data.comment_groups))return [];
     return data.comment_groups.slice(0,3).filter(row=>typeof row?.comment==='string'&&row.comment.trim()).map((row,index)=>({
-      id:index+1,text:row.comment.slice(0,300),nickname:(Array.isArray(row.nicknames)?row.nicknames.filter(name=>typeof name==='string').slice(0,2).join(', '):'')||'Khán giả',platform:message.source==='youtube-live'?'youtube':'tiktok',
+      id:index+1,text:row.comment.slice(0,300),nickname:(Array.isArray(row.display_names||row.nicknames)?(row.display_names||row.nicknames).filter(name=>typeof name==='string').slice(0,3).join(', '):'')||'Khán giả',platform:message.source==='youtube-live'?'youtube':'tiktok',
     }));
   }
   if(!message.source||message.source==='desktop')return message.text.trim()?[{id:1,text:message.text.slice(0,300),nickname:'papa',platform:'desktop'}]:[];

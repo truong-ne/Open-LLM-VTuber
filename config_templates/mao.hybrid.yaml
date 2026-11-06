@@ -2,6 +2,7 @@
 # scripts/mao_hybrid.py enable does this for conf.yaml and characters/mao_live.yaml.
 hybrid:
   enabled: true
+  wesnoth_enabled: false # optional local training add-on; setup via scripts/mao_wesnoth.py
   emotion_enabled: true # bounded state + response/speech policy; never grants tool access
   interaction_enabled: true
   coordinator_enabled: true

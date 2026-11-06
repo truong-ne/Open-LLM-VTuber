@@ -1,4 +1,11 @@
 'use strict';
+exports.classroomBounds=(previous,area)=>{
+  const height=Math.max(100,Math.floor(Math.min(1040,area.height-32,area.width*16/9+30)));
+  const width=Math.round((height-30)*9/16);
+  const x=Math.round(Math.min(area.x+area.width-width,Math.max(area.x,previous.x+previous.width/2-width/2)));
+  const y=Math.round(area.y+(area.height-height)/2);
+  return {x,y,width,height};
+};
 // Loaded by the existing Electron app only for the local Draco launch profile.
 exports.loadDraco = window => {
   const fs=require('fs'),path=require('path'),{ipcMain,screen}=require('electron');
@@ -6,11 +13,54 @@ exports.loadDraco = window => {
   if(!root)throw new Error('MAO_WORKSPACE is required for Draco desktop');
   // Keep animation and hosting heartbeat alive while OBS covers this window.
   window.webContents.setBackgroundThrottling(false);
+  ipcMain.removeHandler('mao-classroom-control');
+  ipcMain.handle('mao-classroom-control',async(event,options)=>{
+    if(event.sender!==window.webContents)throw new Error('Desktop owner required');
+    if(!options||typeof options.enabled!=='boolean'||!/^@[A-Za-z0-9_.]{1,24}$/.test(options.account))return {error:'Thông số lớp học không hợp lệ.'};
+    try{
+      const crypto=require('crypto'),key=fs.readFileSync(path.join(root,'private','mao-ingress.key'));
+      if(key.length!==32)throw new Error('Invalid host key');
+      const profile=process.env.MAO_RUNTIME_PROFILE||'local_companion';
+      const token=crypto.createHmac('sha256',key).update('local-control:v1:'+profile).digest('hex');
+      const response=await fetch('http://127.0.0.1:12393/api/classroom/control',{method:'POST',headers:{'Content-Type':'application/json','X-Mao-Control':token},body:JSON.stringify({enabled:options.enabled,account:options.account}),signal:AbortSignal.timeout(15000)});
+      const data=await response.json();
+      if(!response.ok)return {error:typeof data.detail==='string'?data.detail:'Backend chưa nạp chế độ lớp học. Hãy khởi động lại Mao.'};
+      return data;
+    }catch(error){return {error:'Không nối được lớp học: '+String(error.message).slice(0,120)};}
+  });
   const statusPath=path.join(root,'private','draco-desktop-status.json');
   const write=data=>fs.writeFileSync(statusPath,JSON.stringify({...data,updatedAt:Date.now()},null,2));
   write({model:'draco',ready:false,socket:'starting'});
   // Reuse the existing Pet Mode when Mao studies in Chrome.
-  let researchActive=false,researchPrevious='window',currentMode='window';
+  let researchActive=false,researchPrevious='window',currentMode=process.env.MAO_DESKTOP_START_MODE==='pet'?'pet':'window';
+  let portraitActive=false,previousWindowBounds=null,previousMaximized=false;
+  const classroomLayout=()=>{
+    const active=currentMode==='window';
+    if(active===portraitActive){
+      if(active){
+        const bounds=window.getBounds();
+        // Upstream's async window-mode handshake can restore 900x670 after
+        // the first classroom status. Reconcile that programmatic resize.
+        if(Math.abs(bounds.width/(bounds.height-30)-9/16)>.015){
+          window.setBounds(exports.classroomBounds(bounds,screen.getDisplayMatching(bounds).workArea));
+        }
+      }
+      return;
+    }
+    portraitActive=active;
+    if(active){
+      previousMaximized=window.isMaximized();
+      previousWindowBounds=previousMaximized?window.getNormalBounds():window.getBounds();
+      if(previousMaximized)window.unmaximize();
+      const area=screen.getDisplayMatching(previousWindowBounds).workArea;
+      window.setAspectRatio(9/16);
+      window.setBounds(exports.classroomBounds(previousWindowBounds,area));
+    }else{
+      window.setAspectRatio(0);
+      if(currentMode==='window'&&previousWindowBounds){window.setBounds(previousWindowBounds);if(previousMaximized)window.maximize();}
+      previousWindowBounds=null;
+    }
+  };
   let petViewRevision=null,petViewPending=false;
   const researchTimer=setInterval(()=>{
     if(window.isDestroyed()||window.webContents.isLoading())return;
@@ -36,9 +86,14 @@ exports.loadDraco = window => {
     if(event.sender!==window.webContents||!data||data.model!=='draco')return;
     if(['pet','window'].includes(data.mode))currentMode=data.mode;
     const safe={};
-    for(const key of ['model','ui','ready','frames','drawCalls','socket','audioStarted','audioEnded','audioErrors','action','lastError','visible','queued','playback','mouthOpen','mouthPeak','faceMeshes','zoom','petX','petY','focus','petChatVisible','scrollToResize','forceIgnoreMouse','spaceX','spaceZ','spaceYaw','audienceYaw','facingError','completedSpins','mode','floorVisible','viewportWidth','viewportHeight','background','roomVisible','roomWidth','roomDepth','roomCamera','roomTheme','bodyHeading','bodyDirection','bodyPhase','bodyTargetX','bodyTargetZ','bodyStopped','lastBodyCommand','lastBodyAccepted','faceExpression','performanceVersion','facePresetCount','bodyAction','speechFocused','motorActive','motorRevision','motorSaved','motorFeedback','motorRejected','lastMotorAccepted']){
+    for(const key of ['musicPlaying','musicVolume','musicError','model','ui','ready','frames','drawCalls','socket','audioStarted','audioEnded','audioErrors','action','lastError','visible','queued','playback','mouthOpen','mouthPeak','faceMeshes','zoom','petX','petY','focus','petChatVisible','scrollToResize','forceIgnoreMouse','spaceX','spaceZ','spaceYaw','audienceYaw','facingError','completedSpins','mode','floorVisible','viewportWidth','viewportHeight','background','roomVisible','roomWidth','roomDepth','roomCamera','roomTheme','bodyHeading','bodyDirection','bodyPhase','bodyTargetX','bodyTargetZ','bodyStopped','lastBodyCommand','lastBodyAccepted','faceExpression','performanceVersion','facePresetCount','bodyAction','speechFocused','motorActive','motorRevision','motorSaved','motorFeedback','motorRejected','lastMotorAccepted']){
       const value=data[key];if(['string','number','boolean'].includes(typeof value))safe[key]=typeof value==='string'?value.slice(0,350):value;
     }
+    safe.classroom=data.classroom===true;
+    safe.cameraFrame=data.cameraFrame==='waist-up'?'waist-up':'room';
+    classroomLayout(data.classroom===true&&currentMode==='window');
+    safe.classroomLayout=portraitActive?'portrait-9:16':'normal';
+    if(portraitActive){const bounds=window.getBounds();safe.windowWidth=bounds.width;safe.windowHeight=bounds.height;}
     write(safe);
   });
   // Hit test in the app's own main process: Windows forwards mouse-move while
@@ -58,9 +113,16 @@ exports.loadDraco = window => {
   window.webContents.on('render-process-gone',(_event,details)=>write({model:'draco',ready:false,lastError:details.reason}));
   window.webContents.on('did-fail-load',(_event,code,description)=>write({model:'draco',ready:false,lastError:`${code}: ${description}`}));
   window.setTitle('Mao VTuber');
+  classroomLayout();
   window.webContents.on('console-message',(_event,level,message)=>{
     if(level>=2)fs.appendFileSync(path.join(root,'logs','draco-desktop.log'),`${new Date().toISOString()} ${message.slice(0,1000)}\n`);
   });
-  window.loadFile(path.join(__dirname,'../renderer/index.html'),{query:{'mao-mode':process.env.MAO_DESKTOP_START_MODE==='window'?'window':'pet'}});
+  // Local renderer modules and the GLB change in place during desktop updates.
+  // A normal Electron restart can reuse cached dependencies from an older rig.
+  const loadDesktop=()=>window.loadFile(path.join(__dirname,'../renderer/index.html'),{query:{'mao-mode':process.env.MAO_DESKTOP_START_MODE==='window'?'window':'pet','mao-classroom-preview':process.env.MAO_DESKTOP_CLASSROOM_PREVIEW==='1'?'1':'0'}});
+  window.webContents.session.clearCache().then(loadDesktop,error=>{
+    fs.appendFileSync(path.join(root,'logs','draco-desktop.log'),`${new Date().toISOString()} Could not clear desktop asset cache: ${String(error).slice(0,300)}\n`);
+    return loadDesktop();
+  });
   return true;
 };

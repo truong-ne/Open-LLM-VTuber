@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const root=path.resolve(import.meta.dirname,'..');
+const modules=path.join(root,'private/tools/mao-avatar-build/node_modules');
+const {build}=await import(pathToFileURL(path.join(modules,'esbuild/lib/main.js')).href);
+const target=path.join(root,'web_tool/mao-5070/draco/vendor');
+fs.mkdirSync(target,{recursive:true});
+await build({stdin:{contents:`import {Avatar,Style} from '@dicebear/core';import definition from '@dicebear/styles/avataaars.json';const style=new Style(definition);export function localAvatar(seed){return new Avatar(style,{seed:String(seed).slice(0,128)}).toDataUri();}`,resolveDir:path.dirname(modules),sourcefile:'classroom-avatars.js'},bundle:true,format:'esm',platform:'browser',target:'es2022',minify:true,legalComments:'inline',outfile:path.join(target,'dicebear-avataaars.mjs')});
+fs.copyFileSync(path.join(modules,'@dicebear/core/LICENSE'),path.join(target,'DICEBEAR-CORE-LICENSE.txt'));
+const meta=JSON.parse(fs.readFileSync(path.join(modules,'@dicebear/styles/dist/avataaars.min.json'),'utf8')).meta;
+fs.writeFileSync(path.join(target,'AVATAAARS-ATTRIBUTION.txt'),`DiceBear core and styles 10.6.0\n${meta.license.text}\nStyle: https://www.dicebear.com/styles/avataaars/\nLibrary: https://github.com/dicebear/dicebear\nBundled locally to remove network dependence.\n`);
+console.log('Bundled local Avataaars:',fs.statSync(path.join(target,'dicebear-avataaars.mjs')).size,'bytes');
